@@ -41,7 +41,7 @@ export default function Stocks() {
   
   const queryClient = useQueryClient();
 
-  const { data: stocks = [], isLoading } = useQuery({
+  const { data: stocks = [] } = useQuery({
     queryKey: ['stocks'],
     queryFn: () => base44.entities.Stock.list()
   });
@@ -58,7 +58,7 @@ export default function Stocks() {
   const { prices: stockPrices, loading: pricesLoading } = useStockPrices(stockTickers);
   const { convertToUSD, loading: ratesLoading } = useExchangeRates();
 
-  const isLoading = pricesLoading || ratesLoading;
+  const isLoadingPrices = pricesLoading || ratesLoading;
 
   // Helper to get current price (real-time or manual)
   const getCurrentPrice = (stock) => stockPrices[stock.ticker] || stock.current_price || stock.average_cost;
@@ -214,7 +214,7 @@ export default function Stocks() {
           subtitle={
             <div className="flex items-center gap-2">
               <span>{stocks.length} positions • ${totalValueUSD.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USD</span>
-              {isLoading && <RefreshCw className="w-3 h-3 animate-spin text-slate-400" />}
+              {isLoadingPrices && <RefreshCw className="w-3 h-3 animate-spin text-slate-400" />}
             </div>
           }
           onAdd={() => {

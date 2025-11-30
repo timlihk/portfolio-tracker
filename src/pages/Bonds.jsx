@@ -45,7 +45,7 @@ export default function Bonds() {
   
   const queryClient = useQueryClient();
 
-  const { data: bonds = [], isLoading } = useQuery({
+  const { data: bonds = [] } = useQuery({
     queryKey: ['bonds'],
     queryFn: () => base44.entities.Bond.list()
   });
@@ -61,7 +61,7 @@ export default function Bonds() {
   const { prices: bondPrices, loading: pricesLoading } = useBondPrices(bonds);
   const { convertToUSD, loading: ratesLoading } = useExchangeRates();
 
-  const isLoading = pricesLoading || ratesLoading;
+  const isLoadingPrices = pricesLoading || ratesLoading;
 
   // Helper to get current value (estimated or manual)
   const getCurrentValue = (bond) => bondPrices[bond.name] || bond.current_value || bond.purchase_price;
@@ -206,7 +206,7 @@ export default function Bonds() {
           subtitle={
             <div className="flex items-center gap-2">
               <span>{bonds.length} bonds • ${totalValueUSD.toLocaleString()} USD</span>
-              {isLoading && <RefreshCw className="w-3 h-3 animate-spin text-slate-400" />}
+              {isLoadingPrices && <RefreshCw className="w-3 h-3 animate-spin text-slate-400" />}
             </div>
           }
           onAdd={() => {
