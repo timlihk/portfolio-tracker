@@ -61,47 +61,53 @@ export function useStockPrices(tickers) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!tickers || tickers.length === 0) return;
+    if (!tickers || tickers.length === 0) {
+      setPrices({});
+      return;
+    }
+
+    const uniqueTickers = [...new Set(tickers.filter(Boolean))];
+    if (uniqueTickers.length === 0) {
+      setPrices({});
+      return;
+    }
 
     const fetchPrices = async () => {
       setLoading(true);
       try {
-        const uniqueTickers = [...new Set(tickers.filter(Boolean))];
-        if (uniqueTickers.length === 0) {
-          setLoading(false);
-          return;
-        }
-
-        // Use Yahoo Finance via AI for real-time stock prices
         const result = await base44.integrations.Core.InvokeLLM({
-          prompt: `Get the current real-time stock prices from Yahoo Finance for these tickers: ${uniqueTickers.join(', ')}. Return the current market price in the stock's native currency for each ticker. Be accurate and use the latest market data.`,
+          prompt: `Look up the current stock price for these ticker symbols: ${uniqueTickers.join(', ')}
+
+Search Yahoo Finance or Google Finance for each ticker and return the latest trading price.
+Return the exact ticker symbol as the key (matching what I provided).`,
           add_context_from_internet: true,
           response_json_schema: {
             type: "object",
             properties: {
               prices: {
                 type: "object",
-                description: "Object with ticker symbols as keys and current prices as values",
-                additionalProperties: { type: "number" }
+                description: "Object mapping ticker symbols to their current stock prices as numbers"
               }
-            }
+            },
+            required: ["prices"]
           }
         });
         
-        if (result?.prices) {
+        if (result && result.prices && typeof result.prices === 'object') {
           setPrices(result.prices);
         }
       } catch (error) {
         console.error('Failed to fetch stock prices:', error);
+        setPrices({});
       } finally {
         setLoading(false);
       }
     };
 
     fetchPrices();
-  }, [tickers?.join(',')]);
+  }, [JSON.stringify(tickers)]);
 
-  return { prices, loading };
+  return { prices: prices || {}, loading };
 }
 
 export function useBondPrices(bonds) {
