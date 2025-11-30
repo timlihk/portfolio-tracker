@@ -18,9 +18,10 @@ import {
 
 const SECTORS = ['Technology', 'Healthcare', 'Finance', 'Energy', 'Consumer', 'Industrial', 'Real Estate', 'Utilities', 'Materials', 'Communications', 'Other'];
 
-const stockFields = [
+const getStockFields = (accounts) => [
   { name: 'ticker', label: 'Ticker Symbol', required: true, placeholder: 'AAPL' },
   { name: 'company_name', label: 'Company Name', placeholder: 'Apple Inc.' },
+  { name: 'account', label: 'Account', type: 'select', options: accounts.map(a => a.name), allowCustom: true },
   { name: 'shares', label: 'Number of Shares', type: 'number', required: true, placeholder: '100' },
   { name: 'average_cost', label: 'Average Cost per Share', type: 'number', required: true, placeholder: '150.00' },
   { name: 'current_price', label: 'Current Price', type: 'number', placeholder: '175.00' },
@@ -40,6 +41,13 @@ export default function Stocks() {
     queryKey: ['stocks'],
     queryFn: () => base44.entities.Stock.list()
   });
+
+  const { data: accounts = [] } = useQuery({
+    queryKey: ['accounts'],
+    queryFn: () => base44.entities.Account.list()
+  });
+
+  const stockFields = getStockFields(accounts);
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Stock.create(data),
@@ -148,6 +156,15 @@ export default function Stocks() {
           {val}
         </Badge>
       )
+    },
+    { 
+      key: 'account', 
+      label: 'Account',
+      render: (val) => val ? (
+        <Badge variant="outline" className="font-normal">
+          {val}
+        </Badge>
+      ) : '-'
     }
   ];
 

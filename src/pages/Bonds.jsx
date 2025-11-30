@@ -20,9 +20,10 @@ import {
 const BOND_TYPES = ['Treasury', 'Corporate', 'Municipal', 'Agency', 'International', 'High Yield', 'Other'];
 const RATINGS = ['AAA', 'AA', 'A', 'BBB', 'BB', 'B', 'CCC', 'CC', 'C', 'D', 'NR'];
 
-const bondFields = [
+const getBondFields = (accounts) => [
   { name: 'name', label: 'Bond Name / Issuer', required: true, placeholder: 'US Treasury 10Y' },
   { name: 'bond_type', label: 'Bond Type', type: 'select', options: BOND_TYPES },
+  { name: 'account', label: 'Account', type: 'select', options: accounts.map(a => a.name), allowCustom: true },
   { name: 'face_value', label: 'Face Value', type: 'number', required: true, placeholder: '10000' },
   { name: 'purchase_price', label: 'Purchase Price', type: 'number', required: true, placeholder: '9800' },
   { name: 'current_value', label: 'Current Value', type: 'number', placeholder: '10100' },
@@ -44,6 +45,13 @@ export default function Bonds() {
     queryKey: ['bonds'],
     queryFn: () => base44.entities.Bond.list()
   });
+
+  const { data: accounts = [] } = useQuery({
+    queryKey: ['accounts'],
+    queryFn: () => base44.entities.Account.list()
+  });
+
+  const bondFields = getBondFields(accounts);
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Bond.create(data),
@@ -141,6 +149,15 @@ export default function Bonds() {
           {val}
         </Badge>
       )
+    },
+    { 
+      key: 'account', 
+      label: 'Account',
+      render: (val) => val ? (
+        <Badge variant="outline" className="font-normal">
+          {val}
+        </Badge>
+      ) : '-'
     }
   ];
 
