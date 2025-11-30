@@ -6,6 +6,8 @@ import AssetTable from '@/components/portfolio/AssetTable';
 import AddAssetDialog from '@/components/portfolio/AddAssetDialog';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import { useExchangeRates, useBondPrices, CURRENCY_SYMBOLS } from '@/components/portfolio/useMarketData';
+import { RefreshCw } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,14 +21,16 @@ import {
 
 const BOND_TYPES = ['Treasury', 'Corporate', 'Municipal', 'Agency', 'International', 'High Yield', 'Other'];
 const RATINGS = ['AAA', 'AA', 'A', 'BBB', 'BB', 'B', 'CCC', 'CC', 'C', 'D', 'NR'];
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS'];
 
 const getBondFields = (accounts) => [
   { name: 'name', label: 'Bond Name / Issuer', required: true, placeholder: 'US Treasury 10Y' },
   { name: 'bond_type', label: 'Bond Type', type: 'select', options: BOND_TYPES },
+  { name: 'currency', label: 'Currency', type: 'select', options: CURRENCIES },
   { name: 'account', label: 'Account', type: 'select', options: accounts.map(a => a.name), allowCustom: true },
   { name: 'face_value', label: 'Face Value', type: 'number', required: true, placeholder: '10000' },
   { name: 'purchase_price', label: 'Purchase Price', type: 'number', required: true, placeholder: '9800' },
-  { name: 'current_value', label: 'Current Value', type: 'number', placeholder: '10100' },
+  { name: 'current_value', label: 'Current Value (leave empty for estimate)', type: 'number', placeholder: 'Auto-estimated' },
   { name: 'coupon_rate', label: 'Coupon Rate (%)', type: 'number', placeholder: '4.5' },
   { name: 'maturity_date', label: 'Maturity Date', type: 'date' },
   { name: 'purchase_date', label: 'Purchase Date', type: 'date' },
@@ -52,6 +56,15 @@ export default function Bonds() {
   });
 
   const bondFields = getBondFields(accounts);
+
+  // Get real-time bond values and exchange rates
+  const { prices: bondPrices, loading: pricesLoading } = useBondPrices(bonds);
+  const { convertToUSD, loading: ratesLoading } = useExchangeRates();
+
+  const isLoading = pricesLoading || ratesLoading;
+
+  // Helper to get current value (estimated or manual)
+  const getCurrentValue = (bond) => bondPrices[bond.name] || bond.current_value || bond.purchase_price;
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Bond.create(data),
@@ -118,17 +131,26 @@ export default function Bonds() {
       key: 'face_value', 
       label: 'Face Value',
       align: 'right',
-      render: (val) => `$${val?.toLocaleString()}`
+      render: (val, row) => {
+        const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
+        return `${symbol}${val?.toLocaleString()}`;
+      }
     },
     { 
       key: 'current_value', 
       label: 'Current Value',
       align: 'right',
-      render: (val, row) => (
-        <span className="font-medium">
-          ${(val || row.purchase_price)?.toLocaleString()}
-        </span>
-      )
+      render: (val, row) => {
+        const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
+        const value = getCurrentValue(row);
+        const isLive = bondPrices[row.name] && !row.current_value;
+        return (
+          <div className="flex items-center justify-end gap-1">
+            <span className="font-medium">{symbol}{value?.toLocaleString()}</span>
+            {isLive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Estimated value" />}
+          </div>
+        );
+      }
     },
     { 
       key: 'coupon_rate', 
@@ -151,6 +173,15 @@ export default function Bonds() {
       )
     },
     { 
+      key: 'currency', 
+      label: 'Ccy',
+      render: (val) => (
+        <Badge variant="outline" className="font-normal text-xs">
+          {val || 'USD'}
+        </Badge>
+      )
+    },
+    { 
       key: 'account', 
       label: 'Account',
       render: (val) => val ? (
@@ -161,14 +192,23 @@ export default function Bonds() {
     }
   ];
 
-  const totalValue = bonds.reduce((sum, b) => sum + (b.current_value || b.purchase_price), 0);
+  // Calculate total in USD
+  const totalValueUSD = bonds.reduce((sum, b) => {
+    const value = getCurrentValue(b);
+    return sum + convertToUSD(value, b.currency);
+  }, 0);
 
   return (
     <div className="min-h-screen bg-slate-50/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <PageHeader
           title="Bonds"
-          subtitle={`${bonds.length} bonds • $${totalValue.toLocaleString()} total value`}
+          subtitle={
+            <div className="flex items-center gap-2">
+              <span>{bonds.length} bonds • ${totalValueUSD.toLocaleString()} USD</span>
+              {isLoading && <RefreshCw className="w-3 h-3 animate-spin text-slate-400" />}
+            </div>
+          }
           onAdd={() => {
             setFormData({});
             setDialogOpen(true);
