@@ -77,8 +77,8 @@ export default function Dashboard() {
     const converted = convertToUSD(costInOriginalCurrency, s.currency);
     return sum + (isNaN(converted) ? 0 : converted);
   }, 0);
-  const stocksGain = stocksValue - stocksCost;
-  const stocksGainPercent = stocksCost > 0 ? ((stocksGain / stocksCost) * 100).toFixed(1) : '0.0';
+  const stocksGain = (stocksValue || 0) - (stocksCost || 0);
+  const stocksGainPercent = stocksCost > 0 ? (((stocksGain || 0) / stocksCost) * 100).toFixed(1) : '0.0';
 
   const bondsValue = bonds.reduce((sum, b) => {
     const realTimeValue = b.current_value || bondPrices[b.name] || b.purchase_price || 0;
@@ -108,8 +108,8 @@ export default function Dashboard() {
 
   const totalValue = (stocksValue || 0) + (bondsValue || 0) + (peFundsValue || 0) + (peDealsValue || 0) + (liquidFundsValue || 0) + (cashValue || 0);
   const totalCost = (stocksCost || 0) + (bondsCost || 0) + (peFundsCalled || 0) + (peDealsCost || 0) + (liquidFundsCost || 0) + (cashValue || 0);
-  const totalGain = totalValue - totalCost;
-  const totalGainPercent = totalCost > 0 ? ((totalGain / totalCost) * 100).toFixed(1) : '0.0';
+  const totalGain = (totalValue || 0) - (totalCost || 0);
+  const totalGainPercent = totalCost > 0 ? (((totalGain || 0) / totalCost) * 100).toFixed(1) : '0.0';
 
   const allocationData = [
     { name: 'Stocks', value: stocksValue },
@@ -208,16 +208,16 @@ export default function Dashboard() {
             title="Total Value"
             value={`$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
             icon={Wallet}
-            trend={totalCost > 0 ? (Number(totalGainPercent) >= 0 ? 'up' : 'down') : null}
-            trendValue={totalCost > 0 ? `${totalGainPercent}%` : null}
+            trend={totalCost > 0 && !isNaN(Number(totalGainPercent)) ? (Number(totalGainPercent) >= 0 ? 'up' : 'down') : null}
+            trendValue={totalCost > 0 && !isNaN(Number(totalGainPercent)) ? `${totalGainPercent}%` : null}
             subValue="all time"
           />
           <StatCard
             title="Stocks"
             value={`$${stocksValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
             icon={TrendingUp}
-            trend={stocksCost > 0 ? (Number(stocksGainPercent) >= 0 ? 'up' : 'down') : null}
-            trendValue={stocksCost > 0 ? `${stocksGainPercent}%` : null}
+            trend={stocksCost > 0 && !isNaN(Number(stocksGainPercent)) ? (Number(stocksGainPercent) >= 0 ? 'up' : 'down') : null}
+            trendValue={stocksCost > 0 && !isNaN(Number(stocksGainPercent)) ? `${stocksGainPercent}%` : null}
             subValue={`${stocks.length} positions`}
           />
           <StatCard
