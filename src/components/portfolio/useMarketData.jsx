@@ -118,17 +118,16 @@ export function useStockPrices(tickers) {
         // Make individual requests for each ticker to improve accuracy
         const tickerList = uniqueTickers.join(', ');
         const result = await base44.integrations.Core.InvokeLLM({
-          prompt: `I need the CURRENT stock prices for these specific ticker symbols: ${tickerList}
+          prompt: `Look up the CURRENT stock price for each of these tickers on Yahoo Finance or Google Finance: ${tickerList}
 
-CRITICAL INSTRUCTIONS:
-1. Search Yahoo Finance, Google Finance, or MarketWatch for EACH ticker
-2. Return the LATEST market price (today's price or most recent closing price)
-3. Use the EXACT ticker symbols as keys: ${uniqueTickers.map(t => `"${t}"`).join(', ')}
-4. Every ticker MUST have a price - search carefully for each one
-5. Prices should be in the stock's native currency
+IMPORTANT:
+- Search for the EXACT ticker symbol on finance websites
+- Return the current/latest trading price per share
+- Use the exact ticker symbols provided as keys
+- Prices should be the price per single share (not total market cap)
 
-Return format example:
-{"prices": {"AAPL": 189.95, "MSFT": 378.91}}
+Example response format:
+{"prices": {"AAPL": 189.95, "TSLA": 248.50}}
 
 Tickers to look up: ${tickerList}`,
           add_context_from_internet: true,
@@ -137,7 +136,7 @@ Tickers to look up: ${tickerList}`,
             properties: {
               prices: {
                 type: "object",
-                description: "Map of exact ticker symbol to current stock price as a number",
+                description: "Map of ticker symbol to current price per share",
                 additionalProperties: { type: "number" }
               }
             },
