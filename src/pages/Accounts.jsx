@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Building2, TrendingUp, Landmark, ChevronDown, ChevronUp, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Building2, TrendingUp, Landmark, ChevronDown, ChevronUp, Pencil, Trash2, CreditCard } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -61,6 +61,11 @@ export default function Accounts() {
     queryFn: () => base44.entities.Bond.list()
   });
 
+  const { data: liabilities = [] } = useQuery({
+    queryKey: ['liabilities'],
+    queryFn: () => base44.entities.Liability.list()
+  });
+
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Account.create(data),
     onSuccess: () => {
@@ -108,16 +113,20 @@ export default function Accounts() {
   const getAccountAssets = (accountName) => {
     const accountStocks = stocks.filter(s => s.account === accountName);
     const accountBonds = bonds.filter(b => b.account === accountName);
+    const accountLiabilities = liabilities.filter(l => l.account === accountName && l.status !== 'Paid Off');
     
     const stocksValue = accountStocks.reduce((sum, s) => sum + (s.shares * (s.current_price || s.average_cost)), 0);
     const bondsValue = accountBonds.reduce((sum, b) => sum + (b.current_value || b.purchase_price), 0);
+    const liabilitiesValue = accountLiabilities.reduce((sum, l) => sum + (l.outstanding_balance || 0), 0);
     
     return {
       stocks: accountStocks,
       bonds: accountBonds,
+      liabilities: accountLiabilities,
       stocksValue,
       bondsValue,
-      totalValue: stocksValue + bondsValue
+      liabilitiesValue,
+      totalValue: stocksValue + bondsValue - liabilitiesValue
     };
   };
 
@@ -181,7 +190,7 @@ export default function Accounts() {
                               ${assets.totalValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                             </p>
                             <p className="text-sm text-slate-500">
-                              {assets.stocks.length} stocks • {assets.bonds.length} bonds
+                              {assets.stocks.length} stocks • {assets.bonds.length} bonds{assets.liabilities.length > 0 ? ` • ${assets.liabilities.length} loans` : ''}
                             </p>
                           </div>
                           <div className="flex items-center gap-1">
@@ -214,7 +223,7 @@ export default function Accounts() {
                   
                   <CollapsibleContent>
                     <CardContent className="pt-0 border-t">
-                      {assets.stocks.length === 0 && assets.bonds.length === 0 ? (
+                      {assets.stocks.length === 0 && assets.bonds.length === 0 && assets.liabilities.length === 0 ? (
                         <p className="text-slate-400 text-center py-8">No assets in this account</p>
                       ) : (
                         <div className="space-y-6 pt-4">
@@ -272,6 +281,38 @@ export default function Accounts() {
                                       </p>
                                       {bond.coupon_rate && (
                                         <p className="text-xs text-slate-500">{bond.coupon_rate}% coupon</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {assets.liabilities.length > 0 && (
+                            <div>
+                              <div className="flex items-center gap-2 mb-3">
+                                <CreditCard className="w-4 h-4 text-rose-600" />
+                                <h4 className="font-medium text-slate-700">Liabilities</h4>
+                                <span className="text-sm text-rose-500">
+                                  -${assets.liabilitiesValue.toLocaleString()}
+                                </span>
+                              </div>
+                              <div className="grid gap-2">
+                                {assets.liabilities.map((liability) => (
+                                  <div key={liability.id} className="flex items-center justify-between py-2 px-3 bg-rose-50 rounded-lg">
+                                    <div>
+                                      <span className="font-medium text-slate-900">{liability.name}</span>
+                                      {liability.liability_type && (
+                                        <Badge variant="secondary" className="ml-2 text-xs">{liability.liability_type}</Badge>
+                                      )}
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="font-medium text-rose-600">
+                                        -${(liability.outstanding_balance || 0).toLocaleString()}
+                                      </p>
+                                      {liability.interest_rate && (
+                                        <p className="text-xs text-slate-500">{liability.interest_rate}% interest</p>
                                       )}
                                     </div>
                                   </div>
