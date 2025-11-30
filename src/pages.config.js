@@ -8,6 +8,7 @@ import Accounts from './pages/Accounts';
 import Changelog from './pages/Changelog';
 import Transactions from './pages/Transactions';
 import CashDeposits from './pages/CashDeposits';
+import Liabilities from './pages/Liabilities';
 import __Layout from './Layout.jsx';
 
 
@@ -22,6 +23,7 @@ export const PAGES = {
     "Changelog": Changelog,
     "Transactions": Transactions,
     "CashDeposits": CashDeposits,
+    "Liabilities": Liabilities,
 }
 
 export const pagesConfig = {

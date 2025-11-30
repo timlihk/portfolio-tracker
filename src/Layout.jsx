@@ -14,7 +14,8 @@ import {
   Menu,
   X,
   ChevronRight,
-  Banknote
+  Banknote,
+  CreditCard
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
@@ -27,6 +28,7 @@ const navItems = [
   { name: 'Liquid Funds', page: 'LiquidFunds', icon: Waves },
   { name: 'PE Funds', page: 'PEFunds', icon: Briefcase },
   { name: 'PE Deals', page: 'PEDeals', icon: Building2 },
+  { name: 'Liabilities', page: 'Liabilities', icon: CreditCard },
   { name: 'Transactions', page: 'Transactions', icon: Receipt },
   { name: 'Changelog', page: 'Changelog', icon: History },
 ];
