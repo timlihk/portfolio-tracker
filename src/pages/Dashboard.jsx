@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import StatCard from '@/components/portfolio/StatCard';
 import AllocationChart from '@/components/portfolio/AllocationChart';
+import { useExchangeRates, useStockPrices, useBondPrices } from '@/components/portfolio/useMarketData';
 import { 
   TrendingUp, 
   Briefcase, 
@@ -10,10 +11,10 @@ import {
   Landmark, 
   Wallet,
   Waves,
-  ArrowUpRight,
-  ArrowDownRight
+  RefreshCw
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
 
 export default function Dashboard() {
   const { data: stocks = [] } = useQuery({
@@ -41,14 +42,33 @@ export default function Dashboard() {
     queryFn: () => base44.entities.LiquidFund.list()
   });
 
-  // Calculate totals
-  const stocksValue = stocks.reduce((sum, s) => sum + (s.shares * (s.current_price || s.average_cost)), 0);
-  const stocksCost = stocks.reduce((sum, s) => sum + (s.shares * s.average_cost), 0);
+  // Get exchange rates and real-time prices
+  const { convertToUSD, loading: ratesLoading } = useExchangeRates();
+  
+  const stockTickers = useMemo(() => stocks.map(s => s.ticker), [stocks]);
+  const { prices: stockPrices, loading: stockPricesLoading } = useStockPrices(stockTickers);
+  const { prices: bondPrices, loading: bondPricesLoading } = useBondPrices(bonds);
+
+  const isLoadingPrices = ratesLoading || stockPricesLoading || bondPricesLoading;
+
+  // Calculate totals with real-time prices and currency conversion
+  const stocksValue = stocks.reduce((sum, s) => {
+    const realTimePrice = stockPrices[s.ticker] || s.current_price || s.average_cost;
+    const valueInOriginalCurrency = s.shares * realTimePrice;
+    return sum + convertToUSD(valueInOriginalCurrency, s.currency);
+  }, 0);
+  const stocksCost = stocks.reduce((sum, s) => {
+    const costInOriginalCurrency = s.shares * s.average_cost;
+    return sum + convertToUSD(costInOriginalCurrency, s.currency);
+  }, 0);
   const stocksGain = stocksValue - stocksCost;
   const stocksGainPercent = stocksCost > 0 ? ((stocksGain / stocksCost) * 100).toFixed(1) : 0;
 
-  const bondsValue = bonds.reduce((sum, b) => sum + (b.current_value || b.purchase_price), 0);
-  const bondsCost = bonds.reduce((sum, b) => sum + b.purchase_price, 0);
+  const bondsValue = bonds.reduce((sum, b) => {
+    const realTimeValue = bondPrices[b.name] || b.current_value || b.purchase_price;
+    return sum + convertToUSD(realTimeValue, b.currency);
+  }, 0);
+  const bondsCost = bonds.reduce((sum, b) => sum + convertToUSD(b.purchase_price, b.currency), 0);
 
   const peFundsValue = peFunds.reduce((sum, f) => sum + (f.nav || 0) + (f.distributions || 0), 0);
   const peFundsCalled = peFunds.reduce((sum, f) => sum + (f.called_capital || 0), 0);
@@ -87,9 +107,22 @@ export default function Dashboard() {
     <div className="min-h-screen bg-slate-50/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Portfolio Overview</h1>
-          <p className="text-slate-500 mt-1">Track your investments across all asset classes</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Portfolio Overview</h1>
+            <p className="text-slate-500 mt-1">Track your investments across all asset classes</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {isLoadingPrices && (
+              <Badge variant="outline" className="flex items-center gap-2 py-1.5 px-3">
+                <RefreshCw className="w-3 h-3 animate-spin" />
+                Updating prices...
+              </Badge>
+            )}
+            <Badge variant="secondary" className="py-1.5 px-3">
+              All values in USD
+            </Badge>
+          </div>
         </div>
 
         {/* Main Stats */}
