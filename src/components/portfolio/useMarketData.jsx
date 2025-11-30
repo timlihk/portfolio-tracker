@@ -115,63 +115,39 @@ export function useStockPrices(tickers) {
       setLoading(true);
       setError(null);
       try {
+        // Use LLM with web search - this fetches from Yahoo Finance server-side (no CORS issues)
+        const tickerList = uniqueTickers.join(', ');
+        const result = await base44.integrations.Core.InvokeLLM({
+          prompt: `Get the current real-time stock prices for these tickers: ${tickerList}
+
+Search for each stock on Yahoo Finance and return the exact current market price shown.
+Return ONLY the numeric price for each ticker.`,
+          add_context_from_internet: true,
+          response_json_schema: {
+            type: "object",
+            properties: {
+              prices: { 
+                type: "object", 
+                description: "Ticker symbol to current price mapping",
+                additionalProperties: { type: "number" } 
+              }
+            },
+            required: ["prices"]
+          }
+        });
+        
         const fetchedPrices = {};
-        
-        // Try Finnhub free API (no CORS issues, free tier available)
-        // Or use corsproxy.io which is more reliable
-        const symbols = uniqueTickers.join(',');
-        const yahooUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols)}`;
-        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`;
-        
-        try {
-          const response = await fetch(proxyUrl);
-          console.log('Yahoo proxy response status:', response.status);
-          if (response.ok) {
-            const data = await response.json();
-            console.log('Yahoo Finance data:', data);
-            if (data?.quoteResponse?.result) {
-              for (const quote of data.quoteResponse.result) {
-                const price = quote.regularMarketPrice;
-                if (price && !isNaN(price)) {
-                  const matchedTicker = uniqueTickers.find(t => t.toUpperCase() === quote.symbol.toUpperCase()) || quote.symbol;
-                  fetchedPrices[matchedTicker] = price;
-                }
-              }
-            }
-          }
-        } catch (proxyErr) {
-          console.log('Yahoo proxy failed:', proxyErr.message);
-        }
-        
-        // Fallback to LLM for any missing tickers
-        const missingTickers = uniqueTickers.filter(t => !fetchedPrices[t]);
-        if (missingTickers.length > 0) {
-          console.log('Fetching via LLM for:', missingTickers);
-          const tickerList = missingTickers.join(', ');
-          const result = await base44.integrations.Core.InvokeLLM({
-            prompt: `Get current stock prices from Yahoo Finance for: ${tickerList}`,
-            add_context_from_internet: true,
-            response_json_schema: {
-              type: "object",
-              properties: {
-                prices: { type: "object", additionalProperties: { type: "number" } }
-              },
-              required: ["prices"]
-            }
-          });
-          
-          if (result?.prices) {
-            for (const [ticker, price] of Object.entries(result.prices)) {
-              const numPrice = Number(price);
-              if (!isNaN(numPrice) && numPrice > 0) {
-                const matchedTicker = missingTickers.find(t => t.toUpperCase() === ticker.toUpperCase()) || ticker;
-                fetchedPrices[matchedTicker] = numPrice;
-              }
+        if (result?.prices) {
+          for (const [ticker, price] of Object.entries(result.prices)) {
+            const numPrice = Number(price);
+            if (!isNaN(numPrice) && numPrice > 0) {
+              const matchedTicker = uniqueTickers.find(t => t.toUpperCase() === ticker.toUpperCase()) || ticker;
+              fetchedPrices[matchedTicker] = numPrice;
             }
           }
         }
         
-        console.log('Final stock prices:', fetchedPrices);
+        console.log('Stock prices from LLM:', fetchedPrices);
         setPrices(fetchedPrices);
       } catch (err) {
         console.error('Failed to fetch stock prices:', err);
