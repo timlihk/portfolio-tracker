@@ -72,8 +72,8 @@ export default function Dashboard() {
   const stocksGainPercent = stocksCost > 0 ? ((stocksGain / stocksCost) * 100).toFixed(1) : 0;
 
   const bondsValue = bonds.reduce((sum, b) => {
-    const realTimeValue = bondPrices[b.name] || b.current_value || b.purchase_price;
-    return sum + convertToUSD(realTimeValue, b.currency);
+    const realTimeValue = b.current_value || bondPrices[b.name] || b.purchase_price;
+    return sum + convertToUSD(realTimeValue || 0, b.currency);
   }, 0);
   const bondsCost = bonds.reduce((sum, b) => sum + convertToUSD(b.purchase_price, b.currency), 0);
 
@@ -88,12 +88,12 @@ export default function Dashboard() {
   const liquidFundsValue = liquidFunds.reduce((sum, f) => sum + (f.current_value || f.investment_amount), 0);
   const liquidFundsCost = liquidFunds.reduce((sum, f) => sum + f.investment_amount, 0);
 
-  const cashValue = cashDeposits.reduce((sum, c) => sum + convertToUSD(c.amount, c.currency), 0);
+  const cashValue = cashDeposits.reduce((sum, c) => sum + convertToUSD(c.amount || 0, c.currency), 0);
 
   const totalValue = stocksValue + bondsValue + peFundsValue + peDealsValue + liquidFundsValue + cashValue;
-  const totalCost = stocksCost + bondsCost + peFundsCalled + peDealsCost + liquidFundsCost;
+  const totalCost = stocksCost + bondsCost + peFundsCalled + peDealsCost + liquidFundsCost + cashValue;
   const totalGain = totalValue - totalCost;
-  const totalGainPercent = totalCost > 0 ? ((totalGain / totalCost) * 100).toFixed(1) : '0';
+  const totalGainPercent = totalCost > 0 ? ((totalGain / totalCost) * 100).toFixed(1) : '0.0';
 
   const allocationData = [
     { name: 'Stocks', value: stocksValue },
