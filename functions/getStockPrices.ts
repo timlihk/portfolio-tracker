@@ -5,27 +5,29 @@ export default async function getStockPrices(params, context) {
     return { prices: {} };
   }
   
-  const symbols = tickers.join(',');
-  const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols)}`;
-  
-  const response = await fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-    }
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Yahoo Finance API returned ${response.status}`);
-  }
-  
-  const data = await response.json();
   const prices = {};
   
-  if (data?.quoteResponse?.result) {
-    for (const quote of data.quoteResponse.result) {
-      if (quote.regularMarketPrice) {
-        prices[quote.symbol] = quote.regularMarketPrice;
+  // Fetch each ticker individually using Yahoo Finance chart API (more reliable)
+  for (const ticker of tickers) {
+    try {
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`;
+      
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const price = data?.chart?.result?.[0]?.meta?.regularMarketPrice;
+        if (price) {
+          prices[ticker] = price;
+        }
       }
+    } catch (e) {
+      console.log(`Failed to fetch ${ticker}:`, e.message);
     }
   }
   
