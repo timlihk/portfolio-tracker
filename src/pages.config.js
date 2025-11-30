@@ -7,6 +7,7 @@ import LiquidFunds from './pages/LiquidFunds';
 import Accounts from './pages/Accounts';
 import Changelog from './pages/Changelog';
 import Transactions from './pages/Transactions';
+import CashDeposits from './pages/CashDeposits';
 import __Layout from './Layout.jsx';
 
 
@@ -20,6 +21,7 @@ export const PAGES = {
     "Accounts": Accounts,
     "Changelog": Changelog,
     "Transactions": Transactions,
+    "CashDeposits": CashDeposits,
 }
 
 export const pagesConfig = {

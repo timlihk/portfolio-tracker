@@ -13,7 +13,8 @@ import {
   Receipt,
   Menu,
   X,
-  ChevronRight
+  ChevronRight,
+  Banknote
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,7 @@ const navItems = [
   { name: 'Accounts', page: 'Accounts', icon: Wallet },
   { name: 'Stocks', page: 'Stocks', icon: TrendingUp },
   { name: 'Bonds', page: 'Bonds', icon: Landmark },
+  { name: 'Cash & Deposits', page: 'CashDeposits', icon: Banknote },
   { name: 'Liquid Funds', page: 'LiquidFunds', icon: Waves },
   { name: 'PE Funds', page: 'PEFunds', icon: Briefcase },
   { name: 'PE Deals', page: 'PEDeals', icon: Building2 },
