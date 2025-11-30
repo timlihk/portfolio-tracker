@@ -12,6 +12,7 @@ import {
   Landmark, 
   Wallet,
   Waves,
+  Banknote,
   RefreshCw
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -41,6 +42,11 @@ export default function Dashboard() {
   const { data: liquidFunds = [] } = useQuery({
     queryKey: ['liquidFunds'],
     queryFn: () => base44.entities.LiquidFund.list()
+  });
+
+  const { data: cashDeposits = [] } = useQuery({
+    queryKey: ['cashDeposits'],
+    queryFn: () => base44.entities.CashDeposit.list()
   });
 
   // Get exchange rates and real-time prices
@@ -82,7 +88,9 @@ export default function Dashboard() {
   const liquidFundsValue = liquidFunds.reduce((sum, f) => sum + (f.current_value || f.investment_amount), 0);
   const liquidFundsCost = liquidFunds.reduce((sum, f) => sum + f.investment_amount, 0);
 
-  const totalValue = stocksValue + bondsValue + peFundsValue + peDealsValue + liquidFundsValue;
+  const cashValue = cashDeposits.reduce((sum, c) => sum + convertToUSD(c.amount, c.currency), 0);
+
+  const totalValue = stocksValue + bondsValue + peFundsValue + peDealsValue + liquidFundsValue + cashValue;
   const totalCost = stocksCost + bondsCost + peFundsCalled + peDealsCost + liquidFundsCost;
   const totalGain = totalValue - totalCost;
   const totalGainPercent = totalCost > 0 ? ((totalGain / totalCost) * 100).toFixed(1) : '0';
@@ -90,6 +98,7 @@ export default function Dashboard() {
   const allocationData = [
     { name: 'Stocks', value: stocksValue },
     { name: 'Bonds', value: bondsValue },
+    { name: 'Cash & Deposits', value: cashValue },
     { name: 'Liquid Funds', value: liquidFundsValue },
     { name: 'PE Funds', value: peFundsValue },
     { name: 'PE Deals', value: peDealsValue }
@@ -202,6 +211,16 @@ export default function Dashboard() {
             subValue={`${bonds.length} bonds`}
           />
           <StatCard
+            title="Cash & Deposits"
+            value={`$${cashValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+            icon={Banknote}
+            subValue={`${cashDeposits.length} positions`}
+          />
+        </div>
+
+        {/* Third Row Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+          <StatCard
             title="Liquid Funds"
             value={`$${liquidFundsValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
             icon={Waves}
@@ -209,9 +228,8 @@ export default function Dashboard() {
             trendValue={liquidFundsCost > 0 ? `${(((liquidFundsValue - liquidFundsCost) / liquidFundsCost) * 100).toFixed(1)}%` : null}
             subValue={`${liquidFunds.length} funds`}
           />
-        </div>
 
-        {/* Secondary Stats */}
+        {/* PE Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
           <StatCard
             title="Private Equity"
