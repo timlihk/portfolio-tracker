@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import PageHeader from '@/components/portfolio/PageHeader';
 import AssetTable from '@/components/portfolio/AssetTable';
 import AddAssetDialog from '@/components/portfolio/AddAssetDialog';
 import { Badge } from '@/components/ui/badge';
+import { useExchangeRates, useStockPrices, CURRENCY_SYMBOLS } from '@/components/portfolio/useMarketData';
+import { RefreshCw } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,14 +19,16 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const SECTORS = ['Technology', 'Healthcare', 'Finance', 'Energy', 'Consumer', 'Industrial', 'Real Estate', 'Utilities', 'Materials', 'Communications', 'Other'];
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS'];
 
 const getStockFields = (accounts) => [
   { name: 'ticker', label: 'Ticker Symbol', required: true, placeholder: 'AAPL' },
   { name: 'company_name', label: 'Company Name', placeholder: 'Apple Inc.' },
+  { name: 'currency', label: 'Currency', type: 'select', options: CURRENCIES },
   { name: 'account', label: 'Account', type: 'select', options: accounts.map(a => a.name), allowCustom: true },
   { name: 'shares', label: 'Number of Shares', type: 'number', required: true, placeholder: '100' },
   { name: 'average_cost', label: 'Average Cost per Share', type: 'number', required: true, placeholder: '150.00' },
-  { name: 'current_price', label: 'Current Price', type: 'number', placeholder: '175.00' },
+  { name: 'current_price', label: 'Current Price (leave empty for live)', type: 'number', placeholder: 'Auto-fetched' },
   { name: 'purchase_date', label: 'Purchase Date', type: 'date' },
   { name: 'sector', label: 'Sector', type: 'select', options: SECTORS },
   { name: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Additional notes...' }
@@ -48,6 +52,16 @@ export default function Stocks() {
   });
 
   const stockFields = getStockFields(accounts);
+
+  // Get real-time prices and exchange rates
+  const stockTickers = useMemo(() => stocks.map(s => s.ticker), [stocks]);
+  const { prices: stockPrices, loading: pricesLoading } = useStockPrices(stockTickers);
+  const { convertToUSD, loading: ratesLoading } = useExchangeRates();
+
+  const isLoading = pricesLoading || ratesLoading;
+
+  // Helper to get current price (real-time or manual)
+  const getCurrentPrice = (stock) => stockPrices[stock.ticker] || stock.current_price || stock.average_cost;
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Stock.create(data),
@@ -113,21 +127,36 @@ export default function Stocks() {
       key: 'average_cost', 
       label: 'Avg Cost',
       align: 'right',
-      render: (val) => `$${val?.toFixed(2)}`
+      render: (val, row) => {
+        const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
+        return `${symbol}${val?.toFixed(2)}`;
+      }
     },
     { 
       key: 'current_price', 
       label: 'Current',
       align: 'right',
-      render: (val, row) => val ? `$${val.toFixed(2)}` : `$${row.average_cost?.toFixed(2)}`
+      render: (val, row) => {
+        const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
+        const price = getCurrentPrice(row);
+        const isLive = stockPrices[row.ticker] && !row.current_price;
+        return (
+          <div className="flex items-center justify-end gap-1">
+            <span>{symbol}{price.toFixed(2)}</span>
+            {isLive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Live price" />}
+          </div>
+        );
+      }
     },
     { 
       key: 'market_value', 
       label: 'Market Value',
       align: 'right',
       render: (_, row) => {
-        const value = row.shares * (row.current_price || row.average_cost);
-        return <span className="font-medium">${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
+        const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
+        const price = getCurrentPrice(row);
+        const value = row.shares * price;
+        return <span className="font-medium">{symbol}{value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
       }
     },
     { 
@@ -135,25 +164,27 @@ export default function Stocks() {
       label: 'Gain/Loss',
       align: 'right',
       render: (_, row) => {
+        const price = getCurrentPrice(row);
         const cost = row.shares * row.average_cost;
-        const value = row.shares * (row.current_price || row.average_cost);
+        const value = row.shares * price;
         const gain = value - cost;
         const gainPct = cost > 0 ? ((gain / cost) * 100).toFixed(1) : 0;
         const isPositive = gain >= 0;
+        const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
         return (
           <div className={isPositive ? 'text-emerald-600' : 'text-rose-600'}>
             <span className="font-medium">{isPositive ? '+' : ''}{gainPct}%</span>
-            <p className="text-xs">${Math.abs(gain).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p className="text-xs">{symbol}{Math.abs(gain).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           </div>
         );
       }
     },
     { 
-      key: 'sector', 
-      label: 'Sector',
-      render: (val) => val && (
-        <Badge variant="secondary" className="bg-slate-100 text-slate-700 font-normal">
-          {val}
+      key: 'currency', 
+      label: 'Ccy',
+      render: (val) => (
+        <Badge variant="outline" className="font-normal text-xs">
+          {val || 'USD'}
         </Badge>
       )
     },
@@ -168,16 +199,24 @@ export default function Stocks() {
     }
   ];
 
-  // Calculate totals
-  const totalValue = stocks.reduce((sum, s) => sum + (s.shares * (s.current_price || s.average_cost)), 0);
-  const totalCost = stocks.reduce((sum, s) => sum + (s.shares * s.average_cost), 0);
+  // Calculate totals in USD
+  const totalValueUSD = stocks.reduce((sum, s) => {
+    const price = getCurrentPrice(s);
+    const value = s.shares * price;
+    return sum + convertToUSD(value, s.currency);
+  }, 0);
 
   return (
     <div className="min-h-screen bg-slate-50/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <PageHeader
           title="Stocks"
-          subtitle={`${stocks.length} positions • $${totalValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} total value`}
+          subtitle={
+            <div className="flex items-center gap-2">
+              <span>{stocks.length} positions • ${totalValueUSD.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USD</span>
+              {isLoading && <RefreshCw className="w-3 h-3 animate-spin text-slate-400" />}
+            </div>
+          }
           onAdd={() => {
             setFormData({});
             setDialogOpen(true);
