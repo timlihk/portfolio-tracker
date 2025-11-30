@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS'];
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS', 'HKD'];
 
 export function useExchangeRates() {
   const [rates, setRates] = useState({ USD: 1 });
@@ -11,7 +11,7 @@ export function useExchangeRates() {
     const fetchRates = async () => {
       try {
         const result = await base44.integrations.Core.InvokeLLM({
-          prompt: `Get the current exchange rates to USD for: EUR, GBP, CHF, JPY, CAD, AUD, ILS. Return accurate real-time rates.`,
+          prompt: `Get the current exchange rates to USD for: EUR, GBP, CHF, JPY, CAD, AUD, ILS, HKD. Return accurate real-time rates.`,
           add_context_from_internet: true,
           response_json_schema: {
             type: "object",
@@ -22,7 +22,8 @@ export function useExchangeRates() {
               JPY: { type: "number", description: "JPY to USD rate" },
               CAD: { type: "number", description: "CAD to USD rate" },
               AUD: { type: "number", description: "AUD to USD rate" },
-              ILS: { type: "number", description: "ILS to USD rate" }
+              ILS: { type: "number", description: "ILS to USD rate" },
+              HKD: { type: "number", description: "HKD to USD rate" }
             }
           }
         });
@@ -38,7 +39,8 @@ export function useExchangeRates() {
           JPY: 0.0067,
           CAD: 0.74,
           AUD: 0.65,
-          ILS: 0.27
+          ILS: 0.27,
+          HKD: 0.13
         });
       } finally {
         setLoading(false);
@@ -208,7 +210,8 @@ export const CURRENCY_SYMBOLS = {
   JPY: '¥',
   CAD: 'C$',
   AUD: 'A$',
-  ILS: '₪'
+  ILS: '₪',
+  HKD: 'HK$'
 };
 
 export function formatCurrency(amount, currency = 'USD') {

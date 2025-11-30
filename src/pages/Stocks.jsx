@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const SECTORS = ['Technology', 'Healthcare', 'Finance', 'Energy', 'Consumer', 'Industrial', 'Real Estate', 'Utilities', 'Materials', 'Communications', 'Other'];
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS'];
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS', 'HKD'];
 
 const getStockFields = (accounts) => [
   { name: 'ticker', label: 'Ticker Symbol', required: true, placeholder: 'AAPL' },
