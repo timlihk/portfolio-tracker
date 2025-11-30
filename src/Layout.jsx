@@ -7,6 +7,7 @@ import {
   Landmark, 
   Briefcase, 
   Building2,
+  Waves,
   Menu,
   X,
   ChevronRight
@@ -17,6 +18,7 @@ const navItems = [
   { name: 'Dashboard', page: 'Dashboard', icon: LayoutDashboard },
   { name: 'Stocks', page: 'Stocks', icon: TrendingUp },
   { name: 'Bonds', page: 'Bonds', icon: Landmark },
+  { name: 'Liquid Funds', page: 'LiquidFunds', icon: Waves },
   { name: 'PE Funds', page: 'PEFunds', icon: Briefcase },
   { name: 'PE Deals', page: 'PEDeals', icon: Building2 },
 ];

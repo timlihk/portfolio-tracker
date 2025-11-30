@@ -9,6 +9,7 @@ import {
   Building2, 
   Landmark, 
   Wallet,
+  Waves,
   ArrowUpRight,
   ArrowDownRight
 } from 'lucide-react';
@@ -35,6 +36,11 @@ export default function Dashboard() {
     queryFn: () => base44.entities.PEDeal.list()
   });
 
+  const { data: liquidFunds = [] } = useQuery({
+    queryKey: ['liquidFunds'],
+    queryFn: () => base44.entities.LiquidFund.list()
+  });
+
   // Calculate totals
   const stocksValue = stocks.reduce((sum, s) => sum + (s.shares * (s.current_price || s.average_cost)), 0);
   const stocksCost = stocks.reduce((sum, s) => sum + (s.shares * s.average_cost), 0);
@@ -52,14 +58,18 @@ export default function Dashboard() {
   const peDealsValue = peDeals.reduce((sum, d) => sum + (d.current_value || d.investment_amount), 0);
   const peDealsCost = peDeals.reduce((sum, d) => sum + d.investment_amount, 0);
 
-  const totalValue = stocksValue + bondsValue + peFundsValue + peDealsValue;
-  const totalCost = stocksCost + bondsCost + peFundsCalled + peDealsCost;
+  const liquidFundsValue = liquidFunds.reduce((sum, f) => sum + (f.current_value || f.investment_amount), 0);
+  const liquidFundsCost = liquidFunds.reduce((sum, f) => sum + f.investment_amount, 0);
+
+  const totalValue = stocksValue + bondsValue + peFundsValue + peDealsValue + liquidFundsValue;
+  const totalCost = stocksCost + bondsCost + peFundsCalled + peDealsCost + liquidFundsCost;
   const totalGain = totalValue - totalCost;
   const totalGainPercent = totalCost > 0 ? ((totalGain / totalCost) * 100).toFixed(1) : 0;
 
   const allocationData = [
     { name: 'Stocks', value: stocksValue },
     { name: 'Bonds', value: bondsValue },
+    { name: 'Liquid Funds', value: liquidFundsValue },
     { name: 'PE Funds', value: peFundsValue },
     { name: 'PE Deals', value: peDealsValue }
   ].filter(item => item.value > 0);
@@ -68,6 +78,7 @@ export default function Dashboard() {
   const allAssets = [
     ...stocks.map(s => ({ ...s, type: 'Stock', date: s.purchase_date })),
     ...bonds.map(b => ({ ...b, type: 'Bond', date: b.purchase_date })),
+    ...liquidFunds.map(f => ({ ...f, type: 'Liquid Fund', date: f.investment_date })),
     ...peFunds.map(f => ({ ...f, type: 'PE Fund', date: f.commitment_date })),
     ...peDeals.map(d => ({ ...d, type: 'PE Deal', date: d.investment_date }))
   ].filter(a => a.date).sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
@@ -106,10 +117,28 @@ export default function Dashboard() {
             subValue={`${bonds.length} bonds`}
           />
           <StatCard
+            title="Liquid Funds"
+            value={`$${liquidFundsValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+            icon={Waves}
+            trend={liquidFundsValue - liquidFundsCost >= 0 ? 'up' : 'down'}
+            trendValue={liquidFundsCost > 0 ? `${(((liquidFundsValue - liquidFundsCost) / liquidFundsCost) * 100).toFixed(1)}%` : '0%'}
+            subValue={`${liquidFunds.length} funds`}
+          />
+        </div>
+
+        {/* Secondary Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+          <StatCard
             title="Private Equity"
             value={`$${(peFundsValue + peDealsValue).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
             icon={Briefcase}
             subValue={`$${peFundsUnfunded.toLocaleString()} unfunded`}
+          />
+          <StatCard
+            title="Alternative Investments"
+            value={`$${(peFundsValue + peDealsValue + liquidFundsValue).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+            icon={Building2}
+            subValue={`${peFunds.length + peDeals.length + liquidFunds.length} positions`}
           />
         </div>
 
@@ -136,10 +165,12 @@ export default function Dashboard() {
                       <div className={`p-2 rounded-xl ${
                         asset.type === 'Stock' ? 'bg-sky-50' :
                         asset.type === 'Bond' ? 'bg-emerald-50' :
+                        asset.type === 'Liquid Fund' ? 'bg-cyan-50' :
                         asset.type === 'PE Fund' ? 'bg-violet-50' : 'bg-amber-50'
                       }`}>
                         {asset.type === 'Stock' && <TrendingUp className="w-4 h-4 text-sky-600" />}
                         {asset.type === 'Bond' && <Landmark className="w-4 h-4 text-emerald-600" />}
+                        {asset.type === 'Liquid Fund' && <Waves className="w-4 h-4 text-cyan-600" />}
                         {asset.type === 'PE Fund' && <Briefcase className="w-4 h-4 text-violet-600" />}
                         {asset.type === 'PE Deal' && <Building2 className="w-4 h-4 text-amber-600" />}
                       </div>
