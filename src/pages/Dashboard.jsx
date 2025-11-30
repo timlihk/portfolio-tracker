@@ -56,7 +56,10 @@ export default function Dashboard() {
 
   // Get exchange rates and real-time prices
   const exchangeRates = useExchangeRates();
-  const convertToUSD = exchangeRates?.convertToUSD || ((v) => v || 0);
+  const convertToUSD = exchangeRates?.convertToUSD || ((v, currency) => {
+    if (!currency || currency === 'USD') return Number(v) || 0;
+    return Number(v) || 0;
+  });
   const ratesLoading = exchangeRates?.loading || false;
   
   const stockTickers = useMemo(() => stocks.map(s => s.ticker).filter(Boolean), [stocks]);
@@ -72,18 +75,21 @@ export default function Dashboard() {
 
   // Calculate totals with real-time prices and currency conversion
   const stocksValue = stocks.reduce((sum, s) => {
-    const realTimePrice = stockPrices[s.ticker] || s.current_price || s.average_cost || 0;
-    const valueInOriginalCurrency = (s.shares || 0) * realTimePrice;
+    const realTimePrice = Number(stockPrices[s.ticker]) || Number(s.current_price) || Number(s.average_cost) || 0;
+    const shares = Number(s.shares) || 0;
+    const valueInOriginalCurrency = shares * realTimePrice;
     const converted = convertToUSD(valueInOriginalCurrency, s.currency);
     return sum + (isNaN(converted) ? 0 : converted);
   }, 0);
   const stocksCost = stocks.reduce((sum, s) => {
-    const costInOriginalCurrency = (s.shares || 0) * (s.average_cost || 0);
+    const shares = Number(s.shares) || 0;
+    const avgCost = Number(s.average_cost) || 0;
+    const costInOriginalCurrency = shares * avgCost;
     const converted = convertToUSD(costInOriginalCurrency, s.currency);
     return sum + (isNaN(converted) ? 0 : converted);
   }, 0);
-  const stocksGain = (stocksValue || 0) - (stocksCost || 0);
-  const stocksGainPercent = stocksCost > 0 ? (((stocksGain || 0) / stocksCost) * 100).toFixed(1) : '0.0';
+  const stocksGain = stocksValue - stocksCost;
+  const stocksGainPercent = stocksCost > 0 ? ((stocksGain / stocksCost) * 100).toFixed(1) : '0.0';
 
   const bondsValue = bonds.reduce((sum, b) => {
     const realTimeValue = b.current_value || bondPrices[b.name] || b.purchase_price || 0;
@@ -117,11 +123,11 @@ export default function Dashboard() {
     return sum + (isNaN(converted) ? 0 : converted);
   }, 0);
 
-  const totalAssets = (stocksValue || 0) + (bondsValue || 0) + (peFundsValue || 0) + (peDealsValue || 0) + (liquidFundsValue || 0) + (cashValue || 0);
+  const totalAssets = stocksValue + bondsValue + peFundsValue + peDealsValue + liquidFundsValue + cashValue;
   const totalValue = totalAssets - totalLiabilities;
-  const totalCost = (stocksCost || 0) + (bondsCost || 0) + (peFundsCalled || 0) + (peDealsCost || 0) + (liquidFundsCost || 0) + (cashValue || 0) - totalLiabilities;
-  const totalGain = (totalValue || 0) - (totalCost || 0);
-  const totalGainPercent = totalCost > 0 ? (((totalGain || 0) / totalCost) * 100).toFixed(1) : '0.0';
+  const totalCost = stocksCost + bondsCost + peFundsCalled + peDealsCost + liquidFundsCost + cashValue - totalLiabilities;
+  const totalGain = totalValue - totalCost;
+  const totalGainPercent = totalCost > 0 ? ((totalGain / totalCost) * 100).toFixed(1) : '0.0';
 
   const allocationData = [
     { name: 'Stocks', value: stocksValue },
