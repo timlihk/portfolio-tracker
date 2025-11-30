@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -16,7 +16,70 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
+
+function SelectWithCustom({ value, onChange, options, placeholder }) {
+  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [newValue, setNewValue] = useState('');
+
+  const handleAddNew = () => {
+    if (newValue.trim()) {
+      onChange(newValue.trim());
+      setNewValue('');
+      setIsAddingNew(false);
+    }
+  };
+
+  if (isAddingNew) {
+    return (
+      <div className="flex gap-2">
+        <Input
+          value={newValue}
+          onChange={(e) => setNewValue(e.target.value)}
+          placeholder="Enter new account name"
+          className="h-11 flex-1"
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleAddNew();
+            }
+            if (e.key === 'Escape') {
+              setIsAddingNew(false);
+              setNewValue('');
+            }
+          }}
+        />
+        <Button type="button" onClick={handleAddNew} className="h-11">Add</Button>
+        <Button type="button" variant="outline" onClick={() => { setIsAddingNew(false); setNewValue(''); }} className="h-11">Cancel</Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex gap-2">
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="h-11 flex-1">
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((opt) => (
+            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Button 
+        type="button" 
+        variant="outline" 
+        onClick={() => setIsAddingNew(true)}
+        className="h-11 px-3"
+        title="Add new account"
+      >
+        <Plus className="w-4 h-4" />
+      </Button>
+    </div>
+  );
+}
 
 export default function AddAssetDialog({
   open,
@@ -43,7 +106,14 @@ export default function AddAssetDialog({
                 {field.required && <span className="text-rose-500 ml-1">*</span>}
               </Label>
               
-              {field.type === 'select' ? (
+              {field.type === 'select' && field.allowCustom ? (
+                <SelectWithCustom
+                  value={data[field.name] || ''}
+                  onChange={(value) => onChange(field.name, value)}
+                  options={field.options}
+                  placeholder={field.placeholder || `Select ${field.label.toLowerCase()}`}
+                />
+              ) : field.type === 'select' ? (
                 <Select
                   value={data[field.name] || ''}
                   onValueChange={(value) => onChange(field.name, value)}
