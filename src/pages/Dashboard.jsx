@@ -85,7 +85,7 @@ export default function Dashboard() {
   const totalValue = stocksValue + bondsValue + peFundsValue + peDealsValue + liquidFundsValue;
   const totalCost = stocksCost + bondsCost + peFundsCalled + peDealsCost + liquidFundsCost;
   const totalGain = totalValue - totalCost;
-  const totalGainPercent = totalCost > 0 ? ((totalGain / totalCost) * 100).toFixed(1) : 0;
+  const totalGainPercent = totalCost > 0 ? ((totalGain / totalCost) * 100).toFixed(1) : '0';
 
   const allocationData = [
     { name: 'Stocks', value: stocksValue },
@@ -183,16 +183,16 @@ export default function Dashboard() {
             title="Total Value"
             value={`$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
             icon={Wallet}
-            trend={Number(totalGainPercent) >= 0 ? 'up' : 'down'}
-            trendValue={`${totalGainPercent}%`}
+            trend={totalCost > 0 ? (Number(totalGainPercent) >= 0 ? 'up' : 'down') : null}
+            trendValue={totalCost > 0 ? `${totalGainPercent}%` : null}
             subValue="all time"
           />
           <StatCard
             title="Stocks"
             value={`$${stocksValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
             icon={TrendingUp}
-            trend={Number(stocksGainPercent) >= 0 ? 'up' : 'down'}
-            trendValue={`${stocksGainPercent}%`}
+            trend={stocksCost > 0 ? (Number(stocksGainPercent) >= 0 ? 'up' : 'down') : null}
+            trendValue={stocksCost > 0 ? `${stocksGainPercent}%` : null}
             subValue={`${stocks.length} positions`}
           />
           <StatCard
@@ -205,8 +205,8 @@ export default function Dashboard() {
             title="Liquid Funds"
             value={`$${liquidFundsValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
             icon={Waves}
-            trend={(liquidFundsValue - liquidFundsCost) >= 0 ? 'up' : 'down'}
-            trendValue={liquidFundsCost > 0 ? `${(((liquidFundsValue - liquidFundsCost) / liquidFundsCost) * 100).toFixed(1)}%` : '0%'}
+            trend={liquidFundsCost > 0 ? ((liquidFundsValue - liquidFundsCost) >= 0 ? 'up' : 'down') : null}
+            trendValue={liquidFundsCost > 0 ? `${(((liquidFundsValue - liquidFundsCost) / liquidFundsCost) * 100).toFixed(1)}%` : null}
             subValue={`${liquidFunds.length} funds`}
           />
         </div>
