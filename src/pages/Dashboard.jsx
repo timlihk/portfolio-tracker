@@ -183,7 +183,7 @@ export default function Dashboard() {
             title="Total Value"
             value={`$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
             icon={Wallet}
-            trend={totalGain >= 0 ? 'up' : 'down'}
+            trend={Number(totalGainPercent) >= 0 ? 'up' : 'down'}
             trendValue={`${totalGainPercent}%`}
             subValue="all time"
           />
@@ -191,7 +191,7 @@ export default function Dashboard() {
             title="Stocks"
             value={`$${stocksValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
             icon={TrendingUp}
-            trend={stocksGain >= 0 ? 'up' : 'down'}
+            trend={Number(stocksGainPercent) >= 0 ? 'up' : 'down'}
             trendValue={`${stocksGainPercent}%`}
             subValue={`${stocks.length} positions`}
           />
@@ -205,7 +205,7 @@ export default function Dashboard() {
             title="Liquid Funds"
             value={`$${liquidFundsValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
             icon={Waves}
-            trend={liquidFundsValue - liquidFundsCost >= 0 ? 'up' : 'down'}
+            trend={(liquidFundsValue - liquidFundsCost) >= 0 ? 'up' : 'down'}
             trendValue={liquidFundsCost > 0 ? `${(((liquidFundsValue - liquidFundsCost) / liquidFundsCost) * 100).toFixed(1)}%` : '0%'}
             subValue={`${liquidFunds.length} funds`}
           />
