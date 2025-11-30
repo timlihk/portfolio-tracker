@@ -35,7 +35,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { useExchangeRates } from '@/components/portfolio/useMarketData';
+import { useExchangeRates, useStockPrices } from '@/components/portfolio/useMarketData';
 
 const ACCOUNT_TYPES = ['Brokerage', 'IRA', '401k', 'Roth IRA', 'Bank', 'Other'];
 
@@ -73,6 +73,9 @@ export default function Accounts() {
   });
 
   const { convertToUSD } = useExchangeRates();
+  
+  const stockTickers = stocks.map(s => s.ticker).filter(Boolean);
+  const { prices: stockPrices } = useStockPrices(stockTickers);
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Account.create(data),
@@ -125,7 +128,8 @@ export default function Accounts() {
     const accountCash = cashDeposits.filter(c => c.account === accountName);
     
     const stocksValue = accountStocks.reduce((sum, s) => {
-      const value = s.shares * (s.current_price || s.average_cost);
+      const price = stockPrices[s.ticker] || s.current_price || s.average_cost;
+      const value = s.shares * price;
       return sum + convertToUSD(value, s.currency);
     }, 0);
     const bondsValue = accountBonds.reduce((sum, b) => {
@@ -156,7 +160,10 @@ export default function Accounts() {
   const unassignedStocks = stocks.filter(s => !s.account);
   const unassignedBonds = bonds.filter(b => !b.account);
   const unassignedValue = 
-    unassignedStocks.reduce((sum, s) => sum + convertToUSD(s.shares * (s.current_price || s.average_cost), s.currency), 0) +
+    unassignedStocks.reduce((sum, s) => {
+      const price = stockPrices[s.ticker] || s.current_price || s.average_cost;
+      return sum + convertToUSD(s.shares * price, s.currency);
+    }, 0) +
     unassignedBonds.reduce((sum, b) => sum + convertToUSD(b.current_value || b.purchase_price, b.currency), 0);
 
   return (
@@ -269,7 +276,7 @@ export default function Accounts() {
                                     </div>
                                     <div className="text-right">
                                       <p className="font-medium">
-                                        ${convertToUSD(stock.shares * (stock.current_price || stock.average_cost), stock.currency).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        ${convertToUSD(stock.shares * (stockPrices[stock.ticker] || stock.current_price || stock.average_cost), stock.currency).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                       </p>
                                       <p className="text-xs text-slate-500">{stock.shares} shares {stock.currency && stock.currency !== 'USD' ? `(${stock.currency})` : ''}</p>
                                     </div>
@@ -437,7 +444,7 @@ export default function Accounts() {
                                   )}
                                 </div>
                                 <p className="font-medium">
-                                  ${convertToUSD(stock.shares * (stock.current_price || stock.average_cost), stock.currency).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  ${convertToUSD(stock.shares * (stockPrices[stock.ticker] || stock.current_price || stock.average_cost), stock.currency).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </p>
                               </div>
                             ))}
