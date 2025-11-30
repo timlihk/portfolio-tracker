@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Building2, TrendingUp, Landmark, ChevronDown, ChevronUp, Pencil, Trash2, CreditCard } from 'lucide-react';
+import { Plus, Building2, TrendingUp, Landmark, ChevronDown, ChevronUp, Pencil, Trash2, CreditCard, Banknote } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -67,6 +67,11 @@ export default function Accounts() {
     queryFn: () => base44.entities.Liability.list()
   });
 
+  const { data: cashDeposits = [] } = useQuery({
+    queryKey: ['cashDeposits'],
+    queryFn: () => base44.entities.CashDeposit.list()
+  });
+
   const { convertToUSD } = useExchangeRates();
 
   const createMutation = useMutation({
@@ -117,6 +122,7 @@ export default function Accounts() {
     const accountStocks = stocks.filter(s => s.account === accountName);
     const accountBonds = bonds.filter(b => b.account === accountName);
     const accountLiabilities = liabilities.filter(l => l.account === accountName && l.status !== 'Paid Off');
+    const accountCash = cashDeposits.filter(c => c.account === accountName);
     
     const stocksValue = accountStocks.reduce((sum, s) => {
       const value = s.shares * (s.current_price || s.average_cost);
@@ -129,15 +135,20 @@ export default function Accounts() {
     const liabilitiesValue = accountLiabilities.reduce((sum, l) => {
       return sum + convertToUSD(l.outstanding_balance || 0, l.currency);
     }, 0);
+    const cashValue = accountCash.reduce((sum, c) => {
+      return sum + convertToUSD(c.amount || 0, c.currency);
+    }, 0);
     
     return {
       stocks: accountStocks,
       bonds: accountBonds,
       liabilities: accountLiabilities,
+      cash: accountCash,
       stocksValue,
       bondsValue,
       liabilitiesValue,
-      totalValue: stocksValue + bondsValue - liabilitiesValue
+      cashValue,
+      totalValue: stocksValue + bondsValue + cashValue - liabilitiesValue
     };
   };
 
@@ -201,7 +212,7 @@ export default function Accounts() {
                               ${assets.totalValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                             </p>
                             <p className="text-sm text-slate-500">
-                              {assets.stocks.length} stocks • {assets.bonds.length} bonds{assets.liabilities.length > 0 ? ` • ${assets.liabilities.length} loans` : ''}
+                              {assets.stocks.length} stocks • {assets.bonds.length} bonds{assets.cash.length > 0 ? ` • ${assets.cash.length} cash` : ''}{assets.liabilities.length > 0 ? ` • ${assets.liabilities.length} loans` : ''}
                             </p>
                           </div>
                           <div className="flex items-center gap-1">
@@ -234,7 +245,7 @@ export default function Accounts() {
                   
                   <CollapsibleContent>
                     <CardContent className="pt-0 border-t">
-                      {assets.stocks.length === 0 && assets.bonds.length === 0 && assets.liabilities.length === 0 ? (
+                      {assets.stocks.length === 0 && assets.bonds.length === 0 && assets.cash.length === 0 && assets.liabilities.length === 0 ? (
                         <p className="text-slate-400 text-center py-8">No assets in this account</p>
                       ) : (
                         <div className="space-y-6 pt-4">
@@ -292,6 +303,38 @@ export default function Accounts() {
                                       </p>
                                       {bond.coupon_rate && (
                                         <p className="text-xs text-slate-500">{bond.coupon_rate}% coupon {bond.currency && bond.currency !== 'USD' ? `(${bond.currency})` : ''}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {assets.cash.length > 0 && (
+                            <div>
+                              <div className="flex items-center gap-2 mb-3">
+                                <Banknote className="w-4 h-4 text-amber-600" />
+                                <h4 className="font-medium text-slate-700">Cash & Deposits</h4>
+                                <span className="text-sm text-slate-400">
+                                  ${assets.cashValue.toLocaleString()}
+                                </span>
+                              </div>
+                              <div className="grid gap-2">
+                                {assets.cash.map((deposit) => (
+                                  <div key={deposit.id} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
+                                    <div>
+                                      <span className="font-medium text-slate-900">{deposit.name}</span>
+                                      {deposit.deposit_type && (
+                                        <Badge variant="secondary" className="ml-2 text-xs">{deposit.deposit_type}</Badge>
+                                      )}
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="font-medium">
+                                        ${convertToUSD(deposit.amount || 0, deposit.currency).toLocaleString()}
+                                      </p>
+                                      {deposit.interest_rate && (
+                                        <p className="text-xs text-slate-500">{deposit.interest_rate}% interest {deposit.currency && deposit.currency !== 'USD' ? `(${deposit.currency})` : ''}</p>
                                       )}
                                     </div>
                                   </div>
