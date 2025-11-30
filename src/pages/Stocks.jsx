@@ -135,7 +135,7 @@ export default function Stocks() {
       align: 'right',
       render: (val, row) => {
         const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
-        return `${symbol}${val?.toFixed(2)}`;
+        return `${symbol}${(val || 0).toFixed(2)}`;
       }
     },
     { 
@@ -161,7 +161,7 @@ export default function Stocks() {
       render: (_, row) => {
         const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
         const price = getCurrentPrice(row);
-        const value = row.shares * price;
+        const value = (row.shares || 0) * price;
         return <span className="font-medium">{symbol}{value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
       }
     },
@@ -171,10 +171,10 @@ export default function Stocks() {
       align: 'right',
       render: (_, row) => {
         const price = getCurrentPrice(row);
-        const cost = row.shares * row.average_cost;
-        const value = row.shares * price;
+        const cost = (row.shares || 0) * (row.average_cost || 0);
+        const value = (row.shares || 0) * price;
         const gain = value - cost;
-        const gainPct = cost > 0 ? ((gain / cost) * 100).toFixed(1) : 0;
+        const gainPct = cost > 0 ? ((gain / cost) * 100).toFixed(1) : '0.0';
         const isPositive = gain >= 0;
         const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
         return (
@@ -208,8 +208,8 @@ export default function Stocks() {
   // Calculate totals in USD
   const totalValueUSD = stocks.reduce((sum, s) => {
     const price = getCurrentPrice(s);
-    const value = s.shares * price;
-    return sum + convertToUSD(value, s.currency);
+    const value = (s.shares || 0) * price;
+    return sum + convertToUSD(value || 0, s.currency);
   }, 0);
 
   return (
