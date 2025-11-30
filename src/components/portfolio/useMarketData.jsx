@@ -115,26 +115,8 @@ export function useStockPrices(tickers) {
       setLoading(true);
       setError(null);
       try {
-        // Use LLM with web search - this fetches from Yahoo Finance server-side (no CORS issues)
-        const tickerList = uniqueTickers.join(', ');
-        const result = await base44.integrations.Core.InvokeLLM({
-          prompt: `Get the current real-time stock prices for these tickers: ${tickerList}
-
-Search for each stock on Yahoo Finance and return the exact current market price shown.
-Return ONLY the numeric price for each ticker.`,
-          add_context_from_internet: true,
-          response_json_schema: {
-            type: "object",
-            properties: {
-              prices: { 
-                type: "object", 
-                description: "Ticker symbol to current price mapping",
-                additionalProperties: { type: "number" } 
-              }
-            },
-            required: ["prices"]
-          }
-        });
+        // Use backend function to fetch from Yahoo Finance (no CORS issues)
+        const result = await base44.functions.getStockPrices({ tickers: uniqueTickers });
         
         const fetchedPrices = {};
         if (result?.prices) {
@@ -147,7 +129,7 @@ Return ONLY the numeric price for each ticker.`,
           }
         }
         
-        console.log('Stock prices from LLM:', fetchedPrices);
+        console.log('Stock prices from Yahoo Finance:', fetchedPrices);
         setPrices(fetchedPrices);
       } catch (err) {
         console.error('Failed to fetch stock prices:', err);
