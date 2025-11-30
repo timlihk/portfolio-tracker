@@ -4,6 +4,7 @@ import Bonds from './pages/Bonds';
 import PEFunds from './pages/PEFunds';
 import PEDeals from './pages/PEDeals';
 import LiquidFunds from './pages/LiquidFunds';
+import Accounts from './pages/Accounts';
 import __Layout from './Layout.jsx';
 
 
@@ -14,6 +15,7 @@ export const PAGES = {
     "PEFunds": PEFunds,
     "PEDeals": PEDeals,
     "LiquidFunds": LiquidFunds,
+    "Accounts": Accounts,
 }
 
 export const pagesConfig = {

@@ -8,6 +8,7 @@ import {
   Briefcase, 
   Building2,
   Waves,
+  Wallet,
   Menu,
   X,
   ChevronRight
@@ -16,6 +17,7 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { name: 'Dashboard', page: 'Dashboard', icon: LayoutDashboard },
+  { name: 'Accounts', page: 'Accounts', icon: Wallet },
   { name: 'Stocks', page: 'Stocks', icon: TrendingUp },
   { name: 'Bonds', page: 'Bonds', icon: Landmark },
   { name: 'Liquid Funds', page: 'LiquidFunds', icon: Waves },
