@@ -115,55 +115,63 @@ export function useStockPrices(tickers) {
       setLoading(true);
       setError(null);
       try {
-        // Make individual requests for each ticker to improve accuracy
-        const tickerList = uniqueTickers.join(', ');
-        const result = await base44.integrations.Core.InvokeLLM({
-          prompt: `Look up the CURRENT stock price for each of these tickers on Yahoo Finance or Google Finance: ${tickerList}
-
-IMPORTANT:
-- Search for the EXACT ticker symbol on finance websites
-- Return the current/latest trading price per share
-- Use the exact ticker symbols provided as keys
-- Prices should be the price per single share (not total market cap)
-
-Example response format:
-{"prices": {"AAPL": 189.95, "TSLA": 248.50}}
-
-Tickers to look up: ${tickerList}`,
-          add_context_from_internet: true,
-          response_json_schema: {
-            type: "object",
-            properties: {
-              prices: {
-                type: "object",
-                description: "Map of ticker symbol to current price per share",
-                additionalProperties: { type: "number" }
+        const fetchedPrices = {};
+        
+        // Fetch from Yahoo Finance API via query1 endpoint
+        const symbols = uniqueTickers.join(',');
+        const response = await fetch(
+          `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols)}`
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data?.quoteResponse?.result) {
+            for (const quote of data.quoteResponse.result) {
+              const price = quote.regularMarketPrice || quote.price;
+              if (price && !isNaN(price)) {
+                const matchedTicker = uniqueTickers.find(t => t.toUpperCase() === quote.symbol.toUpperCase()) || quote.symbol;
+                fetchedPrices[matchedTicker] = price;
               }
-            },
-            required: ["prices"]
-          }
-        });
-        
-        console.log('Stock price response:', result);
-        
-        if (result && result.prices && typeof result.prices === 'object') {
-          // Validate all values are numbers
-          const validPrices = {};
-          for (const [ticker, price] of Object.entries(result.prices)) {
-            const numPrice = Number(price);
-            if (!isNaN(numPrice) && numPrice > 0) {
-              // Match ticker case-insensitively but store with original case
-              const matchedTicker = uniqueTickers.find(t => t.toUpperCase() === ticker.toUpperCase()) || ticker;
-              validPrices[matchedTicker] = numPrice;
             }
           }
-          console.log('Valid prices:', validPrices);
-          setPrices(validPrices);
         }
+        
+        // Fallback to LLM for any missing tickers
+        const missingTickers = uniqueTickers.filter(t => !fetchedPrices[t]);
+        if (missingTickers.length > 0) {
+          console.log('Falling back to LLM for:', missingTickers);
+          const tickerList = missingTickers.join(', ');
+          const result = await base44.integrations.Core.InvokeLLM({
+            prompt: `Get the current stock price for: ${tickerList}. Return exact prices from Yahoo Finance.`,
+            add_context_from_internet: true,
+            response_json_schema: {
+              type: "object",
+              properties: {
+                prices: {
+                  type: "object",
+                  additionalProperties: { type: "number" }
+                }
+              },
+              required: ["prices"]
+            }
+          });
+          
+          if (result?.prices) {
+            for (const [ticker, price] of Object.entries(result.prices)) {
+              const numPrice = Number(price);
+              if (!isNaN(numPrice) && numPrice > 0) {
+                const matchedTicker = missingTickers.find(t => t.toUpperCase() === ticker.toUpperCase()) || ticker;
+                fetchedPrices[matchedTicker] = numPrice;
+              }
+            }
+          }
+        }
+        
+        console.log('Stock prices:', fetchedPrices);
+        setPrices(fetchedPrices);
       } catch (err) {
         console.error('Failed to fetch stock prices:', err);
         setError(err);
-        // Don't clear prices on error - keep last known values
       } finally {
         setLoading(false);
       }
