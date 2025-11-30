@@ -10,6 +10,7 @@ import {
   Waves,
   Wallet,
   History,
+  Receipt,
   Menu,
   X,
   ChevronRight
@@ -24,6 +25,7 @@ const navItems = [
   { name: 'Liquid Funds', page: 'LiquidFunds', icon: Waves },
   { name: 'PE Funds', page: 'PEFunds', icon: Briefcase },
   { name: 'PE Deals', page: 'PEDeals', icon: Building2 },
+  { name: 'Transactions', page: 'Transactions', icon: Receipt },
   { name: 'Changelog', page: 'Changelog', icon: History },
 ];
 
