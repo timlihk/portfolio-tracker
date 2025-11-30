@@ -61,6 +61,7 @@ export function useExchangeRates() {
 export function useStockPrices(tickers) {
   const [prices, setPrices] = useState({});
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (!tickers || tickers.length === 0) {
@@ -68,7 +69,7 @@ export function useStockPrices(tickers) {
       return;
     }
 
-    const uniqueTickers = [...new Set(tickers.filter(Boolean))];
+    const uniqueTickers = [...new Set(tickers.filter(t => t && typeof t === 'string' && t.trim()))];
     if (uniqueTickers.length === 0) {
       setPrices({});
       return;
@@ -76,19 +77,20 @@ export function useStockPrices(tickers) {
 
     const fetchPrices = async () => {
       setLoading(true);
+      setError(null);
       try {
         const result = await base44.integrations.Core.InvokeLLM({
-          prompt: `Look up the current stock price for these ticker symbols: ${uniqueTickers.join(', ')}
+          prompt: `Get the current stock prices for these tickers: ${uniqueTickers.join(', ')}
 
-Search Yahoo Finance or Google Finance for each ticker and return the latest trading price.
-Return the exact ticker symbol as the key (matching what I provided).`,
+Return ONLY numeric values for each ticker. Use the exact ticker symbols I provided as keys.
+Example format: {"AAPL": 150.25, "GOOGL": 140.50}`,
           add_context_from_internet: true,
           response_json_schema: {
             type: "object",
             properties: {
               prices: {
                 type: "object",
-                description: "Object mapping ticker symbols to their current stock prices as numbers"
+                additionalProperties: { type: "number" }
               }
             },
             required: ["prices"]
@@ -96,11 +98,20 @@ Return the exact ticker symbol as the key (matching what I provided).`,
         });
         
         if (result && result.prices && typeof result.prices === 'object') {
-          setPrices(result.prices);
+          // Validate all values are numbers
+          const validPrices = {};
+          for (const [ticker, price] of Object.entries(result.prices)) {
+            const numPrice = Number(price);
+            if (!isNaN(numPrice) && numPrice > 0) {
+              validPrices[ticker] = numPrice;
+            }
+          }
+          setPrices(validPrices);
         }
-      } catch (error) {
-        console.error('Failed to fetch stock prices:', error);
-        setPrices({});
+      } catch (err) {
+        console.error('Failed to fetch stock prices:', err);
+        setError(err);
+        // Don't clear prices on error - keep last known values
       } finally {
         setLoading(false);
       }
@@ -109,7 +120,7 @@ Return the exact ticker symbol as the key (matching what I provided).`,
     fetchPrices();
   }, [JSON.stringify(tickers)]);
 
-  return { prices: prices || {}, loading };
+  return { prices: prices || {}, loading, error };
 }
 
 export function useBondPrices(bonds) {
