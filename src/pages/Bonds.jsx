@@ -7,7 +7,10 @@ import AddAssetDialog from '@/components/portfolio/AddAssetDialog';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { useExchangeRates, useBondPrices, CURRENCY_SYMBOLS } from '@/components/portfolio/useMarketData';
+import { createChangeLogger } from '@/components/portfolio/useChangelog';
 import { RefreshCw } from 'lucide-react';
+
+const bondLogger = createChangeLogger('Bond');
 import {
   AlertDialog,
   AlertDialogAction,
@@ -68,7 +71,8 @@ export default function Bonds() {
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Bond.create(data),
-    onSuccess: () => {
+    onSuccess: (_, data) => {
+      bondLogger.logCreate(data.name, `Face value ${data.face_value}`);
       queryClient.invalidateQueries({ queryKey: ['bonds'] });
       setDialogOpen(false);
       setFormData({});
@@ -77,7 +81,8 @@ export default function Bonds() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Bond.update(id, data),
-    onSuccess: () => {
+    onSuccess: (_, { data }) => {
+      bondLogger.logUpdate(data.name, 'Updated position');
       queryClient.invalidateQueries({ queryKey: ['bonds'] });
       setDialogOpen(false);
       setFormData({});
@@ -87,6 +92,7 @@ export default function Bonds() {
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Bond.delete(id),
     onSuccess: () => {
+      bondLogger.logDelete(deleteTarget?.name, 'Position removed');
       queryClient.invalidateQueries({ queryKey: ['bonds'] });
       setDeleteTarget(null);
     }

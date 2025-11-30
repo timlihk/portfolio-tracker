@@ -6,7 +6,10 @@ import AssetTable from '@/components/portfolio/AssetTable';
 import AddAssetDialog from '@/components/portfolio/AddAssetDialog';
 import { Badge } from '@/components/ui/badge';
 import { useExchangeRates, useStockPrices, CURRENCY_SYMBOLS } from '@/components/portfolio/useMarketData';
+import { createChangeLogger } from '@/components/portfolio/useChangelog';
 import { RefreshCw } from 'lucide-react';
+
+const stockLogger = createChangeLogger('Stock');
 import {
   AlertDialog,
   AlertDialogAction,
@@ -65,7 +68,8 @@ export default function Stocks() {
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Stock.create(data),
-    onSuccess: () => {
+    onSuccess: (_, data) => {
+      stockLogger.logCreate(data.ticker, `${data.shares} shares at ${data.average_cost}`);
       queryClient.invalidateQueries({ queryKey: ['stocks'] });
       setDialogOpen(false);
       setFormData({});
@@ -74,7 +78,8 @@ export default function Stocks() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Stock.update(id, data),
-    onSuccess: () => {
+    onSuccess: (_, { data }) => {
+      stockLogger.logUpdate(data.ticker, `Updated position`);
       queryClient.invalidateQueries({ queryKey: ['stocks'] });
       setDialogOpen(false);
       setFormData({});
@@ -84,6 +89,7 @@ export default function Stocks() {
   const deleteMutation = useMutation({
     mutationFn: (id) => base44.entities.Stock.delete(id),
     onSuccess: () => {
+      stockLogger.logDelete(deleteTarget?.ticker, 'Position removed');
       queryClient.invalidateQueries({ queryKey: ['stocks'] });
       setDeleteTarget(null);
     }

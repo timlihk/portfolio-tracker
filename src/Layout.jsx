@@ -9,6 +9,7 @@ import {
   Building2,
   Waves,
   Wallet,
+  History,
   Menu,
   X,
   ChevronRight
@@ -23,6 +24,7 @@ const navItems = [
   { name: 'Liquid Funds', page: 'LiquidFunds', icon: Waves },
   { name: 'PE Funds', page: 'PEFunds', icon: Briefcase },
   { name: 'PE Deals', page: 'PEDeals', icon: Building2 },
+  { name: 'Changelog', page: 'Changelog', icon: History },
 ];
 
 export default function Layout({ children, currentPageName }) {
