@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import StatCard from '@/components/portfolio/StatCard';
 import AllocationChart from '@/components/portfolio/AllocationChart';
+import AIPortfolioAnalysis from '@/components/portfolio/AIPortfolioAnalysis';
 import { useExchangeRates, useStockPrices, useBondPrices } from '@/components/portfolio/useMarketData';
 import { 
   TrendingUp, 
@@ -93,6 +94,57 @@ export default function Dashboard() {
     { name: 'PE Funds', value: peFundsValue },
     { name: 'PE Deals', value: peDealsValue }
   ].filter(item => item.value > 0);
+
+  // Prepare portfolio data for AI analysis
+  const portfolioDataForAI = useMemo(() => ({
+    totalValue,
+    totalCost,
+    totalGainPercent,
+    allocation: allocationData,
+    stocks: stocks.map(s => ({
+      ticker: s.ticker,
+      company: s.company_name,
+      sector: s.sector,
+      shares: s.shares,
+      averageCost: s.average_cost,
+      currentPrice: stockPrices[s.ticker] || s.current_price || s.average_cost,
+      currency: s.currency
+    })),
+    bonds: bonds.map(b => ({
+      name: b.name,
+      type: b.bond_type,
+      faceValue: b.face_value,
+      couponRate: b.coupon_rate,
+      maturityDate: b.maturity_date,
+      rating: b.rating,
+      currency: b.currency
+    })),
+    liquidFunds: liquidFunds.map(f => ({
+      name: f.fund_name,
+      type: f.fund_type,
+      strategy: f.strategy,
+      invested: f.investment_amount,
+      currentValue: f.current_value,
+      ytdReturn: f.ytd_return
+    })),
+    peFunds: peFunds.map(f => ({
+      name: f.fund_name,
+      type: f.fund_type,
+      vintage: f.vintage_year,
+      commitment: f.commitment,
+      called: f.called_capital,
+      nav: f.nav,
+      distributions: f.distributions
+    })),
+    peDeals: peDeals.map(d => ({
+      company: d.company_name,
+      sector: d.sector,
+      type: d.deal_type,
+      invested: d.investment_amount,
+      currentValue: d.current_value,
+      status: d.status
+    }))
+  }), [totalValue, totalCost, totalGainPercent, allocationData, stocks, bonds, liquidFunds, peFunds, peDeals, stockPrices]);
 
   // Recent activity
   const allAssets = [
@@ -224,6 +276,11 @@ export default function Dashboard() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* AI Portfolio Analysis */}
+        <div className="mt-8">
+          <AIPortfolioAnalysis portfolioData={portfolioDataForAI} />
         </div>
 
         {/* PE Summary Cards */}
