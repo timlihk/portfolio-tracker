@@ -49,8 +49,10 @@ export function useExchangeRates() {
   }, []);
 
   const convertToUSD = (amount, fromCurrency) => {
-    if (!fromCurrency || fromCurrency === 'USD') return amount;
-    return amount * (rates[fromCurrency] || 1);
+    const num = Number(amount) || 0;
+    if (!fromCurrency || fromCurrency === 'USD') return num;
+    const rate = Number(rates[fromCurrency]) || 1;
+    return num * rate;
   };
 
   return { rates, loading, convertToUSD, CURRENCIES };
@@ -183,5 +185,6 @@ export const CURRENCY_SYMBOLS = {
 
 export function formatCurrency(amount, currency = 'USD') {
   const symbol = CURRENCY_SYMBOLS[currency] || '$';
-  return `${symbol}${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const num = Number(amount) || 0;
+  return `${symbol}${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
