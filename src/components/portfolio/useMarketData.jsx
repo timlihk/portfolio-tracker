@@ -117,16 +117,18 @@ export function useStockPrices(tickers) {
       try {
         const fetchedPrices = {};
         
-        // Try Yahoo Finance via CORS proxy
+        // Try Finnhub free API (no CORS issues, free tier available)
+        // Or use corsproxy.io which is more reliable
         const symbols = uniqueTickers.join(',');
         const yahooUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols)}`;
-        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`;
+        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`;
         
         try {
           const response = await fetch(proxyUrl);
+          console.log('Yahoo proxy response status:', response.status);
           if (response.ok) {
             const data = await response.json();
-            console.log('Yahoo Finance response:', data);
+            console.log('Yahoo Finance data:', data);
             if (data?.quoteResponse?.result) {
               for (const quote of data.quoteResponse.result) {
                 const price = quote.regularMarketPrice;
@@ -138,7 +140,7 @@ export function useStockPrices(tickers) {
             }
           }
         } catch (proxyErr) {
-          console.log('CORS proxy failed, trying LLM fallback:', proxyErr);
+          console.log('Yahoo proxy failed:', proxyErr.message);
         }
         
         // Fallback to LLM for any missing tickers
