@@ -28,6 +28,7 @@ const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS'];
 
 const getBondFields = (accounts) => [
   { name: 'name', label: 'Bond Name / Issuer', required: true, placeholder: 'US Treasury 10Y' },
+  { name: 'isin', label: 'ISIN', placeholder: 'US912810RZ49 (12 characters)' },
   { name: 'bond_type', label: 'Bond Type', type: 'select', options: BOND_TYPES },
   { name: 'currency', label: 'Currency', type: 'select', options: CURRENCIES },
   { name: 'account', label: 'Account', type: 'select', options: accounts.map(a => a.name), allowCustom: true },
@@ -127,7 +128,10 @@ export default function Bonds() {
       render: (val, row) => (
         <div>
           <span className="font-semibold text-slate-900">{val}</span>
-          {row.bond_type && (
+          {row.isin && (
+            <p className="text-xs text-slate-400 font-mono">{row.isin}</p>
+          )}
+          {row.bond_type && !row.isin && (
             <p className="text-sm text-slate-500">{row.bond_type}</p>
           )}
         </div>

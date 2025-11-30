@@ -72,8 +72,9 @@ export function useStockPrices(tickers) {
           return;
         }
 
+        // Use Yahoo Finance via AI for real-time stock prices
         const result = await base44.integrations.Core.InvokeLLM({
-          prompt: `Get the current real-time stock prices for these tickers: ${uniqueTickers.join(', ')}. Return the current market price in USD for each ticker.`,
+          prompt: `Get the current real-time stock prices from Yahoo Finance for these tickers: ${uniqueTickers.join(', ')}. Return the current market price in the stock's native currency for each ticker. Be accurate and use the latest market data.`,
           add_context_from_internet: true,
           response_json_schema: {
             type: "object",
@@ -104,8 +105,6 @@ export function useStockPrices(tickers) {
 }
 
 export function useBondPrices(bonds) {
-  // For bonds, we'll estimate current value based on coupon rate and maturity
-  // In practice, you'd want a bond pricing service
   const [prices, setPrices] = useState({});
   const [loading, setLoading] = useState(false);
 
@@ -115,23 +114,34 @@ export function useBondPrices(bonds) {
     const fetchPrices = async () => {
       setLoading(true);
       try {
+        // Separate bonds with ISIN from those without
+        const bondsWithISIN = bonds.filter(b => b.isin);
+        const bondsWithoutISIN = bonds.filter(b => !b.isin);
+        
         const bondInfo = bonds.map(b => ({
           name: b.name,
+          isin: b.isin || null,
           type: b.bond_type,
           face_value: b.face_value,
           coupon_rate: b.coupon_rate,
-          maturity_date: b.maturity_date
+          maturity_date: b.maturity_date,
+          rating: b.rating
         }));
 
+        // Use OpenFIGI for ISIN lookups and web search for pricing
         const result = await base44.integrations.Core.InvokeLLM({
-          prompt: `Estimate current market values for these bonds based on current interest rates and market conditions: ${JSON.stringify(bondInfo)}. Consider current treasury yields and credit spreads.`,
+          prompt: `Get current market values for these bonds. For bonds with ISIN, look up pricing data using the ISIN. For others, estimate based on coupon rate, maturity, and current interest rates.
+
+Bonds: ${JSON.stringify(bondInfo)}
+
+Use current treasury yields and credit spreads for estimation. Return values as percentage of face value (e.g., 98.5 means 98.5% of face value).`,
           add_context_from_internet: true,
           response_json_schema: {
             type: "object",
             properties: {
               values: {
                 type: "object",
-                description: "Object with bond names as keys and estimated current values as values",
+                description: "Object with bond names as keys and current market values (in currency amount, not percentage) as values",
                 additionalProperties: { type: "number" }
               }
             }
