@@ -13,7 +13,8 @@ import {
   Wallet,
   Waves,
   Banknote,
-  RefreshCw
+  RefreshCw,
+  CreditCard
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
@@ -240,6 +241,14 @@ export default function Dashboard() {
             icon={Banknote}
             subValue={`${cashDeposits.length} positions`}
           />
+          {totalLiabilities > 0 && (
+            <StatCard
+              title="Liabilities"
+              value={`-$${totalLiabilities.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+              icon={CreditCard}
+              subValue={`${activeLiabilities.length} active loans`}
+            />
+          )}
         </div>
 
         {/* Secondary Stats */}
