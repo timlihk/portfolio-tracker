@@ -64,7 +64,7 @@ export default function Stocks() {
   const isLoadingPrices = pricesLoading || ratesLoading;
 
   // Helper to get current price (real-time or manual)
-  const getCurrentPrice = (stock) => stockPrices[stock.ticker] || stock.current_price || stock.average_cost;
+  const getCurrentPrice = (stock) => stockPrices[stock.ticker] || stock.current_price || stock.average_cost || 0;
 
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Stock.create(data),
@@ -148,7 +148,7 @@ export default function Stocks() {
         const isLive = stockPrices[row.ticker] && !row.current_price;
         return (
           <div className="flex items-center justify-end gap-1">
-            <span>{symbol}{price.toFixed(2)}</span>
+            <span>{symbol}{(price || 0).toFixed(2)}</span>
             {isLive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Live price" />}
           </div>
         );
