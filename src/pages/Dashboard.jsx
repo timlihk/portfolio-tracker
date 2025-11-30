@@ -50,48 +50,64 @@ export default function Dashboard() {
   });
 
   // Get exchange rates and real-time prices
-  const { convertToUSD, loading: ratesLoading } = useExchangeRates();
+  const exchangeRates = useExchangeRates();
+  const convertToUSD = exchangeRates?.convertToUSD || ((v) => v || 0);
+  const ratesLoading = exchangeRates?.loading || false;
   
-  const stockTickers = useMemo(() => stocks.map(s => s.ticker), [stocks]);
-  const { prices: stockPrices, loading: stockPricesLoading } = useStockPrices(stockTickers);
-  const { prices: bondPrices, loading: bondPricesLoading } = useBondPrices(bonds);
+  const stockTickers = useMemo(() => stocks.map(s => s.ticker).filter(Boolean), [stocks]);
+  const stockPricesData = useStockPrices(stockTickers);
+  const stockPrices = stockPricesData?.prices || {};
+  const stockPricesLoading = stockPricesData?.loading || false;
+  
+  const bondPricesData = useBondPrices(bonds);
+  const bondPrices = bondPricesData?.prices || {};
+  const bondPricesLoading = bondPricesData?.loading || false;
 
   const isLoadingPrices = ratesLoading || stockPricesLoading || bondPricesLoading;
 
   // Calculate totals with real-time prices and currency conversion
   const stocksValue = stocks.reduce((sum, s) => {
-    const realTimePrice = stockPrices[s.ticker] || s.current_price || s.average_cost;
-    const valueInOriginalCurrency = s.shares * realTimePrice;
-    return sum + convertToUSD(valueInOriginalCurrency, s.currency);
+    const realTimePrice = stockPrices[s.ticker] || s.current_price || s.average_cost || 0;
+    const valueInOriginalCurrency = (s.shares || 0) * realTimePrice;
+    const converted = convertToUSD(valueInOriginalCurrency, s.currency);
+    return sum + (isNaN(converted) ? 0 : converted);
   }, 0);
   const stocksCost = stocks.reduce((sum, s) => {
-    const costInOriginalCurrency = s.shares * s.average_cost;
-    return sum + convertToUSD(costInOriginalCurrency, s.currency);
+    const costInOriginalCurrency = (s.shares || 0) * (s.average_cost || 0);
+    const converted = convertToUSD(costInOriginalCurrency, s.currency);
+    return sum + (isNaN(converted) ? 0 : converted);
   }, 0);
   const stocksGain = stocksValue - stocksCost;
-  const stocksGainPercent = stocksCost > 0 ? ((stocksGain / stocksCost) * 100).toFixed(1) : 0;
+  const stocksGainPercent = stocksCost > 0 ? ((stocksGain / stocksCost) * 100).toFixed(1) : '0.0';
 
   const bondsValue = bonds.reduce((sum, b) => {
-    const realTimeValue = b.current_value || bondPrices[b.name] || b.purchase_price;
-    return sum + convertToUSD(realTimeValue || 0, b.currency);
+    const realTimeValue = b.current_value || bondPrices[b.name] || b.purchase_price || 0;
+    const converted = convertToUSD(realTimeValue, b.currency);
+    return sum + (isNaN(converted) ? 0 : converted);
   }, 0);
-  const bondsCost = bonds.reduce((sum, b) => sum + convertToUSD(b.purchase_price, b.currency), 0);
+  const bondsCost = bonds.reduce((sum, b) => {
+    const converted = convertToUSD(b.purchase_price || 0, b.currency);
+    return sum + (isNaN(converted) ? 0 : converted);
+  }, 0);
 
   const peFundsValue = peFunds.reduce((sum, f) => sum + (f.nav || 0) + (f.distributions || 0), 0);
   const peFundsCalled = peFunds.reduce((sum, f) => sum + (f.called_capital || 0), 0);
-  const peFundsCommitment = peFunds.reduce((sum, f) => sum + f.commitment, 0);
+  const peFundsCommitment = peFunds.reduce((sum, f) => sum + (f.commitment || 0), 0);
   const peFundsUnfunded = peFundsCommitment - peFundsCalled;
 
-  const peDealsValue = peDeals.reduce((sum, d) => sum + (d.current_value || d.investment_amount), 0);
-  const peDealsCost = peDeals.reduce((sum, d) => sum + d.investment_amount, 0);
+  const peDealsValue = peDeals.reduce((sum, d) => sum + (d.current_value || d.investment_amount || 0), 0);
+  const peDealsCost = peDeals.reduce((sum, d) => sum + (d.investment_amount || 0), 0);
 
-  const liquidFundsValue = liquidFunds.reduce((sum, f) => sum + (f.current_value || f.investment_amount), 0);
-  const liquidFundsCost = liquidFunds.reduce((sum, f) => sum + f.investment_amount, 0);
+  const liquidFundsValue = liquidFunds.reduce((sum, f) => sum + (f.current_value || f.investment_amount || 0), 0);
+  const liquidFundsCost = liquidFunds.reduce((sum, f) => sum + (f.investment_amount || 0), 0);
 
-  const cashValue = cashDeposits.reduce((sum, c) => sum + convertToUSD(c.amount || 0, c.currency), 0);
+  const cashValue = cashDeposits.reduce((sum, c) => {
+    const converted = convertToUSD(c.amount || 0, c.currency);
+    return sum + (isNaN(converted) ? 0 : converted);
+  }, 0);
 
-  const totalValue = stocksValue + bondsValue + peFundsValue + peDealsValue + liquidFundsValue + cashValue;
-  const totalCost = stocksCost + bondsCost + peFundsCalled + peDealsCost + liquidFundsCost + cashValue;
+  const totalValue = (stocksValue || 0) + (bondsValue || 0) + (peFundsValue || 0) + (peDealsValue || 0) + (liquidFundsValue || 0) + (cashValue || 0);
+  const totalCost = (stocksCost || 0) + (bondsCost || 0) + (peFundsCalled || 0) + (peDealsCost || 0) + (liquidFundsCost || 0) + (cashValue || 0);
   const totalGain = totalValue - totalCost;
   const totalGainPercent = totalCost > 0 ? ((totalGain / totalCost) * 100).toFixed(1) : '0.0';
 
@@ -116,7 +132,7 @@ export default function Dashboard() {
       sector: s.sector,
       shares: s.shares,
       averageCost: s.average_cost,
-      currentPrice: stockPrices[s.ticker] || s.current_price || s.average_cost,
+      currentPrice: stockPrices[s.ticker] || s.current_price || s.average_cost || 0,
       currency: s.currency
     })),
     bonds: bonds.map(b => ({
