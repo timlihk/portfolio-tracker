@@ -79,22 +79,29 @@ export function useStockPrices(tickers) {
       setLoading(true);
       setError(null);
       try {
+        // Make individual requests for each ticker to improve accuracy
+        const tickerList = uniqueTickers.join(', ');
         const result = await base44.integrations.Core.InvokeLLM({
-          prompt: `Search Google Finance, Yahoo Finance, or Bloomberg for the LATEST real-time stock prices for these tickers: ${uniqueTickers.join(', ')}
+          prompt: `I need the CURRENT stock prices for these specific ticker symbols: ${tickerList}
 
-IMPORTANT: I need the CURRENT market price as of TODAY. Search for each ticker individually if needed.
+CRITICAL INSTRUCTIONS:
+1. Search Yahoo Finance, Google Finance, or MarketWatch for EACH ticker
+2. Return the LATEST market price (today's price or most recent closing price)
+3. Use the EXACT ticker symbols as keys: ${uniqueTickers.map(t => `"${t}"`).join(', ')}
+4. Every ticker MUST have a price - search carefully for each one
+5. Prices should be in the stock's native currency
 
-For each ticker, return ONLY the current trading price as a number.
-Use the EXACT ticker symbols I provided as keys in your response.
+Return format example:
+{"prices": {"AAPL": 189.95, "MSFT": 378.91}}
 
-Example response format: {"AAPL": 189.95, "MSFT": 378.91, "GOOGL": 141.80}`,
+Tickers to look up: ${tickerList}`,
           add_context_from_internet: true,
           response_json_schema: {
             type: "object",
             properties: {
               prices: {
                 type: "object",
-                description: "Map of ticker symbol to current stock price",
+                description: "Map of exact ticker symbol to current stock price as a number",
                 additionalProperties: { type: "number" }
               }
             },
@@ -102,15 +109,20 @@ Example response format: {"AAPL": 189.95, "MSFT": 378.91, "GOOGL": 141.80}`,
           }
         });
         
+        console.log('Stock price response:', result);
+        
         if (result && result.prices && typeof result.prices === 'object') {
           // Validate all values are numbers
           const validPrices = {};
           for (const [ticker, price] of Object.entries(result.prices)) {
             const numPrice = Number(price);
             if (!isNaN(numPrice) && numPrice > 0) {
-              validPrices[ticker] = numPrice;
+              // Match ticker case-insensitively but store with original case
+              const matchedTicker = uniqueTickers.find(t => t.toUpperCase() === ticker.toUpperCase()) || ticker;
+              validPrices[matchedTicker] = numPrice;
             }
           }
+          console.log('Valid prices:', validPrices);
           setPrices(validPrices);
         }
       } catch (err) {
