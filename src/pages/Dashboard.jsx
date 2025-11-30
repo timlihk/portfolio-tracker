@@ -218,8 +218,8 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Third Row Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
+        {/* Secondary Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
           <StatCard
             title="Liquid Funds"
             value={`$${liquidFundsValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
@@ -228,9 +228,6 @@ export default function Dashboard() {
             trendValue={liquidFundsCost > 0 ? `${(((liquidFundsValue - liquidFundsCost) / liquidFundsCost) * 100).toFixed(1)}%` : null}
             subValue={`${liquidFunds.length} funds`}
           />
-
-        {/* PE Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
           <StatCard
             title="Private Equity"
             value={`$${(peFundsValue + peDealsValue).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
