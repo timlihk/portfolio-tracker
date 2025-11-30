@@ -80,16 +80,21 @@ export function useStockPrices(tickers) {
       setError(null);
       try {
         const result = await base44.integrations.Core.InvokeLLM({
-          prompt: `Get the current stock prices for these tickers: ${uniqueTickers.join(', ')}
+          prompt: `Search Google Finance, Yahoo Finance, or Bloomberg for the LATEST real-time stock prices for these tickers: ${uniqueTickers.join(', ')}
 
-Return ONLY numeric values for each ticker. Use the exact ticker symbols I provided as keys.
-Example format: {"AAPL": 150.25, "GOOGL": 140.50}`,
+IMPORTANT: I need the CURRENT market price as of TODAY. Search for each ticker individually if needed.
+
+For each ticker, return ONLY the current trading price as a number.
+Use the EXACT ticker symbols I provided as keys in your response.
+
+Example response format: {"AAPL": 189.95, "MSFT": 378.91, "GOOGL": 141.80}`,
           add_context_from_internet: true,
           response_json_schema: {
             type: "object",
             properties: {
               prices: {
                 type: "object",
+                description: "Map of ticker symbol to current stock price",
                 additionalProperties: { type: "number" }
               }
             },
