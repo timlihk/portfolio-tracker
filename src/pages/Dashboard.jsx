@@ -58,13 +58,8 @@ export default function Dashboard() {
   const { convertToUSD, loading: ratesLoading } = useExchangeRates();
   
   const stockTickers = useMemo(() => stocks.map(s => s.ticker).filter(Boolean), [stocks]);
-  const stockPricesData = useStockPrices(stockTickers);
-  const stockPrices = stockPricesData?.prices || {};
-  const stockPricesLoading = stockPricesData?.loading || false;
-  
-  const bondPricesData = useBondPrices(bonds);
-  const bondPrices = bondPricesData?.prices || {};
-  const bondPricesLoading = bondPricesData?.loading || false;
+  const { prices: stockPrices = {}, loading: stockPricesLoading } = useStockPrices(stockTickers);
+  const { prices: bondPrices = {}, loading: bondPricesLoading } = useBondPrices(bonds);
 
   const isLoadingPrices = ratesLoading || stockPricesLoading || bondPricesLoading;
 
