@@ -55,12 +55,7 @@ export default function Dashboard() {
   });
 
   // Get exchange rates and real-time prices
-  const exchangeRates = useExchangeRates();
-  const convertToUSD = exchangeRates?.convertToUSD || ((v, currency) => {
-    if (!currency || currency === 'USD') return Number(v) || 0;
-    return Number(v) || 0;
-  });
-  const ratesLoading = exchangeRates?.loading || false;
+  const { convertToUSD, loading: ratesLoading } = useExchangeRates();
   
   const stockTickers = useMemo(() => stocks.map(s => s.ticker).filter(Boolean), [stocks]);
   const stockPricesData = useStockPrices(stockTickers);

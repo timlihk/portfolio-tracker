@@ -4,7 +4,17 @@ import { base44 } from '@/api/base44Client';
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS', 'HKD'];
 
 export function useExchangeRates() {
-  const [rates, setRates] = useState({ USD: 1 });
+  const [rates, setRates] = useState({
+    USD: 1,
+    EUR: 1.05,
+    GBP: 1.27,
+    CHF: 1.13,
+    JPY: 0.0067,
+    CAD: 0.74,
+    AUD: 0.65,
+    ILS: 0.27,
+    HKD: 0.13
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
