@@ -115,40 +115,62 @@ export function useStockPrices(tickers) {
       setLoading(true);
       setError(null);
       try {
-        const tickerList = uniqueTickers.join(', ');
-        const result = await base44.integrations.Core.InvokeLLM({
-          prompt: `Look up the CURRENT stock prices on Yahoo Finance for these tickers: ${tickerList}
-
-For each ticker, search "TICKER stock price yahoo finance" and return the current market price.
-Return the exact price shown on Yahoo Finance for each stock.`,
-          add_context_from_internet: true,
-          response_json_schema: {
-            type: "object",
-            properties: {
-              prices: {
-                type: "object",
-                description: "Map of ticker symbol to current price per share",
-                additionalProperties: { type: "number" }
+        const fetchedPrices = {};
+        
+        // Try Yahoo Finance via CORS proxy
+        const symbols = uniqueTickers.join(',');
+        const yahooUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols)}`;
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(yahooUrl)}`;
+        
+        try {
+          const response = await fetch(proxyUrl);
+          if (response.ok) {
+            const data = await response.json();
+            console.log('Yahoo Finance response:', data);
+            if (data?.quoteResponse?.result) {
+              for (const quote of data.quoteResponse.result) {
+                const price = quote.regularMarketPrice;
+                if (price && !isNaN(price)) {
+                  const matchedTicker = uniqueTickers.find(t => t.toUpperCase() === quote.symbol.toUpperCase()) || quote.symbol;
+                  fetchedPrices[matchedTicker] = price;
+                }
               }
-            },
-            required: ["prices"]
-          }
-        });
-        
-        console.log('Stock price response:', result);
-        
-        if (result?.prices && typeof result.prices === 'object') {
-          const validPrices = {};
-          for (const [ticker, price] of Object.entries(result.prices)) {
-            const numPrice = Number(price);
-            if (!isNaN(numPrice) && numPrice > 0) {
-              const matchedTicker = uniqueTickers.find(t => t.toUpperCase() === ticker.toUpperCase()) || ticker;
-              validPrices[matchedTicker] = numPrice;
             }
           }
-          console.log('Valid prices:', validPrices);
-          setPrices(validPrices);
+        } catch (proxyErr) {
+          console.log('CORS proxy failed, trying LLM fallback:', proxyErr);
         }
+        
+        // Fallback to LLM for any missing tickers
+        const missingTickers = uniqueTickers.filter(t => !fetchedPrices[t]);
+        if (missingTickers.length > 0) {
+          console.log('Fetching via LLM for:', missingTickers);
+          const tickerList = missingTickers.join(', ');
+          const result = await base44.integrations.Core.InvokeLLM({
+            prompt: `Get current stock prices from Yahoo Finance for: ${tickerList}`,
+            add_context_from_internet: true,
+            response_json_schema: {
+              type: "object",
+              properties: {
+                prices: { type: "object", additionalProperties: { type: "number" } }
+              },
+              required: ["prices"]
+            }
+          });
+          
+          if (result?.prices) {
+            for (const [ticker, price] of Object.entries(result.prices)) {
+              const numPrice = Number(price);
+              if (!isNaN(numPrice) && numPrice > 0) {
+                const matchedTicker = missingTickers.find(t => t.toUpperCase() === ticker.toUpperCase()) || ticker;
+                fetchedPrices[matchedTicker] = numPrice;
+              }
+            }
+          }
+        }
+        
+        console.log('Final stock prices:', fetchedPrices);
+        setPrices(fetchedPrices);
       } catch (err) {
         console.error('Failed to fetch stock prices:', err);
         setError(err);
