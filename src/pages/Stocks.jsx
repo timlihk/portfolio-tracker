@@ -57,9 +57,9 @@ export default function Stocks() {
   const stockFields = getStockFields(accounts);
 
   // Get real-time prices and exchange rates
-  const stockTickers = useMemo(() => stocks.map(s => s.ticker), [stocks]);
-  const { prices: stockPrices, loading: pricesLoading } = useStockPrices(stockTickers);
-  const { convertToUSD, loading: ratesLoading } = useExchangeRates();
+  const stockTickers = useMemo(() => stocks.map(s => s.ticker).filter(Boolean), [stocks]);
+  const { prices: stockPrices = {}, loading: pricesLoading } = useStockPrices(stockTickers);
+  const { convertToUSD = (v) => v, loading: ratesLoading } = useExchangeRates() || {};
 
   const isLoadingPrices = pricesLoading || ratesLoading;
 
@@ -127,7 +127,7 @@ export default function Stocks() {
       key: 'shares', 
       label: 'Shares',
       align: 'right',
-      render: (val) => val?.toLocaleString()
+      render: (val) => (val || 0).toLocaleString()
     },
     { 
       key: 'average_cost', 
