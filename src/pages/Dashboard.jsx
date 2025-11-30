@@ -49,6 +49,11 @@ export default function Dashboard() {
     queryFn: () => base44.entities.CashDeposit.list()
   });
 
+  const { data: liabilities = [] } = useQuery({
+    queryKey: ['liabilities'],
+    queryFn: () => base44.entities.Liability.list()
+  });
+
   // Get exchange rates and real-time prices
   const exchangeRates = useExchangeRates();
   const convertToUSD = exchangeRates?.convertToUSD || ((v) => v || 0);
@@ -106,8 +111,15 @@ export default function Dashboard() {
     return sum + (isNaN(converted) ? 0 : converted);
   }, 0);
 
-  const totalValue = (stocksValue || 0) + (bondsValue || 0) + (peFundsValue || 0) + (peDealsValue || 0) + (liquidFundsValue || 0) + (cashValue || 0);
-  const totalCost = (stocksCost || 0) + (bondsCost || 0) + (peFundsCalled || 0) + (peDealsCost || 0) + (liquidFundsCost || 0) + (cashValue || 0);
+  const activeLiabilities = liabilities.filter(l => l.status !== 'Paid Off');
+  const totalLiabilities = activeLiabilities.reduce((sum, l) => {
+    const converted = convertToUSD(l.outstanding_balance || 0, l.currency);
+    return sum + (isNaN(converted) ? 0 : converted);
+  }, 0);
+
+  const totalAssets = (stocksValue || 0) + (bondsValue || 0) + (peFundsValue || 0) + (peDealsValue || 0) + (liquidFundsValue || 0) + (cashValue || 0);
+  const totalValue = totalAssets - totalLiabilities;
+  const totalCost = (stocksCost || 0) + (bondsCost || 0) + (peFundsCalled || 0) + (peDealsCost || 0) + (liquidFundsCost || 0) + (cashValue || 0) - totalLiabilities;
   const totalGain = (totalValue || 0) - (totalCost || 0);
   const totalGainPercent = totalCost > 0 ? (((totalGain || 0) / totalCost) * 100).toFixed(1) : '0.0';
 
@@ -205,12 +217,12 @@ export default function Dashboard() {
         {/* Main Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
           <StatCard
-            title="Total Value"
+            title="Net Worth"
             value={`$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
             icon={Wallet}
             trend={totalCost > 0 && !isNaN(Number(totalGainPercent)) ? (Number(totalGainPercent) >= 0 ? 'up' : 'down') : null}
             trendValue={totalCost > 0 && !isNaN(Number(totalGainPercent)) ? `${totalGainPercent}%` : null}
-            subValue="all time"
+            subValue={totalLiabilities > 0 ? `$${totalAssets.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} assets - $${totalLiabilities.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} liabilities` : 'all time'}
           />
           <StatCard
             title="Stocks"
