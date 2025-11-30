@@ -21,36 +21,60 @@ export function useExchangeRates() {
     const fetchRates = async () => {
       try {
         const result = await base44.integrations.Core.InvokeLLM({
-          prompt: `Get the current exchange rates to USD for: EUR, GBP, CHF, JPY, CAD, AUD, ILS, HKD. Return accurate real-time rates.`,
+          prompt: `Get the current exchange rates showing how much 1 unit of each currency equals in USD.
+
+For example:
+- 1 EUR = ~1.05 USD
+- 1 GBP = ~1.27 USD  
+- 1 JPY = ~0.0066 USD (since 1 USD = ~150 JPY, then 1 JPY = 1/150 = 0.0066 USD)
+- 1 ILS = ~0.27 USD
+
+Return the rate for: EUR, GBP, CHF, JPY, CAD, AUD, ILS, HKD
+Each rate should be: how many USD you get for 1 unit of that currency.`,
           add_context_from_internet: true,
           response_json_schema: {
             type: "object",
             properties: {
-              EUR: { type: "number", description: "EUR to USD rate" },
-              GBP: { type: "number", description: "GBP to USD rate" },
-              CHF: { type: "number", description: "CHF to USD rate" },
-              JPY: { type: "number", description: "JPY to USD rate" },
-              CAD: { type: "number", description: "CAD to USD rate" },
-              AUD: { type: "number", description: "AUD to USD rate" },
-              ILS: { type: "number", description: "ILS to USD rate" },
-              HKD: { type: "number", description: "HKD to USD rate" }
+              EUR: { type: "number", description: "How many USD for 1 EUR (e.g., 1.05)" },
+              GBP: { type: "number", description: "How many USD for 1 GBP (e.g., 1.27)" },
+              CHF: { type: "number", description: "How many USD for 1 CHF (e.g., 1.13)" },
+              JPY: { type: "number", description: "How many USD for 1 JPY (e.g., 0.0066)" },
+              CAD: { type: "number", description: "How many USD for 1 CAD (e.g., 0.74)" },
+              AUD: { type: "number", description: "How many USD for 1 AUD (e.g., 0.65)" },
+              ILS: { type: "number", description: "How many USD for 1 ILS (e.g., 0.27)" },
+              HKD: { type: "number", description: "How many USD for 1 HKD (e.g., 0.13)" }
             }
           }
         });
-        setRates({ USD: 1, ...result });
+        // Validate rates - JPY should be a small number like 0.006-0.007
+        const validatedRates = { USD: 1 };
+        for (const [currency, rate] of Object.entries(result)) {
+          const numRate = Number(rate);
+          // Sanity check: JPY rate should be < 0.02, others should be < 3
+          if (currency === 'JPY' && numRate > 0.02) {
+            // LLM probably returned inverted rate, fix it
+            validatedRates[currency] = 1 / numRate;
+          } else if (currency !== 'JPY' && numRate > 200) {
+            // LLM probably returned inverted rate for other currencies
+            validatedRates[currency] = 1 / numRate;
+          } else {
+            validatedRates[currency] = numRate;
+          }
+        }
+        setRates(validatedRates);
       } catch (error) {
         console.error('Failed to fetch exchange rates:', error);
-        // Fallback rates
+        // Fallback rates (Nov 2025 approximate)
         setRates({
           USD: 1,
           EUR: 1.05,
           GBP: 1.27,
           CHF: 1.13,
-          JPY: 0.0067,
-          CAD: 0.74,
+          JPY: 0.0066,
+          CAD: 0.71,
           AUD: 0.65,
           ILS: 0.27,
-          HKD: 0.13
+          HKD: 0.128
         });
       } finally {
         setLoading(false);
