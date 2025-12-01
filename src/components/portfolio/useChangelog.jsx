@@ -1,16 +1,9 @@
-import { base44 } from '@/api/base44Client';
+// Changelog functionality - disabled for now (was using base44)
+// TODO: Implement changelog with backend API if needed
 
 export async function logChange(action, assetType, assetName, details = '') {
-  try {
-    await base44.entities.Changelog.create({
-      action,
-      asset_type: assetType,
-      asset_name: assetName,
-      details
-    });
-  } catch (error) {
-    console.error('Failed to log change:', error);
-  }
+  // Disabled - just log to console for now
+  console.log(`[Changelog] ${action} ${assetType}: ${assetName}`, details);
 }
 
 export function createChangeLogger(assetType) {
