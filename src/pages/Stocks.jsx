@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { entities } from '@/api/backendClient';
+import { entities, pricingAPI } from '@/api/backendClient';
 import PageHeader from '@/components/portfolio/PageHeader';
 import AssetTable from '@/components/portfolio/AssetTable';
 import AddAssetDialog from '@/components/portfolio/AddAssetDialog';
@@ -41,7 +41,8 @@ export default function Stocks() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({});
   const [deleteTarget, setDeleteTarget] = useState(null);
-  
+  const [tickerLookupLoading, setTickerLookupLoading] = useState(false);
+
   const queryClient = useQueryClient();
 
   const { data: stocks = [] } = useQuery({
@@ -112,18 +113,65 @@ export default function Stocks() {
     setDialogOpen(true);
   };
 
+  // Lookup ticker info from Yahoo Finance
+  const lookupTicker = useCallback(async (ticker) => {
+    if (!ticker || ticker.length < 1) return;
+
+    setTickerLookupLoading(true);
+    try {
+      const data = await pricingAPI.getStockPrice(ticker.toUpperCase());
+      if (data && data.price) {
+        setFormData(prev => ({
+          ...prev,
+          ticker: data.ticker || ticker.toUpperCase(),
+          company_name: prev.company_name || data.name || data.shortName || '',
+          sector: prev.sector || data.sector || '',
+          currency: prev.currency || data.currency || 'USD',
+        }));
+        console.log('✅ Ticker lookup:', data);
+      }
+    } catch (error) {
+      console.log('⚠️ Ticker lookup failed:', error.message);
+    } finally {
+      setTickerLookupLoading(false);
+    }
+  }, []);
+
+  // Handle form field changes with auto-lookup for ticker
+  const handleFieldChange = useCallback((name, value) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+
+    // Auto-lookup when ticker changes and has at least 1 character
+    if (name === 'ticker' && value && value.length >= 1) {
+      // Debounce the lookup - only trigger after user stops typing
+      const timeoutId = setTimeout(() => {
+        lookupTicker(value);
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [lookupTicker]);
+
   const columns = [
-    { 
-      key: 'ticker', 
+    {
+      key: 'ticker',
       label: 'Ticker',
-      render: (val, row) => (
-        <div>
-          <span className="font-semibold text-slate-900">{val}</span>
-          {row.company_name && (
-            <p className="text-sm text-slate-500">{row.company_name}</p>
-          )}
-        </div>
-      )
+      render: (val, row) => {
+        // Use Yahoo Finance data if available, otherwise use stored data
+        const yahooData = stockPrices[row.ticker];
+        const companyName = row.company_name || yahooData?.name || yahooData?.shortName;
+        const sector = row.sector || yahooData?.sector;
+        return (
+          <div>
+            <span className="font-semibold text-slate-900">{val}</span>
+            {companyName && (
+              <p className="text-sm text-slate-500">{companyName}</p>
+            )}
+            {sector && (
+              <p className="text-xs text-slate-400">{sector}</p>
+            )}
+          </div>
+        );
+      }
     },
     { 
       key: 'shares', 
@@ -245,10 +293,10 @@ export default function Stocks() {
         <AddAssetDialog
           open={dialogOpen}
           onOpenChange={setDialogOpen}
-          title={formData.id ? 'Edit Stock' : 'Add Stock'}
+          title={formData.id ? 'Edit Stock' : (tickerLookupLoading ? 'Add Stock (looking up...)' : 'Add Stock')}
           fields={stockFields}
           data={formData}
-          onChange={(name, value) => setFormData(prev => ({ ...prev, [name]: value }))}
+          onChange={handleFieldChange}
           onSubmit={handleSubmit}
           isLoading={createMutation.isPending || updateMutation.isPending}
         />

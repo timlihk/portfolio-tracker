@@ -84,6 +84,9 @@ class PricingService {
         price: cached.price,
         currency: cached.currency,
         name: cached.name,
+        shortName: cached.shortName,
+        sector: cached.sector,
+        industry: cached.industry,
         exchange: cached.exchange,
         change: cached.change,
         changePercent: cached.changePercent,
@@ -128,11 +131,40 @@ class PricingService {
       const meta = result.meta;
       const quote = result.indicators?.quote?.[0];
 
+      // Fetch additional info (sector, industry) from quoteSummary API
+      let sector = null;
+      let industry = null;
+      let longName = null;
+      try {
+        const summaryResponse = await fetch(
+          `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(upperTicker)}?modules=assetProfile,quoteType`,
+          {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+          }
+        );
+        if (summaryResponse.ok) {
+          const summaryData = await summaryResponse.json();
+          const assetProfile = summaryData.quoteSummary?.result?.[0]?.assetProfile;
+          const quoteType = summaryData.quoteSummary?.result?.[0]?.quoteType;
+          sector = assetProfile?.sector || null;
+          industry = assetProfile?.industry || null;
+          longName = quoteType?.longName || null;
+        }
+      } catch (e) {
+        // Ignore errors fetching additional info - price is most important
+        console.log(`⚠️ Could not fetch sector info for ${upperTicker}:`, e.message);
+      }
+
       const priceData = {
         ticker: upperTicker,
         price: meta.regularMarketPrice || meta.previousClose || 0,
         currency: meta.currency || 'USD',
-        name: meta.shortName || meta.longName || upperTicker,
+        name: longName || meta.shortName || meta.longName || upperTicker,
+        shortName: meta.shortName || upperTicker,
+        sector: sector,
+        industry: industry,
         exchange: meta.exchangeName || 'Unknown',
         change: meta.regularMarketPrice && meta.previousClose
           ? meta.regularMarketPrice - meta.previousClose
