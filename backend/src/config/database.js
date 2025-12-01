@@ -254,6 +254,40 @@ export const initDatabase = async () => {
 
     console.log('✅ All columns added/verified');
 
+    // Create indexes for performance
+    console.log('📋 Creating indexes...');
+    const createIndexes = [
+      // Foreign key indexes (user_id is queried on every request)
+      'CREATE INDEX IF NOT EXISTS idx_stocks_user_id ON stocks(user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_bonds_user_id ON bonds(user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_pe_funds_user_id ON pe_funds(user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_pe_deals_user_id ON pe_deals(user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_liquid_funds_user_id ON liquid_funds(user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_cash_deposits_user_id ON cash_deposits(user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_liabilities_user_id ON liabilities(user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id)',
+      // Frequently queried columns
+      'CREATE INDEX IF NOT EXISTS idx_stocks_ticker ON stocks(ticker)',
+      'CREATE INDEX IF NOT EXISTS idx_stocks_account ON stocks(account)',
+      'CREATE INDEX IF NOT EXISTS idx_bonds_account ON bonds(account)',
+      'CREATE INDEX IF NOT EXISTS idx_liabilities_status ON liabilities(status)',
+      'CREATE INDEX IF NOT EXISTS idx_pe_funds_status ON pe_funds(status)',
+      'CREATE INDEX IF NOT EXISTS idx_pe_deals_status ON pe_deals(status)',
+      'CREATE INDEX IF NOT EXISTS idx_liquid_funds_status ON liquid_funds(status)',
+    ];
+
+    for (const indexSql of createIndexes) {
+      try {
+        await pool.query(indexSql);
+      } catch (e) {
+        // Index might already exist
+        if (!e.message.includes('already exists')) {
+          console.log(`Note: Could not create index: ${e.message}`);
+        }
+      }
+    }
+    console.log('✅ Indexes created/verified');
+
     // Create default user if not exists (for development)
     const defaultUserResult = await pool.query('SELECT id FROM users WHERE id = 1');
     if (defaultUserResult.rows.length === 0) {
