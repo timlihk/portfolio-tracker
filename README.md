@@ -72,3 +72,4 @@ The application is configured for deployment on Railway. See [DEPLOYMENT.md](DEP
 ├── package.json          # Root dependencies and scripts
 └── DEPLOYMENT.md         # Deployment guide
 ```
+# Deployment trigger: Mon, Dec  1, 2025  4:45:23 PM
