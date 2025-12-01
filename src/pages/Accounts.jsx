@@ -128,19 +128,19 @@ export default function Accounts() {
     const accountCash = cashDeposits.filter(c => c.account === accountName);
     
     const stocksValue = accountStocks.reduce((sum, s) => {
-      const price = stockPrices[s.ticker] || s.current_price || s.average_cost;
-      const value = s.shares * price;
+      const price = Number(stockPrices[s.ticker]?.price) || Number(s.current_price) || Number(s.average_cost) || 0;
+      const value = Number(s.shares) * price;
       return sum + convertToUSD(value, s.currency);
     }, 0);
     const bondsValue = accountBonds.reduce((sum, b) => {
-      const value = b.current_value || b.purchase_price;
+      const value = Number(b.current_value) || Number(b.purchase_price) || 0;
       return sum + convertToUSD(value, b.currency);
     }, 0);
     const liabilitiesValue = accountLiabilities.reduce((sum, l) => {
-      return sum + convertToUSD(l.outstanding_balance || 0, l.currency);
+      return sum + convertToUSD(Number(l.outstanding_balance) || 0, l.currency);
     }, 0);
     const cashValue = accountCash.reduce((sum, c) => {
-      return sum + convertToUSD(c.amount || 0, c.currency);
+      return sum + convertToUSD(Number(c.amount) || 0, c.currency);
     }, 0);
     
     return {
@@ -159,12 +159,12 @@ export default function Accounts() {
   // Get unassigned assets - all values converted to USD
   const unassignedStocks = stocks.filter(s => !s.account);
   const unassignedBonds = bonds.filter(b => !b.account);
-  const unassignedValue = 
+  const unassignedValue =
     unassignedStocks.reduce((sum, s) => {
-      const price = stockPrices[s.ticker] || s.current_price || s.average_cost;
-      return sum + convertToUSD(s.shares * price, s.currency);
+      const price = Number(stockPrices[s.ticker]?.price) || Number(s.current_price) || Number(s.average_cost) || 0;
+      return sum + convertToUSD(Number(s.shares) * price, s.currency);
     }, 0) +
-    unassignedBonds.reduce((sum, b) => sum + convertToUSD(b.current_value || b.purchase_price, b.currency), 0);
+    unassignedBonds.reduce((sum, b) => sum + convertToUSD(Number(b.current_value) || Number(b.purchase_price) || 0, b.currency), 0);
 
   return (
     <div className="min-h-screen bg-slate-50/50">
@@ -276,9 +276,9 @@ export default function Accounts() {
                                     </div>
                                     <div className="text-right">
                                       <p className="font-medium">
-                                        ${convertToUSD(stock.shares * (stockPrices[stock.ticker] || stock.current_price || stock.average_cost), stock.currency).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        ${convertToUSD(Number(stock.shares) * (Number(stockPrices[stock.ticker]?.price) || Number(stock.current_price) || Number(stock.average_cost) || 0), stock.currency).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                       </p>
-                                      <p className="text-xs text-slate-500">{stock.shares} shares {stock.currency && stock.currency !== 'USD' ? `(${stock.currency})` : ''}</p>
+                                      <p className="text-xs text-slate-500">{Number(stock.shares).toLocaleString()} shares {stock.currency && stock.currency !== 'USD' ? `(${stock.currency})` : ''}</p>
                                     </div>
                                   </div>
                                 ))}
@@ -306,10 +306,10 @@ export default function Accounts() {
                                     </div>
                                     <div className="text-right">
                                       <p className="font-medium">
-                                        ${convertToUSD(bond.current_value || bond.purchase_price, bond.currency).toLocaleString()}
+                                        ${convertToUSD(Number(bond.current_value) || Number(bond.purchase_price) || 0, bond.currency).toLocaleString()}
                                       </p>
                                       {bond.coupon_rate && (
-                                        <p className="text-xs text-slate-500">{bond.coupon_rate}% coupon {bond.currency && bond.currency !== 'USD' ? `(${bond.currency})` : ''}</p>
+                                        <p className="text-xs text-slate-500">{Number(bond.coupon_rate)}% coupon {bond.currency && bond.currency !== 'USD' ? `(${bond.currency})` : ''}</p>
                                       )}
                                     </div>
                                   </div>
@@ -338,10 +338,10 @@ export default function Accounts() {
                                     </div>
                                     <div className="text-right">
                                       <p className="font-medium">
-                                        ${convertToUSD(deposit.amount || 0, deposit.currency).toLocaleString()}
+                                        ${convertToUSD(Number(deposit.amount) || 0, deposit.currency).toLocaleString()}
                                       </p>
                                       {deposit.interest_rate && (
-                                        <p className="text-xs text-slate-500">{deposit.interest_rate}% interest {deposit.currency && deposit.currency !== 'USD' ? `(${deposit.currency})` : ''}</p>
+                                        <p className="text-xs text-slate-500">{Number(deposit.interest_rate)}% interest {deposit.currency && deposit.currency !== 'USD' ? `(${deposit.currency})` : ''}</p>
                                       )}
                                     </div>
                                   </div>
@@ -370,10 +370,10 @@ export default function Accounts() {
                                     </div>
                                     <div className="text-right">
                                       <p className="font-medium text-rose-600">
-                                        -${convertToUSD(liability.outstanding_balance || 0, liability.currency).toLocaleString()}
+                                        -${convertToUSD(Number(liability.outstanding_balance) || 0, liability.currency).toLocaleString()}
                                       </p>
                                       {liability.interest_rate && (
-                                        <p className="text-xs text-slate-500">{liability.interest_rate}% interest {liability.currency && liability.currency !== 'USD' ? `(${liability.currency})` : ''}</p>
+                                        <p className="text-xs text-slate-500">{Number(liability.interest_rate)}% interest {liability.currency && liability.currency !== 'USD' ? `(${liability.currency})` : ''}</p>
                                       )}
                                     </div>
                                   </div>
@@ -444,7 +444,7 @@ export default function Accounts() {
                                   )}
                                 </div>
                                 <p className="font-medium">
-                                  ${convertToUSD(stock.shares * (stockPrices[stock.ticker] || stock.current_price || stock.average_cost), stock.currency).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  ${convertToUSD(Number(stock.shares) * (Number(stockPrices[stock.ticker]?.price) || Number(stock.current_price) || Number(stock.average_cost) || 0), stock.currency).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </p>
                               </div>
                             ))}
@@ -463,7 +463,7 @@ export default function Accounts() {
                               <div key={bond.id} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
                                 <span className="font-medium text-slate-900">{bond.name}</span>
                                 <p className="font-medium">
-                                  ${convertToUSD(bond.current_value || bond.purchase_price, bond.currency).toLocaleString()}
+                                  ${convertToUSD(Number(bond.current_value) || Number(bond.purchase_price) || 0, bond.currency).toLocaleString()}
                                 </p>
                               </div>
                             ))}
@@ -505,7 +505,7 @@ export default function Accounts() {
               <div className="space-y-2">
                 <Label>Account Type</Label>
                 <Select
-                  value={formData.account_type || ''}
+                  value={formData.account_type || undefined}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, account_type: value }))}
                 >
                   <SelectTrigger>
