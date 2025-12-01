@@ -135,13 +135,13 @@ export default function Liabilities() {
         <Badge variant="outline" className="font-normal">{val}</Badge>
       ) : '-'
     },
-    { 
-      key: 'outstanding_balance', 
+    {
+      key: 'outstanding_balance',
       label: 'Outstanding',
       align: 'right',
       render: (val, row) => {
         const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
-        return <span className="font-medium text-rose-600">{symbol}{(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
+        return <span className="font-medium text-rose-600">{symbol}{(Number(val) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
       }
     },
     { 
@@ -178,7 +178,7 @@ export default function Liabilities() {
 
   const activeLiabilities = liabilities.filter(l => l.status !== 'Paid Off');
   const totalOutstandingUSD = activeLiabilities.reduce((sum, l) => {
-    return sum + convertToUSD(l.outstanding_balance || 0, l.currency);
+    return sum + convertToUSD(Number(l.outstanding_balance) || 0, l.currency);
   }, 0);
 
   return (

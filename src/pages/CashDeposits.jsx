@@ -133,13 +133,13 @@ export default function CashDeposits() {
         </Badge>
       )
     },
-    { 
-      key: 'amount', 
+    {
+      key: 'amount',
       label: 'Amount',
       align: 'right',
       render: (val, row) => {
         const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
-        return <span className="font-semibold">{symbol}{val?.toLocaleString()}</span>;
+        return <span className="font-semibold">{symbol}{(Number(val) || 0).toLocaleString()}</span>;
       }
     },
     { 
@@ -167,7 +167,7 @@ export default function CashDeposits() {
   ];
 
   const totalValueUSD = deposits.reduce((sum, d) => {
-    return sum + convertToUSD(d.amount, d.currency);
+    return sum + convertToUSD(Number(d.amount) || 0, d.currency);
   }, 0);
 
   return (

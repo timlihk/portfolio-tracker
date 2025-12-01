@@ -124,29 +124,29 @@ export default function PEDeals() {
         </Badge>
       )
     },
-    { 
-      key: 'investment_amount', 
+    {
+      key: 'investment_amount',
       label: 'Invested',
       align: 'right',
-      render: (val) => `$${val?.toLocaleString()}`
+      render: (val) => `$${(Number(val) || 0).toLocaleString()}`
     },
-    { 
-      key: 'current_value', 
+    {
+      key: 'current_value',
       label: 'Current Value',
       align: 'right',
       render: (val, row) => (
         <span className="font-medium">
-          ${(val || row.investment_amount)?.toLocaleString()}
+          ${(Number(val) || Number(row.investment_amount) || 0).toLocaleString()}
         </span>
       )
     },
-    { 
-      key: 'moic', 
+    {
+      key: 'moic',
       label: 'MOIC',
       align: 'right',
       render: (_, row) => {
-        const invested = row.investment_amount || 0;
-        const current = row.current_value || invested;
+        const invested = Number(row.investment_amount) || 0;
+        const current = Number(row.current_value) || invested;
         const moic = invested > 0 ? current / invested : 0;
         return (
           <span className={moic >= 1 ? 'text-emerald-600' : 'text-rose-600'}>
@@ -177,8 +177,8 @@ export default function PEDeals() {
     }
   ];
 
-  const totalInvested = deals.reduce((sum, d) => sum + d.investment_amount, 0);
-  const totalValue = deals.reduce((sum, d) => sum + (d.current_value || d.investment_amount), 0);
+  const totalInvested = deals.reduce((sum, d) => sum + (Number(d.investment_amount) || 0), 0);
+  const totalValue = deals.reduce((sum, d) => sum + (Number(d.current_value) || Number(d.investment_amount) || 0), 0);
 
   return (
     <div className="min-h-screen bg-slate-50/50">

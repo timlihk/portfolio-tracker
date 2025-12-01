@@ -64,7 +64,8 @@ export default function Stocks() {
   const isLoadingPrices = pricesLoading || ratesLoading;
 
   // Helper to get current price (real-time or manual)
-  const getCurrentPrice = (stock) => stockPrices[stock.ticker] || stock.current_price || stock.average_cost || 0;
+  // Note: PostgreSQL returns DECIMAL as strings, so we need to convert to numbers
+  const getCurrentPrice = (stock) => Number(stockPrices[stock.ticker]) || Number(stock.current_price) || Number(stock.average_cost) || 0;
 
   const createMutation = useMutation({
     mutationFn: (data) => entities.Stock.create(data),
@@ -129,13 +130,13 @@ export default function Stocks() {
       align: 'right',
       render: (val) => (val || 0).toLocaleString()
     },
-    { 
-      key: 'average_cost', 
+    {
+      key: 'average_cost',
       label: 'Avg Cost',
       align: 'right',
       render: (val, row) => {
         const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
-        return `${symbol}${(val || 0).toFixed(2)}`;
+        return `${symbol}${(Number(val) || 0).toFixed(2)}`;
       }
     },
     { 
@@ -154,25 +155,27 @@ export default function Stocks() {
         );
       }
     },
-    { 
-      key: 'market_value', 
+    {
+      key: 'market_value',
       label: 'Market Value',
       align: 'right',
       render: (_, row) => {
         const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
         const price = getCurrentPrice(row);
-        const value = (row.shares || 0) * price;
+        const value = (Number(row.shares) || 0) * price;
         return <span className="font-medium">{symbol}{value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
       }
     },
-    { 
-      key: 'gain_loss', 
+    {
+      key: 'gain_loss',
       label: 'Gain/Loss',
       align: 'right',
       render: (_, row) => {
         const price = getCurrentPrice(row);
-        const cost = (row.shares || 0) * (row.average_cost || 0);
-        const value = (row.shares || 0) * price;
+        const shares = Number(row.shares) || 0;
+        const avgCost = Number(row.average_cost) || 0;
+        const cost = shares * avgCost;
+        const value = shares * price;
         const gain = value - cost;
         const gainPct = cost > 0 ? ((gain / cost) * 100).toFixed(1) : '0.0';
         const isPositive = gain >= 0;
@@ -208,7 +211,7 @@ export default function Stocks() {
   // Calculate totals in USD
   const totalValueUSD = stocks.reduce((sum, s) => {
     const price = getCurrentPrice(s);
-    const value = (s.shares || 0) * price;
+    const value = (Number(s.shares) || 0) * price;
     return sum + convertToUSD(value || 0, s.currency);
   }, 0);
 

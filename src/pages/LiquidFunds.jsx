@@ -138,29 +138,29 @@ export default function LiquidFunds() {
       label: 'Strategy',
       render: (val) => val || '-'
     },
-    { 
-      key: 'investment_amount', 
+    {
+      key: 'investment_amount',
       label: 'Invested',
       align: 'right',
-      render: (val) => `$${val?.toLocaleString()}`
+      render: (val) => `$${(Number(val) || 0).toLocaleString()}`
     },
-    { 
-      key: 'current_value', 
+    {
+      key: 'current_value',
       label: 'Current Value',
       align: 'right',
       render: (val, row) => (
         <span className="font-medium">
-          ${(val || row.investment_amount)?.toLocaleString()}
+          ${(Number(val) || Number(row.investment_amount) || 0).toLocaleString()}
         </span>
       )
     },
-    { 
-      key: 'gain_loss', 
+    {
+      key: 'gain_loss',
       label: 'Gain/Loss',
       align: 'right',
       render: (_, row) => {
-        const invested = row.investment_amount || 0;
-        const current = row.current_value || invested;
+        const invested = Number(row.investment_amount) || 0;
+        const current = Number(row.current_value) || invested;
         const gain = current - invested;
         const gainPct = invested > 0 ? ((gain / invested) * 100).toFixed(1) : 0;
         const isPositive = gain >= 0;
@@ -202,8 +202,8 @@ export default function LiquidFunds() {
     }
   ];
 
-  const totalInvested = funds.reduce((sum, f) => sum + f.investment_amount, 0);
-  const totalValue = funds.reduce((sum, f) => sum + (f.current_value || f.investment_amount), 0);
+  const totalInvested = funds.reduce((sum, f) => sum + (Number(f.investment_amount) || 0), 0);
+  const totalValue = funds.reduce((sum, f) => sum + (Number(f.current_value) || Number(f.investment_amount) || 0), 0);
 
   return (
     <div className="min-h-screen bg-slate-50/50">

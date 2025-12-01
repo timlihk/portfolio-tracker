@@ -83,34 +83,34 @@ export default function Dashboard() {
   const stocksGainPercent = stocksCost > 0 ? ((stocksGain / stocksCost) * 100).toFixed(1) : '0.0';
 
   const bondsValue = bonds.reduce((sum, b) => {
-    const realTimeValue = b.current_value || bondPrices[b.name] || b.purchase_price || 0;
+    const realTimeValue = Number(b.current_value) || Number(bondPrices[b.name]) || Number(b.purchase_price) || 0;
     const converted = convertToUSD(realTimeValue, b.currency);
     return sum + (isNaN(converted) ? 0 : converted);
   }, 0);
   const bondsCost = bonds.reduce((sum, b) => {
-    const converted = convertToUSD(b.purchase_price || 0, b.currency);
+    const converted = convertToUSD(Number(b.purchase_price) || 0, b.currency);
     return sum + (isNaN(converted) ? 0 : converted);
   }, 0);
 
-  const peFundsValue = peFunds.reduce((sum, f) => sum + (f.nav || 0) + (f.distributions || 0), 0);
-  const peFundsCalled = peFunds.reduce((sum, f) => sum + (f.called_capital || 0), 0);
-  const peFundsCommitment = peFunds.reduce((sum, f) => sum + (f.commitment || 0), 0);
+  const peFundsValue = peFunds.reduce((sum, f) => sum + (Number(f.nav) || 0) + (Number(f.distributions) || 0), 0);
+  const peFundsCalled = peFunds.reduce((sum, f) => sum + (Number(f.called_capital) || 0), 0);
+  const peFundsCommitment = peFunds.reduce((sum, f) => sum + (Number(f.commitment) || 0), 0);
   const peFundsUnfunded = peFundsCommitment - peFundsCalled;
 
-  const peDealsValue = peDeals.reduce((sum, d) => sum + (d.current_value || d.investment_amount || 0), 0);
-  const peDealsCost = peDeals.reduce((sum, d) => sum + (d.investment_amount || 0), 0);
+  const peDealsValue = peDeals.reduce((sum, d) => sum + (Number(d.current_value) || Number(d.investment_amount) || 0), 0);
+  const peDealsCost = peDeals.reduce((sum, d) => sum + (Number(d.investment_amount) || 0), 0);
 
-  const liquidFundsValue = liquidFunds.reduce((sum, f) => sum + (f.current_value || f.investment_amount || 0), 0);
-  const liquidFundsCost = liquidFunds.reduce((sum, f) => sum + (f.investment_amount || 0), 0);
+  const liquidFundsValue = liquidFunds.reduce((sum, f) => sum + (Number(f.current_value) || Number(f.investment_amount) || 0), 0);
+  const liquidFundsCost = liquidFunds.reduce((sum, f) => sum + (Number(f.investment_amount) || 0), 0);
 
   const cashValue = cashDeposits.reduce((sum, c) => {
-    const converted = convertToUSD(c.amount || 0, c.currency);
+    const converted = convertToUSD(Number(c.amount) || 0, c.currency);
     return sum + (isNaN(converted) ? 0 : converted);
   }, 0);
 
   const activeLiabilities = liabilities.filter(l => l.status !== 'Paid Off');
   const totalLiabilities = activeLiabilities.reduce((sum, l) => {
-    const converted = convertToUSD(l.outstanding_balance || 0, l.currency);
+    const converted = convertToUSD(Number(l.outstanding_balance) || 0, l.currency);
     return sum + (isNaN(converted) ? 0 : converted);
   }, 0);
 
@@ -351,13 +351,13 @@ export default function Dashboard() {
               <div>
                 <p className="text-sm text-slate-500 mb-1">Distributions</p>
                 <p className="text-2xl font-semibold text-emerald-600">
-                  ${peFunds.reduce((sum, f) => sum + (f.distributions || 0), 0).toLocaleString()}
+                  ${peFunds.reduce((sum, f) => sum + (Number(f.distributions) || 0), 0).toLocaleString()}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-slate-500 mb-1">Current NAV</p>
                 <p className="text-2xl font-semibold text-slate-900">
-                  ${peFunds.reduce((sum, f) => sum + (f.nav || 0), 0).toLocaleString()}
+                  ${peFunds.reduce((sum, f) => sum + (Number(f.nav) || 0), 0).toLocaleString()}
                 </p>
               </div>
             </div>

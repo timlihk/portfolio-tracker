@@ -68,7 +68,8 @@ export default function Bonds() {
   const isLoadingPrices = pricesLoading || ratesLoading;
 
   // Helper to get current value (estimated or manual)
-  const getCurrentValue = (bond) => bondPrices[bond.name] || bond.current_value || bond.purchase_price;
+  // Note: PostgreSQL returns DECIMAL as strings, so we need to convert to numbers
+  const getCurrentValue = (bond) => Number(bondPrices[bond.name]) || Number(bond.current_value) || Number(bond.purchase_price) || 0;
 
   const createMutation = useMutation({
     mutationFn: (data) => entities.Bond.create(data),
@@ -137,17 +138,17 @@ export default function Bonds() {
         </div>
       )
     },
-    { 
-      key: 'face_value', 
+    {
+      key: 'face_value',
       label: 'Face Value',
       align: 'right',
       render: (val, row) => {
         const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
-        return `${symbol}${val?.toLocaleString()}`;
+        return `${symbol}${(Number(val) || 0).toLocaleString()}`;
       }
     },
-    { 
-      key: 'current_value', 
+    {
+      key: 'current_value',
       label: 'Current Value',
       align: 'right',
       render: (val, row) => {
@@ -156,7 +157,7 @@ export default function Bonds() {
         const isLive = bondPrices[row.name] && !row.current_value;
         return (
           <div className="flex items-center justify-end gap-1">
-            <span className="font-medium">{symbol}{value?.toLocaleString()}</span>
+            <span className="font-medium">{symbol}{value.toLocaleString()}</span>
             {isLive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Estimated value" />}
           </div>
         );

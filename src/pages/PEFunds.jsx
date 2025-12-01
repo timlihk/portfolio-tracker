@@ -120,19 +120,20 @@ export default function PEFunds() {
       label: 'Vintage',
       render: (val) => val || '-'
     },
-    { 
-      key: 'commitment', 
+    {
+      key: 'commitment',
       label: 'Commitment',
       align: 'right',
-      render: (val) => `$${val?.toLocaleString()}`
+      render: (val) => `$${(Number(val) || 0).toLocaleString()}`
     },
-    { 
-      key: 'called', 
+    {
+      key: 'called',
       label: 'Called / Unfunded',
       render: (_, row) => {
-        const called = row.called_capital || 0;
-        const unfunded = row.commitment - called;
-        const pct = row.commitment > 0 ? (called / row.commitment) * 100 : 0;
+        const called = Number(row.called_capital) || 0;
+        const commitment = Number(row.commitment) || 0;
+        const unfunded = commitment - called;
+        const pct = commitment > 0 ? (called / commitment) * 100 : 0;
         return (
           <div className="min-w-[140px]">
             <div className="flex justify-between text-sm mb-1">
@@ -144,28 +145,28 @@ export default function PEFunds() {
         );
       }
     },
-    { 
-      key: 'nav', 
+    {
+      key: 'nav',
       label: 'NAV',
       align: 'right',
-      render: (val) => <span className="font-medium">${(val || 0).toLocaleString()}</span>
+      render: (val) => <span className="font-medium">${(Number(val) || 0).toLocaleString()}</span>
     },
-    { 
-      key: 'distributions', 
+    {
+      key: 'distributions',
       label: 'Distributions',
       align: 'right',
       render: (val) => (
-        <span className="text-emerald-600">${(val || 0).toLocaleString()}</span>
+        <span className="text-emerald-600">${(Number(val) || 0).toLocaleString()}</span>
       )
     },
-    { 
-      key: 'tvpi', 
+    {
+      key: 'tvpi',
       label: 'TVPI',
       align: 'right',
       render: (_, row) => {
-        const called = row.called_capital || 0;
+        const called = Number(row.called_capital) || 0;
         if (called === 0) return '-';
-        const tvpi = ((row.nav || 0) + (row.distributions || 0)) / called;
+        const tvpi = ((Number(row.nav) || 0) + (Number(row.distributions) || 0)) / called;
         return (
           <span className={tvpi >= 1 ? 'text-emerald-600' : 'text-rose-600'}>
             {tvpi.toFixed(2)}x
@@ -184,8 +185,8 @@ export default function PEFunds() {
     }
   ];
 
-  const totalCommitment = funds.reduce((sum, f) => sum + f.commitment, 0);
-  const totalNAV = funds.reduce((sum, f) => sum + (f.nav || 0), 0);
+  const totalCommitment = funds.reduce((sum, f) => sum + (Number(f.commitment) || 0), 0);
+  const totalNAV = funds.reduce((sum, f) => sum + (Number(f.nav) || 0), 0);
 
   return (
     <div className="min-h-screen bg-slate-50/50">
