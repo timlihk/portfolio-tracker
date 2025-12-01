@@ -2,13 +2,13 @@
 
 A full-stack portfolio tracking application for managing investments across multiple asset classes including stocks, bonds, private equity funds, and private deals.
 
-> Last updated: December 1, 2025
+> Last updated: December 1, 2025 - Added real-time stock pricing and currency conversion
 
 ## Features
 
 - **Multi-Asset Portfolio Management**: Track stocks, bonds, PE funds, and private deals
 - **Family Member Tracking**: Manage portfolios for multiple family members
-- **Live Market Data**: Real-time pricing via Alpha Vantage API integration
+- **Live Market Data**: Real-time stock pricing via Yahoo Finance API
 - **Dashboard Analytics**: Interactive charts and performance metrics
 - **Secure Authentication**: JWT-based user authentication
 - **Responsive Design**: Mobile-friendly interface built with React and Tailwind CSS
@@ -20,7 +20,7 @@ A full-stack portfolio tracking application for managing investments across mult
 - **Authentication**: JWT, bcryptjs
 - **Database**: PostgreSQL with automatic migrations
 - **Deployment**: Railway with NIXPACKS builder
-- **API Integration**: Alpha Vantage for market data
+- **API Integration**: Yahoo Finance for stock prices, exchangerate-api.com for FX rates
 
 ## Quick Start
 
@@ -72,4 +72,32 @@ The application is configured for deployment on Railway. See [DEPLOYMENT.md](DEP
 ├── package.json          # Root dependencies and scripts
 └── DEPLOYMENT.md         # Deployment guide
 ```
-# Deployment trigger: Mon, Dec  1, 2025  4:45:23 PM
+
+## API Endpoints
+
+### Pricing API
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/pricing/stock/:ticker` | GET | Get real-time price for a stock |
+| `/api/pricing/stocks` | POST | Get prices for multiple stocks |
+| `/api/pricing/validate/:ticker` | GET | Validate a ticker symbol |
+| `/api/pricing/currency/convert` | GET | Convert between currencies |
+| `/api/pricing/currency/to-usd` | GET | Convert amount to USD |
+| `/api/pricing/currency/rates/:base` | GET | Get exchange rates |
+| `/api/pricing/currency/supported` | GET | List supported currencies |
+
+### Example Usage
+
+```bash
+# Get stock price
+curl https://your-app.railway.app/api/pricing/stock/AAPL
+
+# Get multiple stock prices
+curl -X POST https://your-app.railway.app/api/pricing/stocks \
+  -H "Content-Type: application/json" \
+  -d '{"tickers": ["AAPL", "GOOGL", "MSFT"]}'
+
+# Convert currency
+curl "https://your-app.railway.app/api/pricing/currency/convert?amount=100&from=EUR&to=USD"
+```
