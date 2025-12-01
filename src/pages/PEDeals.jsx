@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/api/backendClient';
 import PageHeader from '@/components/portfolio/PageHeader';
 import AssetTable from '@/components/portfolio/AssetTable';
 import AddAssetDialog from '@/components/portfolio/AddAssetDialog';
@@ -43,11 +43,11 @@ export default function PEDeals() {
 
   const { data: deals = [], isLoading } = useQuery({
     queryKey: ['peDeals'],
-    queryFn: () => base44.entities.PEDeal.list()
+    queryFn: () => entities.PEDeal.list()
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.PEDeal.create(data),
+    mutationFn: (data) => entities.PEDeal.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['peDeals'] });
       setDialogOpen(false);
@@ -56,7 +56,7 @@ export default function PEDeals() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.PEDeal.update(id, data),
+    mutationFn: ({ id, data }) => entities.PEDeal.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['peDeals'] });
       setDialogOpen(false);
@@ -65,7 +65,7 @@ export default function PEDeals() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.PEDeal.delete(id),
+    mutationFn: (id) => entities.PEDeal.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['peDeals'] });
       setDeleteTarget(null);

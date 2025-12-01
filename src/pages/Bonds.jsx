@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/api/backendClient';
 import PageHeader from '@/components/portfolio/PageHeader';
 import AssetTable from '@/components/portfolio/AssetTable';
 import AddAssetDialog from '@/components/portfolio/AddAssetDialog';
@@ -51,12 +51,12 @@ export default function Bonds() {
 
   const { data: bonds = [] } = useQuery({
     queryKey: ['bonds'],
-    queryFn: () => base44.entities.Bond.list()
+    queryFn: () => entities.Bond.list()
   });
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
-    queryFn: () => base44.entities.Account.list()
+    queryFn: () => entities.Account.list()
   });
 
   const bondFields = getBondFields(accounts);
@@ -71,7 +71,7 @@ export default function Bonds() {
   const getCurrentValue = (bond) => bondPrices[bond.name] || bond.current_value || bond.purchase_price;
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Bond.create(data),
+    mutationFn: (data) => entities.Bond.create(data),
     onSuccess: (_, data) => {
       bondLogger.logCreate(data.name, `Face value ${data.face_value}`);
       queryClient.invalidateQueries({ queryKey: ['bonds'] });
@@ -81,7 +81,7 @@ export default function Bonds() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Bond.update(id, data),
+    mutationFn: ({ id, data }) => entities.Bond.update(id, data),
     onSuccess: (_, { data }) => {
       bondLogger.logUpdate(data.name, 'Updated position');
       queryClient.invalidateQueries({ queryKey: ['bonds'] });
@@ -91,7 +91,7 @@ export default function Bonds() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Bond.delete(id),
+    mutationFn: (id) => entities.Bond.delete(id),
     onSuccess: () => {
       bondLogger.logDelete(deleteTarget?.name, 'Position removed');
       queryClient.invalidateQueries({ queryKey: ['bonds'] });

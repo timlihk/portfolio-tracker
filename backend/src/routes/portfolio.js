@@ -414,6 +414,120 @@ router.put('/bonds/:id', requireAuth, async (req, res) => {
   }
 });
 
+// Update routes for PE Funds
+router.put('/pe-funds/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fund_name, fund_type, vintage_year, commitment, called_capital, nav, distributions, commitment_date } = req.body;
+
+    const result = await pool.query(
+      `UPDATE pe_funds SET fund_name = $1, fund_type = $2, vintage_year = $3, commitment = $4,
+       called_capital = $5, nav = $6, distributions = $7, commitment_date = $8, updated_at = NOW()
+       WHERE id = $9 AND user_id = $10 RETURNING *`,
+      [fund_name, fund_type, vintage_year, commitment, called_capital, nav, distributions, commitment_date, id, req.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'PE Fund not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating PE fund:', error);
+    res.status(500).json({ error: 'Failed to update PE fund' });
+  }
+});
+
+// Update routes for PE Deals
+router.put('/pe-deals/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { company_name, sector, deal_type, investment_amount, current_value, status, investment_date } = req.body;
+
+    const result = await pool.query(
+      `UPDATE pe_deals SET company_name = $1, sector = $2, deal_type = $3, investment_amount = $4,
+       current_value = $5, status = $6, investment_date = $7, updated_at = NOW()
+       WHERE id = $8 AND user_id = $9 RETURNING *`,
+      [company_name, sector, deal_type, investment_amount, current_value, status, investment_date, id, req.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'PE Deal not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating PE deal:', error);
+    res.status(500).json({ error: 'Failed to update PE deal' });
+  }
+});
+
+// Update routes for Liquid Funds
+router.put('/liquid-funds/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fund_name, fund_type, strategy, investment_amount, current_value, ytd_return, investment_date } = req.body;
+
+    const result = await pool.query(
+      `UPDATE liquid_funds SET fund_name = $1, fund_type = $2, strategy = $3, investment_amount = $4,
+       current_value = $5, ytd_return = $6, investment_date = $7, updated_at = NOW()
+       WHERE id = $8 AND user_id = $9 RETURNING *`,
+      [fund_name, fund_type, strategy, investment_amount, current_value, ytd_return, investment_date, id, req.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Liquid Fund not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating liquid fund:', error);
+    res.status(500).json({ error: 'Failed to update liquid fund' });
+  }
+});
+
+// Update routes for Cash Deposits
+router.put('/cash-deposits/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { account_name, amount, currency, interest_rate } = req.body;
+
+    const result = await pool.query(
+      `UPDATE cash_deposits SET account_name = $1, amount = $2, currency = $3, interest_rate = $4, updated_at = NOW()
+       WHERE id = $5 AND user_id = $6 RETURNING *`,
+      [account_name, amount, currency, interest_rate, id, req.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Cash Deposit not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating cash deposit:', error);
+    res.status(500).json({ error: 'Failed to update cash deposit' });
+  }
+});
+
+// Update routes for Liabilities
+router.put('/liabilities/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, type, outstanding_balance, interest_rate, monthly_payment, currency, status } = req.body;
+
+    const result = await pool.query(
+      `UPDATE liabilities SET name = $1, type = $2, outstanding_balance = $3, interest_rate = $4,
+       monthly_payment = $5, currency = $6, status = $7, updated_at = NOW()
+       WHERE id = $8 AND user_id = $9 RETURNING *`,
+      [name, type, outstanding_balance, interest_rate, monthly_payment, currency, status, id, req.userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Liability not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating liability:', error);
+    res.status(500).json({ error: 'Failed to update liability' });
+  }
+});
+
 // Delete routes
 router.delete('/stocks/:id', requireAuth, async (req, res) => {
   try {

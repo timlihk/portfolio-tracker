@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/api/backendClient';
 import PageHeader from '@/components/portfolio/PageHeader';
 import AssetTable from '@/components/portfolio/AssetTable';
 import AddAssetDialog from '@/components/portfolio/AddAssetDialog';
@@ -51,19 +51,19 @@ export default function Liabilities() {
 
   const { data: liabilities = [] } = useQuery({
     queryKey: ['liabilities'],
-    queryFn: () => base44.entities.Liability.list()
+    queryFn: () => entities.Liability.list()
   });
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
-    queryFn: () => base44.entities.Account.list()
+    queryFn: () => entities.Account.list()
   });
 
   const liabilityFields = getLiabilityFields(accounts);
   const { convertToUSD } = useExchangeRates() || { convertToUSD: (v) => v };
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Liability.create(data),
+    mutationFn: (data) => entities.Liability.create(data),
     onSuccess: (_, data) => {
       liabilityLogger.logCreate(data.name, `${data.outstanding_balance} ${data.currency || 'USD'}`);
       queryClient.invalidateQueries({ queryKey: ['liabilities'] });
@@ -73,7 +73,7 @@ export default function Liabilities() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Liability.update(id, data),
+    mutationFn: ({ id, data }) => entities.Liability.update(id, data),
     onSuccess: (_, { data }) => {
       liabilityLogger.logUpdate(data.name, 'Updated loan');
       queryClient.invalidateQueries({ queryKey: ['liabilities'] });
@@ -83,7 +83,7 @@ export default function Liabilities() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Liability.delete(id),
+    mutationFn: (id) => entities.Liability.delete(id),
     onSuccess: () => {
       liabilityLogger.logDelete(deleteTarget?.name, 'Loan removed');
       queryClient.invalidateQueries({ queryKey: ['liabilities'] });

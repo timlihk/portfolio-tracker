@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/api/backendClient';
 import StatCard from '@/components/portfolio/StatCard';
 import AllocationChart from '@/components/portfolio/AllocationChart';
 import AIPortfolioAnalysis from '@/components/portfolio/AIPortfolioAnalysis';
@@ -22,37 +22,37 @@ import { Badge } from '@/components/ui/badge';
 export default function Dashboard() {
   const { data: stocks = [] } = useQuery({
     queryKey: ['stocks'],
-    queryFn: () => base44.entities.Stock.list()
+    queryFn: () => entities.Stock.list()
   });
 
   const { data: bonds = [] } = useQuery({
     queryKey: ['bonds'],
-    queryFn: () => base44.entities.Bond.list()
+    queryFn: () => entities.Bond.list()
   });
 
   const { data: peFunds = [] } = useQuery({
     queryKey: ['peFunds'],
-    queryFn: () => base44.entities.PEFund.list()
+    queryFn: () => entities.PEFund.list()
   });
 
   const { data: peDeals = [] } = useQuery({
     queryKey: ['peDeals'],
-    queryFn: () => base44.entities.PEDeal.list()
+    queryFn: () => entities.PEDeal.list()
   });
 
   const { data: liquidFunds = [] } = useQuery({
     queryKey: ['liquidFunds'],
-    queryFn: () => base44.entities.LiquidFund.list()
+    queryFn: () => entities.LiquidFund.list()
   });
 
   const { data: cashDeposits = [] } = useQuery({
     queryKey: ['cashDeposits'],
-    queryFn: () => base44.entities.CashDeposit.list()
+    queryFn: () => entities.CashDeposit.list()
   });
 
   const { data: liabilities = [] } = useQuery({
     queryKey: ['liabilities'],
-    queryFn: () => base44.entities.Liability.list()
+    queryFn: () => entities.Liability.list()
   });
 
   // Get exchange rates and real-time prices

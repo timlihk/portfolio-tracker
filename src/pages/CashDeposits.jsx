@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/api/backendClient';
 import PageHeader from '@/components/portfolio/PageHeader';
 import AssetTable from '@/components/portfolio/AssetTable';
 import AddAssetDialog from '@/components/portfolio/AddAssetDialog';
@@ -44,19 +44,19 @@ export default function CashDeposits() {
 
   const { data: deposits = [] } = useQuery({
     queryKey: ['cashDeposits'],
-    queryFn: () => base44.entities.CashDeposit.list()
+    queryFn: () => entities.CashDeposit.list()
   });
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
-    queryFn: () => base44.entities.Account.list()
+    queryFn: () => entities.Account.list()
   });
 
   const cashFields = getCashFields(accounts);
   const { convertToUSD } = useExchangeRates();
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.CashDeposit.create(data),
+    mutationFn: (data) => entities.CashDeposit.create(data),
     onSuccess: (_, data) => {
       cashLogger.logCreate(data.name, `${data.deposit_type || 'Cash'} - ${data.amount}`);
       queryClient.invalidateQueries({ queryKey: ['cashDeposits'] });
@@ -66,7 +66,7 @@ export default function CashDeposits() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.CashDeposit.update(id, data),
+    mutationFn: ({ id, data }) => entities.CashDeposit.update(id, data),
     onSuccess: (_, { data }) => {
       cashLogger.logUpdate(data.name, 'Updated');
       queryClient.invalidateQueries({ queryKey: ['cashDeposits'] });
@@ -76,7 +76,7 @@ export default function CashDeposits() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.CashDeposit.delete(id),
+    mutationFn: (id) => entities.CashDeposit.delete(id),
     onSuccess: () => {
       cashLogger.logDelete(deleteTarget?.name, 'Removed');
       queryClient.invalidateQueries({ queryKey: ['cashDeposits'] });

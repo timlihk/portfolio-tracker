@@ -71,12 +71,26 @@ export const portfolioAPI = {
     method: 'POST',
     body: stockData,
   }),
+  updateStock: (id, stockData) => apiCall(`/portfolio/stocks/${id}`, {
+    method: 'PUT',
+    body: stockData,
+  }),
+  deleteStock: (id) => apiCall(`/portfolio/stocks/${id}`, {
+    method: 'DELETE',
+  }),
 
   // Bonds
   getBonds: () => apiCall('/portfolio/bonds'),
   createBond: (bondData) => apiCall('/portfolio/bonds', {
     method: 'POST',
     body: bondData,
+  }),
+  updateBond: (id, bondData) => apiCall(`/portfolio/bonds/${id}`, {
+    method: 'PUT',
+    body: bondData,
+  }),
+  deleteBond: (id) => apiCall(`/portfolio/bonds/${id}`, {
+    method: 'DELETE',
   }),
 
   // PE Funds
@@ -85,12 +99,26 @@ export const portfolioAPI = {
     method: 'POST',
     body: fundData,
   }),
+  updatePEFund: (id, fundData) => apiCall(`/portfolio/pe-funds/${id}`, {
+    method: 'PUT',
+    body: fundData,
+  }),
+  deletePEFund: (id) => apiCall(`/portfolio/pe-funds/${id}`, {
+    method: 'DELETE',
+  }),
 
   // PE Deals
   getPEDeals: () => apiCall('/portfolio/pe-deals'),
   createPEDeal: (dealData) => apiCall('/portfolio/pe-deals', {
     method: 'POST',
     body: dealData,
+  }),
+  updatePEDeal: (id, dealData) => apiCall(`/portfolio/pe-deals/${id}`, {
+    method: 'PUT',
+    body: dealData,
+  }),
+  deletePEDeal: (id) => apiCall(`/portfolio/pe-deals/${id}`, {
+    method: 'DELETE',
   }),
 
   // Liquid Funds
@@ -99,6 +127,13 @@ export const portfolioAPI = {
     method: 'POST',
     body: fundData,
   }),
+  updateLiquidFund: (id, fundData) => apiCall(`/portfolio/liquid-funds/${id}`, {
+    method: 'PUT',
+    body: fundData,
+  }),
+  deleteLiquidFund: (id) => apiCall(`/portfolio/liquid-funds/${id}`, {
+    method: 'DELETE',
+  }),
 
   // Cash Deposits
   getCashDeposits: () => apiCall('/portfolio/cash-deposits'),
@@ -106,12 +141,26 @@ export const portfolioAPI = {
     method: 'POST',
     body: depositData,
   }),
+  updateCashDeposit: (id, depositData) => apiCall(`/portfolio/cash-deposits/${id}`, {
+    method: 'PUT',
+    body: depositData,
+  }),
+  deleteCashDeposit: (id) => apiCall(`/portfolio/cash-deposits/${id}`, {
+    method: 'DELETE',
+  }),
 
   // Liabilities
   getLiabilities: () => apiCall('/portfolio/liabilities'),
   createLiability: (liabilityData) => apiCall('/portfolio/liabilities', {
     method: 'POST',
     body: liabilityData,
+  }),
+  updateLiability: (id, liabilityData) => apiCall(`/portfolio/liabilities/${id}`, {
+    method: 'PUT',
+    body: liabilityData,
+  }),
+  deleteLiability: (id) => apiCall(`/portfolio/liabilities/${id}`, {
+    method: 'DELETE',
   }),
 };
 
@@ -162,30 +211,44 @@ export const entities = {
   Stock: {
     list: () => portfolioAPI.getStocks(),
     create: (data) => portfolioAPI.createStock(data),
+    update: (id, data) => portfolioAPI.updateStock(id, data),
+    delete: (id) => portfolioAPI.deleteStock(id),
   },
   Bond: {
     list: () => portfolioAPI.getBonds(),
     create: (data) => portfolioAPI.createBond(data),
+    update: (id, data) => portfolioAPI.updateBond(id, data),
+    delete: (id) => portfolioAPI.deleteBond(id),
   },
   PEFund: {
     list: () => portfolioAPI.getPEFunds(),
     create: (data) => portfolioAPI.createPEFund(data),
+    update: (id, data) => portfolioAPI.updatePEFund(id, data),
+    delete: (id) => portfolioAPI.deletePEFund(id),
   },
   PEDeal: {
     list: () => portfolioAPI.getPEDeals(),
     create: (data) => portfolioAPI.createPEDeal(data),
+    update: (id, data) => portfolioAPI.updatePEDeal(id, data),
+    delete: (id) => portfolioAPI.deletePEDeal(id),
   },
   LiquidFund: {
     list: () => portfolioAPI.getLiquidFunds(),
     create: (data) => portfolioAPI.createLiquidFund(data),
+    update: (id, data) => portfolioAPI.updateLiquidFund(id, data),
+    delete: (id) => portfolioAPI.deleteLiquidFund(id),
   },
   CashDeposit: {
     list: () => portfolioAPI.getCashDeposits(),
     create: (data) => portfolioAPI.createCashDeposit(data),
+    update: (id, data) => portfolioAPI.updateCashDeposit(id, data),
+    delete: (id) => portfolioAPI.deleteCashDeposit(id),
   },
   Liability: {
     list: () => portfolioAPI.getLiabilities(),
     create: (data) => portfolioAPI.createLiability(data),
+    update: (id, data) => portfolioAPI.updateLiability(id, data),
+    delete: (id) => portfolioAPI.deleteLiability(id),
   },
 };
 

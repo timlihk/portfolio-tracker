@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/api/backendClient';
 import PageHeader from '@/components/portfolio/PageHeader';
 import AssetTable from '@/components/portfolio/AssetTable';
 import AddAssetDialog from '@/components/portfolio/AddAssetDialog';
@@ -46,12 +46,12 @@ export default function Stocks() {
 
   const { data: stocks = [] } = useQuery({
     queryKey: ['stocks'],
-    queryFn: () => base44.entities.Stock.list()
+    queryFn: () => entities.Stock.list()
   });
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
-    queryFn: () => base44.entities.Account.list()
+    queryFn: () => entities.Account.list()
   });
 
   const stockFields = getStockFields(accounts);
@@ -67,7 +67,7 @@ export default function Stocks() {
   const getCurrentPrice = (stock) => stockPrices[stock.ticker] || stock.current_price || stock.average_cost || 0;
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Stock.create(data),
+    mutationFn: (data) => entities.Stock.create(data),
     onSuccess: (_, data) => {
       stockLogger.logCreate(data.ticker, `${data.shares} shares at ${data.average_cost}`);
       queryClient.invalidateQueries({ queryKey: ['stocks'] });
@@ -77,7 +77,7 @@ export default function Stocks() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Stock.update(id, data),
+    mutationFn: ({ id, data }) => entities.Stock.update(id, data),
     onSuccess: (_, { data }) => {
       stockLogger.logUpdate(data.ticker, `Updated position`);
       queryClient.invalidateQueries({ queryKey: ['stocks'] });
@@ -87,7 +87,7 @@ export default function Stocks() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Stock.delete(id),
+    mutationFn: (id) => entities.Stock.delete(id),
     onSuccess: () => {
       stockLogger.logDelete(deleteTarget?.ticker, 'Position removed');
       queryClient.invalidateQueries({ queryKey: ['stocks'] });

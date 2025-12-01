@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/api/backendClient';
 import PageHeader from '@/components/portfolio/PageHeader';
 import AssetTable from '@/components/portfolio/AssetTable';
 import AddAssetDialog from '@/components/portfolio/AddAssetDialog';
@@ -48,11 +48,11 @@ export default function LiquidFunds() {
 
   const { data: funds = [], isLoading } = useQuery({
     queryKey: ['liquidFunds'],
-    queryFn: () => base44.entities.LiquidFund.list()
+    queryFn: () => entities.LiquidFund.list()
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.LiquidFund.create(data),
+    mutationFn: (data) => entities.LiquidFund.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['liquidFunds'] });
       setDialogOpen(false);
@@ -61,7 +61,7 @@ export default function LiquidFunds() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.LiquidFund.update(id, data),
+    mutationFn: ({ id, data }) => entities.LiquidFund.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['liquidFunds'] });
       setDialogOpen(false);
@@ -70,7 +70,7 @@ export default function LiquidFunds() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.LiquidFund.delete(id),
+    mutationFn: (id) => entities.LiquidFund.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['liquidFunds'] });
       setDeleteTarget(null);
