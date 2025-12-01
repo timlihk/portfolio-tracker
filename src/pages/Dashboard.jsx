@@ -65,8 +65,9 @@ export default function Dashboard() {
   const isLoadingPrices = ratesLoading || stockPricesLoading || bondPricesLoading;
 
   // Calculate totals with real-time prices and currency conversion
+  // stockPrices[ticker] is an object with { price, currency, name, ... }
   const stocksValue = stocks.reduce((sum, s) => {
-    const realTimePrice = Number(stockPrices[s.ticker]) || Number(s.current_price) || Number(s.average_cost) || 0;
+    const realTimePrice = Number(stockPrices[s.ticker]?.price) || Number(s.current_price) || Number(s.average_cost) || 0;
     const shares = Number(s.shares) || 0;
     const valueInOriginalCurrency = shares * realTimePrice;
     const converted = convertToUSD(valueInOriginalCurrency, s.currency);
@@ -141,7 +142,7 @@ export default function Dashboard() {
       sector: s.sector,
       shares: s.shares,
       averageCost: s.average_cost,
-      currentPrice: stockPrices[s.ticker] || s.current_price || s.average_cost || 0,
+      currentPrice: stockPrices[s.ticker]?.price || s.current_price || s.average_cost || 0,
       currency: s.currency
     })),
     bonds: bonds.map(b => ({

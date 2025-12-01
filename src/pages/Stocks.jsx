@@ -65,7 +65,8 @@ export default function Stocks() {
 
   // Helper to get current price (real-time or manual)
   // Note: PostgreSQL returns DECIMAL as strings, so we need to convert to numbers
-  const getCurrentPrice = (stock) => Number(stockPrices[stock.ticker]) || Number(stock.current_price) || Number(stock.average_cost) || 0;
+  // stockPrices[ticker] is an object with { price, currency, name, ... }
+  const getCurrentPrice = (stock) => Number(stockPrices[stock.ticker]?.price) || Number(stock.current_price) || Number(stock.average_cost) || 0;
 
   const createMutation = useMutation({
     mutationFn: (data) => entities.Stock.create(data),
@@ -139,14 +140,14 @@ export default function Stocks() {
         return `${symbol}${(Number(val) || 0).toFixed(2)}`;
       }
     },
-    { 
-      key: 'current_price', 
+    {
+      key: 'current_price',
       label: 'Current',
       align: 'right',
       render: (val, row) => {
         const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
         const price = getCurrentPrice(row);
-        const isLive = stockPrices[row.ticker] && !row.current_price;
+        const isLive = stockPrices[row.ticker]?.price && !row.current_price;
         return (
           <div className="flex items-center justify-end gap-1">
             <span>{symbol}{(price || 0).toFixed(2)}</span>
