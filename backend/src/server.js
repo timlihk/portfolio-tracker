@@ -7,12 +7,18 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+dotenv.config();
+
+console.log('🚀 Starting server...');
+console.log(`📁 Current working directory: ${process.cwd()}`);
+console.log(`📊 NODE_ENV: ${process.env.NODE_ENV}`);
+console.log(`🔌 PORT: ${process.env.PORT}`);
+console.log(`🗄️  DATABASE_URL exists: ${!!process.env.DATABASE_URL}`);
+
 // Import routes
 import portfolioRoutes from './routes/portfolio.js';
 import authRoutes from './routes/auth.js';
 import { initDatabase } from './config/database.js';
-
-dotenv.config();
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);

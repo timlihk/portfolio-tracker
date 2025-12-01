@@ -25,8 +25,21 @@ pool.on('error', (err) => {
 
 // Initialize database tables
 export const initDatabase = async () => {
+  console.log('🗄️  Initializing database connection...');
+
+  if (!process.env.DATABASE_URL) {
+    console.error('❌ DATABASE_URL environment variable is not set!');
+    throw new Error('DATABASE_URL is required');
+  }
+
   try {
+    // Test connection first
+    console.log('🔌 Testing database connection...');
+    const testResult = await pool.query('SELECT NOW()');
+    console.log(`✅ Database connected at: ${testResult.rows[0].now}`);
+
     // Create tables if they don't exist
+    console.log('📋 Creating tables if they don\'t exist...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
