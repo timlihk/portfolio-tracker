@@ -75,17 +75,30 @@ app.use((err, req, res, next) => {
 
 // Initialize database and start server
 async function startServer() {
+  const fs = await import('fs');
+
+  // Log directory contents for debugging
+  console.log(`📁 Current working directory: ${process.cwd()}`);
+  console.log(`📂 Directory contents:`);
+  try {
+    const files = fs.readdirSync(process.cwd());
+    files.forEach(f => console.log(`   - ${f}`));
+  } catch (e) {
+    console.log(`   Error reading directory: ${e.message}`);
+  }
+
   // Serve static files in production
   if (process.env.NODE_ENV === 'production') {
     // Serve static files from the dist directory
     // Use absolute path from root of project
     const distPath = path.join(process.cwd(), 'dist');
-    console.log(`📁 Serving static files from: ${distPath}`);
+    console.log(`📁 Looking for static files at: ${distPath}`);
 
     // Check if dist directory exists
-    const fs = await import('fs');
     if (fs.existsSync(distPath)) {
-      console.log(`✅ Found dist directory with ${fs.readdirSync(distPath).length} files`);
+      const distFiles = fs.readdirSync(distPath);
+      console.log(`✅ Found dist directory with ${distFiles.length} files:`);
+      distFiles.forEach(f => console.log(`   - ${f}`));
       app.use(express.static(distPath));
 
       // For any other route, serve index.html
