@@ -136,13 +136,15 @@ router.post('/stocks', requireAuth, async (req, res) => {
       average_cost,
       current_price,
       currency,
-      purchase_date
+      account,
+      purchase_date,
+      notes
     } = req.body;
 
     const result = await pool.query(
-      `INSERT INTO stocks (user_id, ticker, company_name, sector, shares, average_cost, current_price, currency, purchase_date)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [req.userId, ticker, company_name, sector, shares, average_cost, current_price, currency, purchase_date]
+      `INSERT INTO stocks (user_id, ticker, company_name, sector, shares, average_cost, current_price, currency, account, purchase_date, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+      [req.userId, ticker, company_name, sector, shares, average_cost, current_price, currency, account, purchase_date, notes]
     );
 
     res.status(201).json(result.rows[0]);
@@ -167,6 +169,7 @@ router.post('/bonds', requireAuth, async (req, res) => {
   try {
     const {
       name,
+      isin,
       bond_type,
       face_value,
       coupon_rate,
@@ -175,13 +178,15 @@ router.post('/bonds', requireAuth, async (req, res) => {
       purchase_price,
       current_value,
       currency,
-      purchase_date
+      account,
+      purchase_date,
+      notes
     } = req.body;
 
     const result = await pool.query(
-      `INSERT INTO bonds (user_id, name, bond_type, face_value, coupon_rate, maturity_date, rating, purchase_price, current_value, currency, purchase_date)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
-      [req.userId, name, bond_type, face_value, coupon_rate, maturity_date, rating, purchase_price, current_value, currency, purchase_date]
+      `INSERT INTO bonds (user_id, name, isin, bond_type, face_value, coupon_rate, maturity_date, rating, purchase_price, current_value, currency, account, purchase_date, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *`,
+      [req.userId, name, isin, bond_type, face_value, coupon_rate, maturity_date, rating, purchase_price, current_value, currency, account, purchase_date, notes]
     );
 
     res.status(201).json(result.rows[0]);
@@ -373,13 +378,13 @@ router.post('/liabilities', requireAuth, async (req, res) => {
 router.put('/stocks/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { ticker, company_name, sector, shares, average_cost, current_price, currency, purchase_date } = req.body;
+    const { ticker, company_name, sector, shares, average_cost, current_price, currency, account, purchase_date, notes } = req.body;
 
     const result = await pool.query(
       `UPDATE stocks SET ticker = $1, company_name = $2, sector = $3, shares = $4, average_cost = $5,
-       current_price = $6, currency = $7, purchase_date = $8, updated_at = NOW()
-       WHERE id = $9 AND user_id = $10 RETURNING *`,
-      [ticker, company_name, sector, shares, average_cost, current_price, currency, purchase_date, id, req.userId]
+       current_price = $6, currency = $7, account = $8, purchase_date = $9, notes = $10, updated_at = NOW()
+       WHERE id = $11 AND user_id = $12 RETURNING *`,
+      [ticker, company_name, sector, shares, average_cost, current_price, currency, account, purchase_date, notes, id, req.userId]
     );
 
     if (result.rows.length === 0) {
@@ -395,13 +400,13 @@ router.put('/stocks/:id', requireAuth, async (req, res) => {
 router.put('/bonds/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, bond_type, face_value, coupon_rate, maturity_date, rating, purchase_price, current_value, currency, purchase_date } = req.body;
+    const { name, isin, bond_type, face_value, coupon_rate, maturity_date, rating, purchase_price, current_value, currency, account, purchase_date, notes } = req.body;
 
     const result = await pool.query(
-      `UPDATE bonds SET name = $1, bond_type = $2, face_value = $3, coupon_rate = $4, maturity_date = $5,
-       rating = $6, purchase_price = $7, current_value = $8, currency = $9, purchase_date = $10, updated_at = NOW()
-       WHERE id = $11 AND user_id = $12 RETURNING *`,
-      [name, bond_type, face_value, coupon_rate, maturity_date, rating, purchase_price, current_value, currency, purchase_date, id, req.userId]
+      `UPDATE bonds SET name = $1, isin = $2, bond_type = $3, face_value = $4, coupon_rate = $5, maturity_date = $6,
+       rating = $7, purchase_price = $8, current_value = $9, currency = $10, account = $11, purchase_date = $12, notes = $13, updated_at = NOW()
+       WHERE id = $14 AND user_id = $15 RETURNING *`,
+      [name, isin, bond_type, face_value, coupon_rate, maturity_date, rating, purchase_price, current_value, currency, account, purchase_date, notes, id, req.userId]
     );
 
     if (result.rows.length === 0) {
