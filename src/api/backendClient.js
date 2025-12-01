@@ -101,6 +101,42 @@ export const portfolioAPI = {
   }),
 };
 
+// Pricing API
+export const pricingAPI = {
+  // Get single stock price
+  getStockPrice: (ticker, convertTo = null) => {
+    const params = convertTo ? `?convertTo=${convertTo}` : '';
+    return apiCall(`/pricing/stock/${ticker}${params}`);
+  },
+
+  // Get multiple stock prices
+  getMultipleStockPrices: (tickers, convertTo = null) => apiCall('/pricing/stocks', {
+    method: 'POST',
+    body: { tickers, convertTo },
+  }),
+
+  // Validate ticker symbol
+  validateTicker: (ticker) => apiCall(`/pricing/validate/${ticker}`),
+
+  // Currency conversion
+  convertCurrency: (amount, from, to) =>
+    apiCall(`/pricing/currency/convert?amount=${amount}&from=${from}&to=${to}`),
+
+  // Convert to USD
+  convertToUSD: (amount, from) =>
+    apiCall(`/pricing/currency/to-usd?amount=${amount}&from=${from}`),
+
+  // Get exchange rates
+  getExchangeRates: (base = 'USD') => apiCall(`/pricing/currency/rates/${base}`),
+
+  // Get supported currencies
+  getSupportedCurrencies: () => apiCall('/pricing/currency/supported'),
+
+  // Cache management
+  getCacheStats: () => apiCall('/pricing/cache/stats'),
+  clearCache: () => apiCall('/pricing/cache/clear', { method: 'POST' }),
+};
+
 // Mock entities to maintain compatibility with existing code
 export const entities = {
   Stock: {
@@ -137,4 +173,5 @@ export const entities = {
 export const backend = {
   entities,
   auth: authAPI,
+  pricing: pricingAPI,
 };

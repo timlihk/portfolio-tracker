@@ -1,81 +1,52 @@
-import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { useState, useEffect, useCallback } from 'react';
+import { pricingAPI } from '@/api/backendClient';
 
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS', 'HKD'];
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS', 'HKD', 'SGD', 'CNY', 'KRW', 'TWD'];
 
 export function useExchangeRates() {
   const [rates, setRates] = useState({
     USD: 1,
-    EUR: 1.05,
+    EUR: 1.10,
     GBP: 1.27,
-    CHF: 1.13,
+    CHF: 1.12,
     JPY: 0.0067,
     CAD: 0.74,
-    AUD: 0.65,
+    AUD: 0.66,
     ILS: 0.27,
-    HKD: 0.13
+    HKD: 0.128,
+    SGD: 0.74,
+    CNY: 0.14,
+    KRW: 0.00075,
+    TWD: 0.031
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchRates = async () => {
       try {
-        const result = await base44.integrations.Core.InvokeLLM({
-          prompt: `Get the current exchange rates showing how much 1 unit of each currency equals in USD.
+        // Fetch rates from our backend API (which uses exchangerate-api.com)
+        const result = await pricingAPI.getExchangeRates('USD');
 
-For example:
-- 1 EUR = ~1.05 USD
-- 1 GBP = ~1.27 USD  
-- 1 JPY = ~0.0066 USD (since 1 USD = ~150 JPY, then 1 JPY = 1/150 = 0.0066 USD)
-- 1 ILS = ~0.27 USD
+        if (result?.rates) {
+          // Convert rates: API returns "how many X per 1 USD"
+          // We need: "how many USD per 1 X"
+          const convertedRates = { USD: 1 };
 
-Return the rate for: EUR, GBP, CHF, JPY, CAD, AUD, ILS, HKD
-Each rate should be: how many USD you get for 1 unit of that currency.`,
-          add_context_from_internet: true,
-          response_json_schema: {
-            type: "object",
-            properties: {
-              EUR: { type: "number", description: "How many USD for 1 EUR (e.g., 1.05)" },
-              GBP: { type: "number", description: "How many USD for 1 GBP (e.g., 1.27)" },
-              CHF: { type: "number", description: "How many USD for 1 CHF (e.g., 1.13)" },
-              JPY: { type: "number", description: "How many USD for 1 JPY (e.g., 0.0066)" },
-              CAD: { type: "number", description: "How many USD for 1 CAD (e.g., 0.74)" },
-              AUD: { type: "number", description: "How many USD for 1 AUD (e.g., 0.65)" },
-              ILS: { type: "number", description: "How many USD for 1 ILS (e.g., 0.27)" },
-              HKD: { type: "number", description: "How many USD for 1 HKD (e.g., 0.13)" }
+          for (const currency of CURRENCIES) {
+            if (currency === 'USD') continue;
+            const rate = result.rates[currency];
+            if (rate && rate > 0) {
+              // Invert the rate: 1/rate gives us "USD per 1 unit of currency"
+              convertedRates[currency] = 1 / rate;
             }
           }
-        });
-        // Validate rates - JPY should be a small number like 0.006-0.007
-        const validatedRates = { USD: 1 };
-        for (const [currency, rate] of Object.entries(result)) {
-          const numRate = Number(rate);
-          // Sanity check: JPY rate should be < 0.02, others should be < 3
-          if (currency === 'JPY' && numRate > 0.02) {
-            // LLM probably returned inverted rate, fix it
-            validatedRates[currency] = 1 / numRate;
-          } else if (currency !== 'JPY' && numRate > 200) {
-            // LLM probably returned inverted rate for other currencies
-            validatedRates[currency] = 1 / numRate;
-          } else {
-            validatedRates[currency] = numRate;
-          }
+
+          console.log('Exchange rates fetched:', convertedRates);
+          setRates(convertedRates);
         }
-        setRates(validatedRates);
       } catch (error) {
         console.error('Failed to fetch exchange rates:', error);
-        // Fallback rates (Nov 2025 approximate)
-        setRates({
-          USD: 1,
-          EUR: 1.05,
-          GBP: 1.27,
-          CHF: 1.13,
-          JPY: 0.0066,
-          CAD: 0.71,
-          AUD: 0.65,
-          ILS: 0.27,
-          HKD: 0.128
-        });
+        // Keep fallback rates
       } finally {
         setLoading(false);
       }
@@ -84,12 +55,12 @@ Each rate should be: how many USD you get for 1 unit of that currency.`,
     fetchRates();
   }, []);
 
-  const convertToUSD = (amount, fromCurrency) => {
+  const convertToUSD = useCallback((amount, fromCurrency) => {
     const num = Number(amount) || 0;
     if (!fromCurrency || fromCurrency === 'USD') return num;
     const rate = Number(rates[fromCurrency]) || 1;
     return num * rate;
-  };
+  }, [rates]);
 
   return { rates, loading, convertToUSD, CURRENCIES };
 }
@@ -115,21 +86,27 @@ export function useStockPrices(tickers) {
       setLoading(true);
       setError(null);
       try {
-        // Use backend function to fetch from Yahoo Finance
-        const result = await base44.functions.getStockPrices({ tickers: uniqueTickers });
-        
+        // Use our backend API (which uses Yahoo Finance)
+        const result = await pricingAPI.getMultipleStockPrices(uniqueTickers);
+
         const fetchedPrices = {};
-        if (result?.prices) {
-          for (const [ticker, price] of Object.entries(result.prices)) {
-            const numPrice = Number(price);
-            if (!isNaN(numPrice) && numPrice > 0) {
-              const matchedTicker = uniqueTickers.find(t => t.toUpperCase() === ticker.toUpperCase()) || ticker;
-              fetchedPrices[matchedTicker] = numPrice;
+        if (result?.results) {
+          for (const [ticker, data] of Object.entries(result.results)) {
+            if (data && typeof data.price === 'number' && data.price > 0) {
+              fetchedPrices[ticker] = {
+                price: data.price,
+                currency: data.currency || 'USD',
+                name: data.name,
+                change: data.change,
+                changePercent: data.changePercent,
+                previousClose: data.previousClose,
+                marketState: data.marketState
+              };
             }
           }
         }
-        
-        console.log('Stock prices from Yahoo:', fetchedPrices);
+
+        console.log('Stock prices from Yahoo Finance:', fetchedPrices);
         setPrices(fetchedPrices);
       } catch (err) {
         console.error('Failed to fetch stock prices:', err);
@@ -142,7 +119,24 @@ export function useStockPrices(tickers) {
     fetchPrices();
   }, [JSON.stringify(tickers)]);
 
-  return { prices: prices || {}, loading, error };
+  // Helper to get just the price number for a ticker
+  const getPrice = useCallback((ticker) => {
+    const data = prices[ticker?.toUpperCase()];
+    return data?.price || null;
+  }, [prices]);
+
+  // Helper to get full price data for a ticker
+  const getPriceData = useCallback((ticker) => {
+    return prices[ticker?.toUpperCase()] || null;
+  }, [prices]);
+
+  return {
+    prices,
+    loading,
+    error,
+    getPrice,
+    getPriceData
+  };
 }
 
 export function useBondPrices(bonds) {
@@ -152,54 +146,17 @@ export function useBondPrices(bonds) {
   useEffect(() => {
     if (!bonds || bonds.length === 0) return;
 
-    const fetchPrices = async () => {
-      setLoading(true);
-      try {
-        // Separate bonds with ISIN from those without
-        const bondsWithISIN = bonds.filter(b => b.isin);
-        const bondsWithoutISIN = bonds.filter(b => !b.isin);
-        
-        const bondInfo = bonds.map(b => ({
-          name: b.name,
-          isin: b.isin || null,
-          type: b.bond_type,
-          face_value: b.face_value,
-          coupon_rate: b.coupon_rate,
-          maturity_date: b.maturity_date,
-          rating: b.rating
-        }));
+    // For bonds, we use face value as the default price
+    // Real bond pricing would require a specialized API
+    const bondPrices = {};
+    for (const bond of bonds) {
+      // Use face_value or purchase_price as the current value
+      // In a real implementation, you'd want to fetch from a bond pricing service
+      bondPrices[bond.name] = bond.current_value || bond.face_value || bond.purchase_price || 0;
+    }
 
-        // Use OpenFIGI for ISIN lookups and web search for pricing
-        const result = await base44.integrations.Core.InvokeLLM({
-          prompt: `Get current market values for these bonds. For bonds with ISIN, look up pricing data using the ISIN. For others, estimate based on coupon rate, maturity, and current interest rates.
-
-Bonds: ${JSON.stringify(bondInfo)}
-
-Use current treasury yields and credit spreads for estimation. Return values as percentage of face value (e.g., 98.5 means 98.5% of face value).`,
-          add_context_from_internet: true,
-          response_json_schema: {
-            type: "object",
-            properties: {
-              values: {
-                type: "object",
-                description: "Object with bond names as keys and current market values (in currency amount, not percentage) as values",
-                additionalProperties: { type: "number" }
-              }
-            }
-          }
-        });
-
-        if (result?.values) {
-          setPrices(result.values);
-        }
-      } catch (error) {
-        console.error('Failed to fetch bond prices:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPrices();
+    setPrices(bondPrices);
+    setLoading(false);
   }, [bonds?.map(b => b.id).join(',')]);
 
   return { prices, loading };
@@ -214,11 +171,38 @@ export const CURRENCY_SYMBOLS = {
   CAD: 'C$',
   AUD: 'A$',
   ILS: '₪',
-  HKD: 'HK$'
+  HKD: 'HK$',
+  SGD: 'S$',
+  CNY: '¥',
+  KRW: '₩',
+  TWD: 'NT$'
 };
 
 export function formatCurrency(amount, currency = 'USD') {
   const symbol = CURRENCY_SYMBOLS[currency] || '$';
   const num = Number(amount) || 0;
   return `${symbol}${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+// New helper: Format price with change indicator
+export function formatPriceWithChange(priceData) {
+  if (!priceData) return null;
+
+  const { price, currency, change, changePercent } = priceData;
+  const formattedPrice = formatCurrency(price, currency);
+
+  if (change === undefined || change === null) {
+    return { formattedPrice, change: null, changePercent: null, isPositive: null };
+  }
+
+  const isPositive = change >= 0;
+  const changeStr = `${isPositive ? '+' : ''}${change.toFixed(2)}`;
+  const percentStr = `${isPositive ? '+' : ''}${changePercent.toFixed(2)}%`;
+
+  return {
+    formattedPrice,
+    change: changeStr,
+    changePercent: percentStr,
+    isPositive
+  };
 }

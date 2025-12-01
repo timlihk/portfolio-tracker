@@ -18,6 +18,7 @@ console.log(`🗄️  DATABASE_URL exists: ${!!process.env.DATABASE_URL}`);
 // Import routes
 import portfolioRoutes from './routes/portfolio.js';
 import authRoutes from './routes/auth.js';
+import pricingRoutes from './routes/pricing.js';
 import { initDatabase } from './config/database.js';
 
 // Get __dirname equivalent in ES modules
@@ -63,6 +64,7 @@ app.get('/api/health', (req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/portfolio', portfolioRoutes);
+app.use('/api/pricing', pricingRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
