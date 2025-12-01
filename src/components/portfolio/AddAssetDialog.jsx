@@ -58,7 +58,7 @@ function SelectWithCustom({ value, onChange, options, placeholder }) {
 
   return (
     <div className="flex gap-2">
-      <Select value={value} onValueChange={onChange}>
+      <Select value={value || undefined} onValueChange={onChange}>
         <SelectTrigger className="h-11 flex-1">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
@@ -68,9 +68,9 @@ function SelectWithCustom({ value, onChange, options, placeholder }) {
           ))}
         </SelectContent>
       </Select>
-      <Button 
-        type="button" 
-        variant="outline" 
+      <Button
+        type="button"
+        variant="outline"
         onClick={() => setIsAddingNew(true)}
         className="h-11 px-3"
         title="Add new account"
@@ -108,14 +108,14 @@ export default function AddAssetDialog({
               
               {field.type === 'select' && field.allowCustom ? (
                 <SelectWithCustom
-                  value={data[field.name] || ''}
+                  value={data[field.name] || undefined}
                   onChange={(value) => onChange(field.name, value)}
                   options={field.options}
                   placeholder={field.placeholder || `Select ${field.label.toLowerCase()}`}
                 />
               ) : field.type === 'select' ? (
                 <Select
-                  value={data[field.name] || ''}
+                  value={data[field.name] || undefined}
                   onValueChange={(value) => onChange(field.name, value)}
                 >
                   <SelectTrigger className="h-11">
