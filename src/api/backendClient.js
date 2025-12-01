@@ -5,6 +5,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/a
 // Helper function for API calls
 async function apiCall(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
+  console.log(`📡 API Call: ${options.method || 'GET'} ${url}`);
 
   const config = {
     headers: {
@@ -16,19 +17,24 @@ async function apiCall(endpoint, options = {}) {
 
   if (config.body && typeof config.body === 'object') {
     config.body = JSON.stringify(config.body);
+    console.log('📦 Request body:', config.body);
   }
 
   try {
     const response = await fetch(url, config);
+    console.log(`📥 Response status: ${response.status}`);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      console.error('❌ API Error:', errorData);
+      throw new Error(errorData.error || errorData.message || `HTTP error! status: ${response.status}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    console.log('✅ Response data:', data);
+    return data;
   } catch (error) {
-    console.error('API call failed:', error);
+    console.error('❌ API call failed:', error);
     throw error;
   }
 }
