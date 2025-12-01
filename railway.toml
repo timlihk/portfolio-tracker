@@ -1,29 +1,18 @@
 [build]
 builder = "NIXPACKS"
+buildCommand = "npm run build:all"
 
 [deploy]
-startCommand = "npm run preview"
+startCommand = "npm run start"
 
 [[services]]
-name = "mangrove-portfolio-frontend"
-
-[services.env]
-NODE_ENV = "production"
-VITE_API_URL = "https://${RAILWAY_STATIC_URL}/api"
-
-[[services.ports]]
-port = 4173
-protocol = "http"
-
-[[services]]
-name = "mangrove-portfolio-backend"
+name = "mangrove-portfolio"
 
 [services.env]
 NODE_ENV = "production"
 PORT = "3001"
 DATABASE_URL = "${DATABASE_URL}"
 JWT_SECRET = "${JWT_SECRET}"
-FRONTEND_URL = "https://${RAILWAY_STATIC_URL}"
 
 [[services.ports]]
 port = 3001
