@@ -51,6 +51,20 @@ export const authAPI = {
 export const portfolioAPI = {
   getDashboard: () => apiCall('/portfolio/dashboard'),
 
+  // Accounts
+  getAccounts: () => apiCall('/portfolio/accounts'),
+  createAccount: (accountData) => apiCall('/portfolio/accounts', {
+    method: 'POST',
+    body: accountData,
+  }),
+  updateAccount: (id, accountData) => apiCall(`/portfolio/accounts/${id}`, {
+    method: 'PUT',
+    body: accountData,
+  }),
+  deleteAccount: (id) => apiCall(`/portfolio/accounts/${id}`, {
+    method: 'DELETE',
+  }),
+
   // Stocks
   getStocks: () => apiCall('/portfolio/stocks'),
   createStock: (stockData) => apiCall('/portfolio/stocks', {
@@ -139,6 +153,12 @@ export const pricingAPI = {
 
 // Mock entities to maintain compatibility with existing code
 export const entities = {
+  Account: {
+    list: () => portfolioAPI.getAccounts(),
+    create: (data) => portfolioAPI.createAccount(data),
+    update: (id, data) => portfolioAPI.updateAccount(id, data),
+    delete: (id) => portfolioAPI.deleteAccount(id),
+  },
   Stock: {
     list: () => portfolioAPI.getStocks(),
     create: (data) => portfolioAPI.createStock(data),

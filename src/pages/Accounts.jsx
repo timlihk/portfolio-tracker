@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { entities } from '@/api/backendClient';
 import { Button } from "@/components/ui/button";
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,27 +49,27 @@ export default function Accounts() {
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
-    queryFn: () => base44.entities.Account.list()
+    queryFn: () => entities.Account.list()
   });
 
   const { data: stocks = [] } = useQuery({
     queryKey: ['stocks'],
-    queryFn: () => base44.entities.Stock.list()
+    queryFn: () => entities.Stock.list()
   });
 
   const { data: bonds = [] } = useQuery({
     queryKey: ['bonds'],
-    queryFn: () => base44.entities.Bond.list()
+    queryFn: () => entities.Bond.list()
   });
 
   const { data: liabilities = [] } = useQuery({
     queryKey: ['liabilities'],
-    queryFn: () => base44.entities.Liability.list()
+    queryFn: () => entities.Liability.list()
   });
 
   const { data: cashDeposits = [] } = useQuery({
     queryKey: ['cashDeposits'],
-    queryFn: () => base44.entities.CashDeposit.list()
+    queryFn: () => entities.CashDeposit.list()
   });
 
   const { convertToUSD } = useExchangeRates();
@@ -78,7 +78,7 @@ export default function Accounts() {
   const { prices: stockPrices } = useStockPrices(stockTickers);
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Account.create(data),
+    mutationFn: (data) => entities.Account.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       setDialogOpen(false);
@@ -87,7 +87,7 @@ export default function Accounts() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Account.update(id, data),
+    mutationFn: ({ id, data }) => entities.Account.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       setDialogOpen(false);
@@ -96,7 +96,7 @@ export default function Accounts() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Account.delete(id),
+    mutationFn: (id) => entities.Account.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       setDeleteTarget(null);
