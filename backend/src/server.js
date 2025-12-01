@@ -21,6 +21,9 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy for Railway/Heroku/etc
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 app.use(compression());
@@ -64,25 +67,42 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Serve static files in production
-if (process.env.NODE_ENV === 'production') {
-  // Serve static files from the dist directory
-  const distPath = path.join(__dirname, '../../dist');
-  app.use(express.static(distPath));
-
-  // For any other route, serve index.html
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
-  });
-} else {
-  // 404 handler for development
-  app.use('*', (req, res) => {
-    res.status(404).json({ error: 'Route not found' });
-  });
-}
-
 // Initialize database and start server
 async function startServer() {
+  // Serve static files in production
+  if (process.env.NODE_ENV === 'production') {
+    // Serve static files from the dist directory
+    // Use absolute path from root of project
+    const distPath = path.join(process.cwd(), 'dist');
+    console.log(`📁 Serving static files from: ${distPath}`);
+
+    // Check if dist directory exists
+    const fs = await import('fs');
+    if (fs.existsSync(distPath)) {
+      console.log(`✅ Found dist directory with ${fs.readdirSync(distPath).length} files`);
+      app.use(express.static(distPath));
+
+      // For any other route, serve index.html
+      app.get('*', (req, res) => {
+        res.sendFile(path.join(distPath, 'index.html'));
+      });
+    } else {
+      console.log(`❌ Dist directory not found at: ${distPath}`);
+      // Fallback to API-only mode
+      app.use('*', (req, res) => {
+        res.status(404).json({
+          error: 'Frontend not built',
+          message: 'The frontend static files were not found. Please check the build process.',
+          api: 'Available at /api endpoints'
+        });
+      });
+    }
+  } else {
+    // 404 handler for development
+    app.use('*', (req, res) => {
+      res.status(404).json({ error: 'Route not found' });
+    });
+  }
   try {
     await initDatabase();
 

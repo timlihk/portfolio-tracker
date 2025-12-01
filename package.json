@@ -12,7 +12,7 @@
     "preview": "vite preview",
     "build:frontend": "vite build --outDir dist",
     "build:backend": "echo 'Backend dependencies already installed in root package.json'",
-    "build:all": "npm run build:frontend",
+    "build:all": "npm run build:frontend && echo '✅ Frontend built successfully'",
     "start": "node backend/src/server.js",
     "dev:backend": "cd backend && npm run dev",
     "install:backend": "cd backend && npm install"
