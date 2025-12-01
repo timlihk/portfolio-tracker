@@ -2,6 +2,8 @@
 
 A full-stack portfolio tracking application for managing investments across multiple asset classes including stocks, bonds, private equity funds, and private deals.
 
+> Last updated: December 1, 2025
+
 ## Features
 
 - **Multi-Asset Portfolio Management**: Track stocks, bonds, PE funds, and private deals
