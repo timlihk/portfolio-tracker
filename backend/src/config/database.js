@@ -152,6 +152,18 @@ export const initDatabase = async () => {
     `);
 
     console.log('✅ Database tables initialized successfully');
+
+    // Create default user if not exists (for development)
+    const defaultUserResult = await pool.query('SELECT id FROM users WHERE id = 1');
+    if (defaultUserResult.rows.length === 0) {
+      console.log('👤 Creating default user...');
+      await pool.query(`
+        INSERT INTO users (id, email, password_hash, name)
+        VALUES (1, 'default@example.com', 'placeholder', 'Default User')
+        ON CONFLICT (id) DO NOTHING
+      `);
+      console.log('✅ Default user created');
+    }
   } catch (error) {
     console.error('❌ Error initializing database:', error);
     throw error;
