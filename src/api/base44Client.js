@@ -1,13 +1,5 @@
-import { createClient } from '@base44/sdk';
-import { appParams } from '@/lib/app-params';
+// Export backend client for compatibility with existing code
+// This replaces the Base44 SDK with our own backend API
+import { backend } from './backendClient';
 
-const { appId, serverUrl, token, functionsVersion } = appParams;
-
-//Create a client with authentication required
-export const base44 = createClient({
-  appId,
-  serverUrl,
-  token,
-  functionsVersion,
-  requiresAuth: false
-});
+export const base44 = backend;

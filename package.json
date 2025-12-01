@@ -10,16 +10,14 @@
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc -p ./jsconfig.json",
     "preview": "vite preview",
-    "build:frontend": "vite build",
-    "build:backend": "cd backend && npm install",
-    "build:all": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "vite build --outDir dist",
+    "build:backend": "echo 'Backend dependencies already installed in root package.json'",
+    "build:all": "npm run build:frontend",
     "start": "node backend/src/server.js",
     "dev:backend": "cd backend && npm run dev",
     "install:backend": "cd backend && npm install"
   },
   "dependencies": {
-    "@base44/sdk": "^0.8.3",
-    "@base44/vite-plugin": "^0.2.5",
     "@hello-pangea/dnd": "^17.0.0",
     "@hookform/resolvers": "^4.1.2",
     "@radix-ui/react-accordion": "^1.2.3",
@@ -90,24 +88,24 @@
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "express-rate-limit": "^7.1.5",
-    "express-validator": "^7.0.1"
+    "express-validator": "^7.0.1",
+    "vite": "^6.1.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "tailwindcss": "^3.4.17",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
     "@types/node": "^22.13.5",
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
-    "@vitejs/plugin-react": "^4.3.4",
-    "autoprefixer": "^10.4.20",
     "eslint": "^9.19.0",
     "eslint-plugin-react": "^7.37.4",
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.18",
     "eslint-plugin-unused-imports": "^4.3.0",
     "globals": "^15.14.0",
-    "postcss": "^8.5.3",
-    "tailwindcss": "^3.4.17",
-    "typescript": "^5.8.2",
-    "vite": "^6.1.0"
+    "typescript": "^5.8.2"
   }
 }
