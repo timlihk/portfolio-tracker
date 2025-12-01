@@ -32,16 +32,13 @@ Ensure your repository has the following structure:
    Railway will automatically detect the `railway.toml` configuration. You need to add the following environment variables:
 
    ```bash
-   # Frontend
-   VITE_API_URL=https://your-app-name.railway.app/api
-
    # Backend
    JWT_SECRET=your-super-secret-jwt-key-here
    ```
 
    Railway will automatically provide:
    - `DATABASE_URL` (PostgreSQL connection string)
-   - `RAILWAY_STATIC_URL` (your app's URL)
+   - `PORT` (server port, defaults to 3001)
 
 3. **Database Setup**:
    - Railway will automatically provision a PostgreSQL database
@@ -49,9 +46,9 @@ Ensure your repository has the following structure:
 
 ### 3. Verify Deployment
 
-1. **Check Services**:
-   - Railway will deploy two services: frontend and backend
-   - The frontend will be available at your Railway URL
+1. **Check Service**:
+   - Railway will deploy a single service combining frontend and backend
+   - The application will be available at your Railway URL (e.g., `https://portfolio-tracker-production.up.railway.app`)
    - The backend API will be available at `https://your-app-name.railway.app/api`
 
 2. **Test API Endpoints**:
@@ -109,8 +106,6 @@ For local development, you can use:
 ### Frontend (.env.local)
 ```
 VITE_API_URL=http://localhost:3001/api
-VITE_BASE44_APP_ID=your_base44_app_id
-VITE_BASE44_BACKEND_URL=your_base44_backend_url
 ```
 
 ### Backend (.env)
@@ -165,9 +160,9 @@ railway shell
 
 The deployed application consists of:
 
-- **Frontend**: React app served via Vite
-- **Backend**: Express.js API server
+- **Frontend**: React app built with Vite and served as static files
+- **Backend**: Express.js API server that also serves the frontend static files in production
 - **Database**: PostgreSQL with portfolio data
-- **Reverse Proxy**: Railway handles routing between services
+- **Single Service**: Both frontend and backend are deployed as a single container for simplicity
 
-Both services are deployed as separate containers and Railway handles the routing automatically based on the `railway.toml` configuration.
+The application uses a single service architecture where the Express.js server handles both API requests and serves the React frontend static files in production mode.
