@@ -6,16 +6,15 @@ buildCommand = "npm run build:all"
 startCommand = "npm run start"
 
 [[services]]
-name = "mangrove-portfolio"
+name = "portfolio-tracker"
 
 [services.env]
 NODE_ENV = "production"
-PORT = "3001"
 DATABASE_URL = "${DATABASE_URL}"
 JWT_SECRET = "${JWT_SECRET}"
 
 [[services.ports]]
-port = 3001
+port = 8080
 protocol = "http"
 
 [[databases]]

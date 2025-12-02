@@ -98,6 +98,33 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Helper function to initialize database with retry logic
+async function initDatabaseWithRetry(maxRetries = 3, delayMs = 2000) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      logger.info(`Attempting database connection (attempt ${attempt}/${maxRetries})...`);
+      await initDatabase();
+      logger.info('Database connection successful');
+      return true;
+    } catch (error) {
+      lastError = error;
+      logger.warn(`Database connection failed (attempt ${attempt}/${maxRetries}):`, { error: error.message });
+
+      if (attempt < maxRetries) {
+        logger.info(`Retrying in ${delayMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        // Exponential backoff
+        delayMs *= 1.5;
+      }
+    }
+  }
+
+  logger.error('All database connection attempts failed', { error: lastError.message });
+  throw lastError;
+}
+
 // Initialize database and start server
 async function startServer() {
   const fs = await import('fs');
