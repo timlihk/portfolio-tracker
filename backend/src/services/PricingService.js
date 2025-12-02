@@ -2,6 +2,7 @@
  * Stock Pricing Service
  * Fetches real-time stock prices from Yahoo Finance API
  */
+import logger from './logger.js';
 
 class PricingService {
   constructor() {
@@ -78,7 +79,7 @@ class PricingService {
     // Check cache first
     const cached = this.getCachedPrice(upperTicker);
     if (cached) {
-      console.log(`📊 Cache hit for ${upperTicker}`);
+      logger.debug(`Cache hit for ${upperTicker}`);
       return {
         ticker: upperTicker,
         price: cached.price,
@@ -97,12 +98,12 @@ class PricingService {
 
     // Check circuit breaker
     if (this.isCircuitOpen()) {
-      console.log(`⚠️ Circuit breaker open for ${upperTicker}`);
+      logger.warn(`Circuit breaker open for ${upperTicker}`);
       throw new Error('Service temporarily unavailable. Please try again later.');
     }
 
     try {
-      console.log(`🔍 Fetching price for ${upperTicker} from Yahoo Finance`);
+      logger.info(`Fetching price for ${upperTicker} from Yahoo Finance`);
 
       const response = await fetch(
         `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(upperTicker)}?interval=1d&range=1d`,
@@ -154,7 +155,7 @@ class PricingService {
         }
       } catch (e) {
         // Ignore errors fetching additional info - price is most important
-        console.log(`⚠️ Could not fetch sector info for ${upperTicker}:`, e.message);
+        logger.warn(`Could not fetch sector info for ${upperTicker}:`, { error: e.message });
       }
 
       const priceData = {
@@ -186,12 +187,12 @@ class PricingService {
       this.setCachedPrice(upperTicker, priceData);
       this.recordSuccess();
 
-      console.log(`✅ Got price for ${upperTicker}: ${priceData.price} ${priceData.currency}`);
+      logger.info(`Got price for ${upperTicker}: ${priceData.price} ${priceData.currency}`);
       return priceData;
 
     } catch (error) {
       this.recordFailure();
-      console.error(`❌ Error fetching price for ${upperTicker}:`, error.message);
+      logger.error(`Error fetching price for ${upperTicker}:`, { error: error.message });
       throw error;
     }
   }
@@ -248,7 +249,7 @@ class PricingService {
    */
   clearCache() {
     this.priceCache.clear();
-    console.log('🗑️ Price cache cleared');
+    logger.info('Price cache cleared');
   }
 
   /**

@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '../config/database.js';
+import logger from '../services/logger.js';
 
 const router = express.Router();
 
@@ -34,9 +35,13 @@ router.post('/register', async (req, res) => {
     const user = result.rows[0];
 
     // Generate JWT token
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET environment variable is not set');
+    }
+
     const token = jwt.sign(
       { userId: user.id, email: user.email },
-      process.env.JWT_SECRET || 'fallback-secret-key',
+      process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
 
@@ -50,7 +55,7 @@ router.post('/register', async (req, res) => {
       token
     });
   } catch (error) {
-    console.error('Error registering user:', error);
+    logger.error('Error registering user:', { error: error.message, email });
     res.status(500).json({ error: 'Failed to register user' });
   }
 });
@@ -80,9 +85,13 @@ router.post('/login', async (req, res) => {
     }
 
     // Generate JWT token
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET environment variable is not set');
+    }
+
     const token = jwt.sign(
       { userId: user.id, email: user.email },
-      process.env.JWT_SECRET || 'fallback-secret-key',
+      process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
 
@@ -96,7 +105,7 @@ router.post('/login', async (req, res) => {
       token
     });
   } catch (error) {
-    console.error('Error logging in:', error);
+    logger.error('Error logging in:', { error: error.message, email });
     res.status(500).json({ error: 'Failed to login' });
   }
 });
@@ -111,7 +120,11 @@ router.get('/profile', async (req, res) => {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-key');
+    if (!process.env.JWT_SECRET) {
+      throw new Error('JWT_SECRET environment variable is not set');
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const result = await pool.query('SELECT id, email, name, created_at FROM users WHERE id = $1', [decoded.userId]);
 
     if (result.rows.length === 0) {
@@ -120,7 +133,7 @@ router.get('/profile', async (req, res) => {
 
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Error fetching profile:', error);
+    logger.error('Error fetching profile:', { error: error.message, userId: req.userId });
     res.status(401).json({ error: 'Invalid token' });
   }
 });

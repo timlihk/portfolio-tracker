@@ -1,6 +1,7 @@
 import express from 'express';
 import pool from '../../config/database.js';
 import { requireAuth } from '../../middleware/auth.js';
+import logger from '../../services/logger.js';
 
 const router = express.Router();
 
@@ -10,7 +11,7 @@ router.get('/', requireAuth, async (req, res) => {
     const result = await pool.query('SELECT * FROM pe_deals WHERE user_id = $1', [req.userId]);
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching PE deals:', error);
+    logger.error('Error fetching PE deals:', { error: error.message, userId: req.userId });
     res.status(500).json({ error: 'Failed to fetch PE deals' });
   }
 });
@@ -39,7 +40,7 @@ router.post('/', requireAuth, async (req, res) => {
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Error creating PE deal:', error);
+    logger.error('Error creating PE deal:', { error: error.message, userId: req.userId });
     res.status(500).json({ error: 'Failed to create PE deal' });
   }
 });
@@ -62,7 +63,7 @@ router.put('/:id', requireAuth, async (req, res) => {
     }
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Error updating PE deal:', error);
+    logger.error('Error updating PE deal:', { error: error.message, userId: req.userId, peDealId: id });
     res.status(500).json({ error: 'Failed to update PE deal' });
   }
 });
@@ -78,7 +79,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
     }
     res.json({ message: 'PE Deal deleted successfully' });
   } catch (error) {
-    console.error('Error deleting PE deal:', error);
+    logger.error('Error deleting PE deal:', { error: error.message, userId: req.userId, peDealId: id });
     res.status(500).json({ error: 'Failed to delete PE deal' });
   }
 });

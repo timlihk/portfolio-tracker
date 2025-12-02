@@ -1,5 +1,6 @@
 import pg from 'pg';
 import dotenv from 'dotenv';
+import logger from '../services/logger.js';
 
 dotenv.config();
 
@@ -16,30 +17,30 @@ const pool = new Pool({
 
 // Test database connection
 pool.on('connect', () => {
-  console.log('✅ Connected to PostgreSQL database');
+  logger.info('Connected to PostgreSQL database');
 });
 
 pool.on('error', (err) => {
-  console.error('❌ Database connection error:', err);
+  logger.error('Database connection error:', { error: err.message });
 });
 
 // Initialize database tables
 export const initDatabase = async () => {
-  console.log('🗄️  Initializing database connection...');
+  logger.info('Initializing database connection...');
 
   if (!process.env.DATABASE_URL) {
-    console.error('❌ DATABASE_URL environment variable is not set!');
+    logger.error('DATABASE_URL environment variable is not set!');
     throw new Error('DATABASE_URL is required');
   }
 
   try {
     // Test connection first
-    console.log('🔌 Testing database connection...');
+    logger.info('Testing database connection...');
     const testResult = await pool.query('SELECT NOW()');
-    console.log(`✅ Database connected at: ${testResult.rows[0].now}`);
+    logger.info('Database connected', { timestamp: testResult.rows[0].now });
 
     // Create tables if they don't exist
-    console.log('📋 Creating tables if they don\'t exist...');
+    logger.info('Creating tables if they don\'t exist...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -190,10 +191,10 @@ export const initDatabase = async () => {
       );
     `);
 
-    console.log('✅ Database tables initialized successfully');
+    logger.info('Database tables initialized successfully');
 
     // Add missing columns to existing tables (ALTER TABLE is idempotent with IF NOT EXISTS in PostgreSQL 9.6+)
-    console.log('📋 Adding missing columns to existing tables...');
+    logger.info('Adding missing columns to existing tables...');
 
     // Helper to add column if it doesn't exist
     const addColumnIfNotExists = async (table, column, type) => {
@@ -202,7 +203,7 @@ export const initDatabase = async () => {
       } catch (e) {
         // Column might already exist in older PostgreSQL versions
         if (!e.message.includes('already exists')) {
-          console.log(`Note: Could not add ${column} to ${table}: ${e.message}`);
+          logger.warn('Could not add column', { table, column, error: e.message });
         }
       }
     };
@@ -252,10 +253,10 @@ export const initDatabase = async () => {
     await addColumnIfNotExists('liabilities', 'maturity_date', 'DATE');
     await addColumnIfNotExists('liabilities', 'notes', 'TEXT');
 
-    console.log('✅ All columns added/verified');
+    logger.info('All columns added/verified');
 
     // Create indexes for performance
-    console.log('📋 Creating indexes...');
+    logger.info('Creating indexes...');
     const createIndexes = [
       // Foreign key indexes (user_id is queried on every request)
       'CREATE INDEX IF NOT EXISTS idx_stocks_user_id ON stocks(user_id)',
@@ -282,25 +283,16 @@ export const initDatabase = async () => {
       } catch (e) {
         // Index might already exist
         if (!e.message.includes('already exists')) {
-          console.log(`Note: Could not create index: ${e.message}`);
+          logger.warn('Could not create index', { error: e.message });
         }
       }
     }
-    console.log('✅ Indexes created/verified');
+    logger.info('Indexes created/verified');
 
-    // Create default user if not exists (for development)
-    const defaultUserResult = await pool.query('SELECT id FROM users WHERE id = 1');
-    if (defaultUserResult.rows.length === 0) {
-      console.log('👤 Creating default user...');
-      await pool.query(`
-        INSERT INTO users (id, email, password_hash, name)
-        VALUES (1, 'default@example.com', 'placeholder', 'Default User')
-        ON CONFLICT (id) DO NOTHING
-      `);
-      console.log('✅ Default user created');
-    }
+    // Note: Default user creation removed for security
+    // Users must register through /api/auth/register endpoint
   } catch (error) {
-    console.error('❌ Error initializing database:', error);
+    logger.error('Error initializing database:', { error: error.message });
     throw error;
   }
 };

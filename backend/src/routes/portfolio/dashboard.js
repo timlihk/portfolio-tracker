@@ -1,6 +1,7 @@
 import express from 'express';
 import pool from '../../config/database.js';
 import { requireAuth } from '../../middleware/auth.js';
+import logger from '../../services/logger.js';
 
 const router = express.Router();
 
@@ -40,7 +41,7 @@ router.get('/', requireAuth, async (req, res) => {
 
     res.json(portfolioData);
   } catch (error) {
-    console.error('Error fetching portfolio data:', error);
+    logger.error('Error fetching portfolio data:', { error: error.message, userId: req.userId });
     res.status(500).json({ error: 'Failed to fetch portfolio data' });
   }
 });

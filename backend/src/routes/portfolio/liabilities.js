@@ -1,6 +1,7 @@
 import express from 'express';
 import pool from '../../config/database.js';
 import { requireAuth } from '../../middleware/auth.js';
+import logger from '../../services/logger.js';
 
 const router = express.Router();
 
@@ -10,7 +11,7 @@ router.get('/', requireAuth, async (req, res) => {
     const result = await pool.query('SELECT * FROM liabilities WHERE user_id = $1', [req.userId]);
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching liabilities:', error);
+    logger.error('Error fetching liabilities:', { error: error.message, userId: req.userId });
     res.status(500).json({ error: 'Failed to fetch liabilities' });
   }
 });
@@ -42,7 +43,7 @@ router.post('/', requireAuth, async (req, res) => {
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Error creating liability:', error);
+    logger.error('Error creating liability:', { error: error.message, userId: req.userId });
     res.status(500).json({ error: 'Failed to create liability' });
   }
 });
@@ -65,7 +66,7 @@ router.put('/:id', requireAuth, async (req, res) => {
     }
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Error updating liability:', error);
+    logger.error('Error updating liability:', { error: error.message, userId: req.userId, liabilityId: id });
     res.status(500).json({ error: 'Failed to update liability' });
   }
 });
@@ -81,7 +82,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
     }
     res.json({ message: 'Liability deleted successfully' });
   } catch (error) {
-    console.error('Error deleting liability:', error);
+    logger.error('Error deleting liability:', { error: error.message, userId: req.userId, liabilityId: id });
     res.status(500).json({ error: 'Failed to delete liability' });
   }
 });

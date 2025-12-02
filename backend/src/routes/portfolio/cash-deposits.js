@@ -1,6 +1,7 @@
 import express from 'express';
 import pool from '../../config/database.js';
 import { requireAuth } from '../../middleware/auth.js';
+import logger from '../../services/logger.js';
 
 const router = express.Router();
 
@@ -10,7 +11,7 @@ router.get('/', requireAuth, async (req, res) => {
     const result = await pool.query('SELECT * FROM cash_deposits WHERE user_id = $1', [req.userId]);
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching cash deposits:', error);
+    logger.error('Error fetching cash deposits:', { error: error.message, userId: req.userId });
     res.status(500).json({ error: 'Failed to fetch cash deposits' });
   }
 });
@@ -37,7 +38,7 @@ router.post('/', requireAuth, async (req, res) => {
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Error creating cash deposit:', error);
+    logger.error('Error creating cash deposit:', { error: error.message, userId: req.userId });
     res.status(500).json({ error: 'Failed to create cash deposit' });
   }
 });
@@ -60,7 +61,7 @@ router.put('/:id', requireAuth, async (req, res) => {
     }
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Error updating cash deposit:', error);
+    logger.error('Error updating cash deposit:', { error: error.message, userId: req.userId, cashDepositId: id });
     res.status(500).json({ error: 'Failed to update cash deposit' });
   }
 });
@@ -76,7 +77,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
     }
     res.json({ message: 'Cash Deposit deleted successfully' });
   } catch (error) {
-    console.error('Error deleting cash deposit:', error);
+    logger.error('Error deleting cash deposit:', { error: error.message, userId: req.userId, cashDepositId: id });
     res.status(500).json({ error: 'Failed to delete cash deposit' });
   }
 });

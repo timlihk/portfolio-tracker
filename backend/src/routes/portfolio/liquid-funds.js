@@ -1,6 +1,7 @@
 import express from 'express';
 import pool from '../../config/database.js';
 import { requireAuth } from '../../middleware/auth.js';
+import logger from '../../services/logger.js';
 
 const router = express.Router();
 
@@ -10,7 +11,7 @@ router.get('/', requireAuth, async (req, res) => {
     const result = await pool.query('SELECT * FROM liquid_funds WHERE user_id = $1', [req.userId]);
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching liquid funds:', error);
+    logger.error('Error fetching liquid funds:', { error: error.message, userId: req.userId });
     res.status(500).json({ error: 'Failed to fetch liquid funds' });
   }
 });
@@ -43,7 +44,7 @@ router.post('/', requireAuth, async (req, res) => {
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Error creating liquid fund:', error);
+    logger.error('Error creating liquid fund:', { error: error.message, userId: req.userId });
     res.status(500).json({ error: 'Failed to create liquid fund' });
   }
 });
@@ -67,7 +68,7 @@ router.put('/:id', requireAuth, async (req, res) => {
     }
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Error updating liquid fund:', error);
+    logger.error('Error updating liquid fund:', { error: error.message, userId: req.userId, liquidFundId: id });
     res.status(500).json({ error: 'Failed to update liquid fund' });
   }
 });
@@ -83,7 +84,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
     }
     res.json({ message: 'Liquid Fund deleted successfully' });
   } catch (error) {
-    console.error('Error deleting liquid fund:', error);
+    logger.error('Error deleting liquid fund:', { error: error.message, userId: req.userId, liquidFundId: id });
     res.status(500).json({ error: 'Failed to delete liquid fund' });
   }
 });

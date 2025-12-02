@@ -24,7 +24,9 @@ function useChart() {
 
 const ChartContainer = React.forwardRef(({ id, className, children, config, ...props }, ref) => {
   const uniqueId = React.useId()
-  const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`
+  // Sanitize id for use in data attribute (allow only alphanumeric, hyphen, underscore)
+  const sanitizedId = (id || uniqueId.replace(/:/g, "")).replace(/[^a-zA-Z0-9-_]/g, '')
+  const chartId = `chart-${sanitizedId}`
 
   return (
     (<ChartContext.Provider value={{ config }}>
@@ -56,25 +58,30 @@ const ChartStyle = ({
     return null
   }
 
-  return (
-    (<style
-      dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
+  // Sanitize id for CSS selector (allow only alphanumeric, hyphen, underscore)
+  const sanitizedId = id.replace(/[^a-zA-Z0-9-_]/g, '');
+
+  const cssContent = Object.entries(THEMES)
+    .map(([theme, prefix]) => `
+${prefix} [data-chart=${sanitizedId}] {
 ${colorConfig
-.map(([key, itemConfig]) => {
-const color =
-  itemConfig.theme?.[theme] ||
-  itemConfig.color
-return color ? `  --color-${key}: ${color};` : null
-})
-.join("\n")}
+  .map(([key, itemConfig]) => {
+    const color =
+      itemConfig.theme?.[theme] ||
+      itemConfig.color
+    // Sanitize color value - ensure it doesn't contain CSS-breaking characters
+    if (color && !/[;{}]/.test(color)) {
+      return `  --color-${key.replace(/[^a-zA-Z0-9-_]/g, '')}: ${color};`
+    }
+    return null
+  })
+  .filter(Boolean)
+  .join("\n")}
 }
 `)
-          .join("\n"),
-      }} />)
-  );
+    .join("\n")
+
+  return <style>{cssContent}</style>;
 }
 
 const ChartTooltip = RechartsPrimitive.Tooltip

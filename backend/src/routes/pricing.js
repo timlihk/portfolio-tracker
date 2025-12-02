@@ -1,6 +1,7 @@
 import express from 'express';
 import { pricingService } from '../services/PricingService.js';
 import { currencyService } from '../services/CurrencyService.js';
+import logger from '../services/logger.js';
 
 const router = express.Router();
 
@@ -33,7 +34,7 @@ router.get('/stock/:ticker', async (req, res) => {
 
     res.json(priceData);
   } catch (error) {
-    console.error('Error fetching stock price:', error);
+    logger.error('Error fetching stock price:', { error: error.message, ticker });
     res.status(500).json({
       error: 'Failed to fetch stock price',
       message: error.message
@@ -88,7 +89,7 @@ router.post('/stocks', async (req, res) => {
       timestamp: Date.now()
     });
   } catch (error) {
-    console.error('Error fetching stock prices:', error);
+    logger.error('Error fetching stock prices:', { error: error.message, tickerCount: tickers?.length });
     res.status(500).json({
       error: 'Failed to fetch stock prices',
       message: error.message
@@ -111,7 +112,7 @@ router.get('/validate/:ticker', async (req, res) => {
     const validation = await pricingService.validateTicker(ticker);
     res.json(validation);
   } catch (error) {
-    console.error('Error validating ticker:', error);
+    logger.error('Error validating ticker:', { error: error.message, ticker });
     res.status(500).json({
       error: 'Failed to validate ticker',
       message: error.message
@@ -142,7 +143,7 @@ router.get('/currency/convert', async (req, res) => {
     const conversion = await currencyService.convert(numAmount, from, to);
     res.json(conversion);
   } catch (error) {
-    console.error('Error converting currency:', error);
+    logger.error('Error converting currency:', { error: error.message, amount, from, to });
     res.status(500).json({
       error: 'Failed to convert currency',
       message: error.message
@@ -173,7 +174,7 @@ router.get('/currency/to-usd', async (req, res) => {
     const conversion = await currencyService.convertToUSD(numAmount, from);
     res.json(conversion);
   } catch (error) {
-    console.error('Error converting to USD:', error);
+    logger.error('Error converting to USD:', { error: error.message, amount, from });
     res.status(500).json({
       error: 'Failed to convert to USD',
       message: error.message
@@ -196,7 +197,7 @@ router.get('/currency/rates/:base', async (req, res) => {
       timestamp: Date.now()
     });
   } catch (error) {
-    console.error('Error fetching exchange rates:', error);
+    logger.error('Error fetching exchange rates:', { error: error.message, base: base || 'USD' });
     res.status(500).json({
       error: 'Failed to fetch exchange rates',
       message: error.message
@@ -216,7 +217,7 @@ router.get('/currency/supported', async (req, res) => {
       count: currencies.length
     });
   } catch (error) {
-    console.error('Error fetching supported currencies:', error);
+    logger.error('Error fetching supported currencies:', { error: error.message });
     res.status(500).json({
       error: 'Failed to fetch supported currencies',
       message: error.message

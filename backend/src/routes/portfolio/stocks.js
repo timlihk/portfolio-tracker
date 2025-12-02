@@ -1,6 +1,8 @@
 import express from 'express';
+import { body, param, validationResult } from 'express-validator';
 import pool from '../../config/database.js';
 import { requireAuth } from '../../middleware/auth.js';
+import logger from '../../services/logger.js';
 
 const router = express.Router();
 
@@ -10,14 +12,28 @@ router.get('/', requireAuth, async (req, res) => {
     const result = await pool.query('SELECT * FROM stocks WHERE user_id = $1', [req.userId]);
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching stocks:', error);
+    logger.error('Error fetching stocks:', { error: error.message, userId: req.userId });
     res.status(500).json({ error: 'Failed to fetch stocks' });
   }
 });
 
 // POST /stocks - Create a stock
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', requireAuth, [
+  body('ticker').notEmpty().trim().isLength({ max: 20 }),
+  body('shares').isFloat({ gt: 0 }),
+  body('average_cost').isFloat({ gt: 0 }),
+  body('currency').optional().isLength({ max: 10 }),
+  body('account').optional().isLength({ max: 255 }),
+  body('purchase_date').optional().isISO8601(),
+  body('notes').optional().isLength({ max: 1000 }),
+], async (req, res) => {
   try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
     const {
       ticker,
       company_name,
@@ -39,14 +55,29 @@ router.post('/', requireAuth, async (req, res) => {
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Error creating stock:', error);
+    logger.error('Error creating stock:', { error: error.message, userId: req.userId });
     res.status(500).json({ error: 'Failed to create stock' });
   }
 });
 
 // PUT /stocks/:id - Update a stock
-router.put('/:id', requireAuth, async (req, res) => {
+router.put('/:id', requireAuth, [
+  param('id').isInt({ gt: 0 }),
+  body('ticker').optional().notEmpty().trim().isLength({ max: 20 }),
+  body('shares').optional().isFloat({ gt: 0 }),
+  body('average_cost').optional().isFloat({ gt: 0 }),
+  body('currency').optional().isLength({ max: 10 }),
+  body('account').optional().isLength({ max: 255 }),
+  body('purchase_date').optional().isISO8601(),
+  body('notes').optional().isLength({ max: 1000 }),
+], async (req, res) => {
   try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
     const { id } = req.params;
     const { ticker, company_name, sector, shares, average_cost, current_price, currency, account, purchase_date, notes } = req.body;
 
@@ -62,14 +93,22 @@ router.put('/:id', requireAuth, async (req, res) => {
     }
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Error updating stock:', error);
+    logger.error('Error updating stock:', { error: error.message, userId: req.userId, stockId: id });
     res.status(500).json({ error: 'Failed to update stock' });
   }
 });
 
 // DELETE /stocks/:id - Delete a stock
-router.delete('/:id', requireAuth, async (req, res) => {
+router.delete('/:id', requireAuth, [
+  param('id').isInt({ gt: 0 }),
+], async (req, res) => {
   try {
+    // Check for validation errors
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
     const { id } = req.params;
     const result = await pool.query('DELETE FROM stocks WHERE id = $1 AND user_id = $2 RETURNING *', [id, req.userId]);
 
@@ -78,7 +117,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
     }
     res.json({ message: 'Stock deleted successfully' });
   } catch (error) {
-    console.error('Error deleting stock:', error);
+    logger.error('Error deleting stock:', { error: error.message, userId: req.userId, stockId: id });
     res.status(500).json({ error: 'Failed to delete stock' });
   }
 });

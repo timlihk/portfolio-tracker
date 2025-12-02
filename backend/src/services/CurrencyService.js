@@ -2,6 +2,7 @@
  * Currency Conversion Service
  * Converts prices between currencies using exchangerate-api.com
  */
+import logger from './logger.js';
 
 class CurrencyService {
   constructor() {
@@ -102,18 +103,18 @@ class CurrencyService {
     // Check cache first
     const cached = this.getCachedRate(upperCurrency);
     if (cached) {
-      console.log(`💱 Cache hit for ${upperCurrency} rates`);
+      logger.debug(`Cache hit for ${upperCurrency} rates`);
       return cached.rates;
     }
 
     // Check circuit breaker
     if (this.isCircuitOpen()) {
-      console.log(`⚠️ Currency API circuit breaker open, using fallback rates`);
+      logger.warn(`Currency API circuit breaker open, using fallback rates`);
       return this.fallbackRates;
     }
 
     try {
-      console.log(`🔍 Fetching exchange rates for ${upperCurrency}`);
+      logger.info(`Fetching exchange rates for ${upperCurrency}`);
 
       const response = await fetch(
         `https://api.exchangerate-api.com/v4/latest/${upperCurrency}`,
@@ -138,13 +139,13 @@ class CurrencyService {
       this.setCachedRate(upperCurrency, { rates: data.rates });
       this.recordSuccess();
 
-      console.log(`✅ Got exchange rates for ${upperCurrency}`);
+      logger.info(`Got exchange rates for ${upperCurrency}`);
       return data.rates;
 
     } catch (error) {
       this.recordFailure();
-      console.error(`❌ Error fetching exchange rates:`, error.message);
-      console.log(`⚠️ Using fallback rates`);
+      logger.error(`Error fetching exchange rates`, { error: error.message, currency: upperCurrency });
+      logger.warn(`Using fallback rates`, { currency: upperCurrency });
       return this.fallbackRates;
     }
   }
@@ -204,7 +205,7 @@ class CurrencyService {
       // Use fallback rate if available
       const fallbackRate = this.fallbackRates[upperCurrency];
       if (fallbackRate) {
-        console.log(`⚠️ Using fallback rate for ${upperCurrency}: ${fallbackRate}`);
+        logger.warn(`Using fallback rate`, { currency: upperCurrency, rate: fallbackRate });
         const usdAmount = amount * fallbackRate;
         return {
           originalAmount: amount,
@@ -262,7 +263,7 @@ class CurrencyService {
       };
 
     } catch (error) {
-      console.error(`❌ Error converting ${upperFrom} to ${upperTo}:`, error.message);
+      logger.error(`Error converting currency`, { error: error.message, from: upperFrom, to: upperTo });
       throw error;
     }
   }
@@ -285,7 +286,7 @@ class CurrencyService {
    */
   clearCache() {
     this.rateCache.clear();
-    console.log('🗑️ Currency rate cache cleared');
+    logger.info('Currency rate cache cleared');
   }
 
   /**

@@ -10,11 +10,21 @@ import logger from './services/logger.js';
 
 dotenv.config();
 
+// Validate required environment variables
+const requiredEnvVars = ['DATABASE_URL', 'JWT_SECRET'];
+const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingEnvVars.length > 0) {
+  logger.error('Missing required environment variables:', { missing: missingEnvVars });
+  process.exit(1);
+}
+
 logger.info('Starting server...', {
   cwd: process.cwd(),
   nodeEnv: process.env.NODE_ENV,
   port: process.env.PORT,
-  hasDbUrl: !!process.env.DATABASE_URL
+  hasDbUrl: !!process.env.DATABASE_URL,
+  hasJwtSecret: !!process.env.JWT_SECRET
 });
 
 // Import routes

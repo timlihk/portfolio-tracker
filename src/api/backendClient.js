@@ -2,16 +2,33 @@
 // In production, use relative URL since frontend and backend are on same server
 const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3001/api');
 
+// Helper function to get authentication token
+function getAuthToken() {
+  // Try to get token from sessionStorage (preferred) or localStorage (fallback)
+  const token = sessionStorage.getItem('base44_access_token') ||
+                localStorage.getItem('base44_access_token') ||
+                localStorage.getItem('token');
+  return token;
+}
+
 // Helper function for API calls
 async function apiCall(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
   console.log(`📡 API Call: ${options.method || 'GET'} ${url}`);
 
+  // Get authentication token if available
+  const token = getAuthToken();
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const config = {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
+    headers,
     ...options,
   };
 

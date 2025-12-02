@@ -34,8 +34,9 @@ export const AuthProvider = ({ children }) => {
   const logout = (shouldRedirect = true) => {
     setUser(null);
     setIsAuthenticated(false);
-    // Clear any stored tokens
+    // Clear any stored tokens from both localStorage and sessionStorage
     localStorage.removeItem('token');
+    sessionStorage.removeItem('base44_access_token');
     if (shouldRedirect) {
       window.location.href = '/';
     }

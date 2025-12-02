@@ -1,6 +1,7 @@
 import express from 'express';
 import pool from '../../config/database.js';
 import { requireAuth } from '../../middleware/auth.js';
+import logger from '../../services/logger.js';
 
 const router = express.Router();
 
@@ -10,7 +11,7 @@ router.get('/', requireAuth, async (req, res) => {
     const result = await pool.query('SELECT * FROM accounts WHERE user_id = $1', [req.userId]);
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching accounts:', error);
+    logger.error('Error fetching accounts:', { error: error.message, userId: req.userId });
     res.status(500).json({ error: 'Failed to fetch accounts' });
   }
 });
@@ -28,7 +29,7 @@ router.post('/', requireAuth, async (req, res) => {
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Error creating account:', error);
+    logger.error('Error creating account:', { error: error.message, userId: req.userId });
     res.status(500).json({ error: 'Failed to create account' });
   }
 });
@@ -50,7 +51,7 @@ router.put('/:id', requireAuth, async (req, res) => {
     }
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Error updating account:', error);
+    logger.error('Error updating account:', { error: error.message, userId: req.userId, accountId: id });
     res.status(500).json({ error: 'Failed to update account' });
   }
 });
@@ -66,7 +67,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
     }
     res.json({ message: 'Account deleted successfully' });
   } catch (error) {
-    console.error('Error deleting account:', error);
+    logger.error('Error deleting account:', { error: error.message, userId: req.userId, accountId: id });
     res.status(500).json({ error: 'Failed to delete account' });
   }
 });
