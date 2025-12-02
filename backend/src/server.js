@@ -168,7 +168,7 @@ async function startServer() {
   }
 
   try {
-    await initDatabase();
+    await initDatabaseWithRetry();
 
     app.listen(PORT, () => {
       logger.info('Server started', {
