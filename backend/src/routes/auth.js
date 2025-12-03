@@ -114,15 +114,15 @@ router.post('/login', async (req, res) => {
 router.get('/profile', async (req, res) => {
   try {
     const sharedSecret = process.env.SHARED_SECRET || process.env.SECRET_PHRASE;
-    const sharedSecretUserId = Number(process.env.SHARED_SECRET_USER_ID || 1);
+    const singleUserId = Number(process.env.SHARED_SECRET_USER_ID || 1);
     const authHeader = req.headers.authorization;
     const sharedHeader =
       (authHeader?.startsWith('Shared ') && authHeader.replace('Shared ', '')) ||
       req.headers['x-shared-secret'];
 
-    // Shared-secret path (family/demo)
+    // Shared-secret path (family/demo) — single tenant only
     if (sharedSecret && sharedHeader && sharedHeader === sharedSecret) {
-      const sharedUser = await pool.query('SELECT id, email, name, created_at FROM users WHERE id = $1', [sharedSecretUserId]);
+      const sharedUser = await pool.query('SELECT id, email, name, created_at FROM users WHERE id = $1', [singleUserId]);
       if (sharedUser.rows.length === 0) {
         return res.status(404).json({ error: 'User not found for shared secret' });
       }
@@ -138,8 +138,9 @@ router.get('/profile', async (req, res) => {
       throw new Error('JWT_SECRET environment variable is not set');
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const result = await pool.query('SELECT id, email, name, created_at FROM users WHERE id = $1', [decoded.userId]);
+    // JWT accepted but always resolves to the single tenant user
+    jwt.verify(token, process.env.JWT_SECRET);
+    const result = await pool.query('SELECT id, email, name, created_at FROM users WHERE id = $1', [singleUserId]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });

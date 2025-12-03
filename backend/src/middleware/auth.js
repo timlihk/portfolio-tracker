@@ -2,17 +2,17 @@ import jwt from 'jsonwebtoken';
 import logger from '../services/logger.js';
 
 /**
- * Authentication middleware that verifies JWTs and populates req.userId.
- * Also supports a shared-secret shortcut for family/demo use.
+ * Authentication middleware for single-tenant (family) use.
+ * Requires a shared secret or a JWT, but always maps to the configured single user ID.
  */
 export const requireAuth = (req, res, next) => {
   const sharedSecret = process.env.SHARED_SECRET || process.env.SECRET_PHRASE;
-  const sharedSecretUserId = Number(process.env.SHARED_SECRET_USER_ID || 1);
+  const singleUserId = Number(process.env.SHARED_SECRET_USER_ID || 1);
 
   try {
     const authHeader = req.headers.authorization;
 
-    // Primary: Bearer JWT
+    // Primary: Bearer JWT (still accepted, but user is forced to singleUserId)
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.replace('Bearer ', '');
 
@@ -21,8 +21,8 @@ export const requireAuth = (req, res, next) => {
         return res.status(500).json({ error: 'Server configuration error' });
       }
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      req.userId = decoded.userId;
+      jwt.verify(token, process.env.JWT_SECRET);
+      req.userId = singleUserId;
       return next();
     }
 
@@ -32,7 +32,7 @@ export const requireAuth = (req, res, next) => {
       req.headers['x-shared-secret'];
 
     if (sharedSecret && sharedHeader && sharedHeader === sharedSecret) {
-      req.userId = sharedSecretUserId;
+      req.userId = singleUserId;
       return next();
     }
 
