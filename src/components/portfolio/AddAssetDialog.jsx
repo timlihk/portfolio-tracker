@@ -140,8 +140,15 @@ export default function AddAssetDialog({
                   id={field.name}
                   type={field.type || 'text'}
                   step={field.type === 'number' ? 'any' : undefined}
-                  value={data[field.name] || ''}
-                  onChange={(e) => onChange(field.name, field.type === 'number' ? parseFloat(e.target.value) || '' : e.target.value)}
+                  value={data[field.name] ?? ''}
+                  onChange={(e) => {
+                    if (field.type === 'number') {
+                      const val = e.target.value;
+                      onChange(field.name, val === '' ? '' : parseFloat(val));
+                    } else {
+                      onChange(field.name, e.target.value);
+                    }
+                  }}
                   placeholder={field.placeholder}
                   className="h-11"
                   required={field.required}

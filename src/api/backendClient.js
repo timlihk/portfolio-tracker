@@ -11,6 +11,14 @@ function getAuthToken() {
   return token;
 }
 
+// Helper to get shared secret (family/demo login)
+function getSharedSecret() {
+  const secret = sessionStorage.getItem('shared_secret') ||
+                 localStorage.getItem('shared_secret') ||
+                 localStorage.getItem('secret_phrase');
+  return secret;
+}
+
 // Helper function for API calls
 /**
  * @param {string} endpoint
@@ -25,6 +33,7 @@ async function apiCall(endpoint, options = {}) {
 
   // Get authentication token if available
   const token = getAuthToken();
+  const sharedSecret = getSharedSecret();
   const headers = {
     'Content-Type': 'application/json',
     ...options.headers,
@@ -32,6 +41,9 @@ async function apiCall(endpoint, options = {}) {
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+  } else if (sharedSecret) {
+    headers['Authorization'] = `Shared ${sharedSecret}`;
+    headers['x-shared-secret'] = sharedSecret;
   }
 
   /** @type {{ method?: string, headers?: any, body?: any }} */

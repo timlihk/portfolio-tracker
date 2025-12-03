@@ -113,9 +113,23 @@ router.post('/login', async (req, res) => {
 // Get current user profile
 router.get('/profile', async (req, res) => {
   try {
-    // TODO: Implement proper JWT authentication middleware
-    const token = req.headers.authorization?.replace('Bearer ', '');
+    const sharedSecret = process.env.SHARED_SECRET || process.env.SECRET_PHRASE;
+    const sharedSecretUserId = Number(process.env.SHARED_SECRET_USER_ID || 1);
+    const authHeader = req.headers.authorization;
+    const sharedHeader =
+      (authHeader?.startsWith('Shared ') && authHeader.replace('Shared ', '')) ||
+      req.headers['x-shared-secret'];
 
+    // Shared-secret path (family/demo)
+    if (sharedSecret && sharedHeader && sharedHeader === sharedSecret) {
+      const sharedUser = await pool.query('SELECT id, email, name, created_at FROM users WHERE id = $1', [sharedSecretUserId]);
+      if (sharedUser.rows.length === 0) {
+        return res.status(404).json({ error: 'User not found for shared secret' });
+      }
+      return res.json(sharedUser.rows[0]);
+    }
+
+    const token = authHeader?.replace('Bearer ', '');
     if (!token) {
       return res.status(401).json({ error: 'Authentication required' });
     }

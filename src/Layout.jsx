@@ -15,7 +15,8 @@ import {
   X,
   ChevronRight,
   Banknote,
-  CreditCard
+  CreditCard,
+  Lock
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
@@ -31,6 +32,7 @@ const navItems = [
   { name: 'Liabilities', page: 'Liabilities', icon: CreditCard },
   { name: 'Transactions', page: 'Transactions', icon: Receipt },
   { name: 'Changelog', page: 'Changelog', icon: History },
+  { name: 'Login', page: 'Login', icon: Lock },
 ];
 
 export default function Layout({ children, currentPageName }) {
