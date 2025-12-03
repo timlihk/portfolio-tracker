@@ -150,18 +150,24 @@ async function startServer() {
 
       app.get('*', (req, res, next) => {
         // Skip API routes - let them be handled by API route handlers
+        logger.info('Static file catch-all route', { path: req.path, method: req.method });
         if (req.path.startsWith('/api')) {
+          logger.info('Skipping API route', { path: req.path });
           return next();
         }
+        logger.info('Serving index.html for', { path: req.path });
         res.sendFile(path.join(distPath, 'index.html'));
       });
     } else {
       logger.warn('Dist directory not found', { distPath });
       app.use('*', (req, res, next) => {
         // Skip API routes - let them be handled by API route handlers
+        logger.info('Dist not found catch-all route', { path: req.path, method: req.method });
         if (req.path.startsWith('/api')) {
+          logger.info('Skipping API route (dist not found)', { path: req.path });
           return next();
         }
+        logger.info('Returning frontend not built error for', { path: req.path });
         res.status(404).json({
           error: 'Frontend not built',
           message: 'The frontend static files were not found. Please check the build process.',
@@ -172,9 +178,12 @@ async function startServer() {
   } else {
     app.use('*', (req, res, next) => {
       // Skip API routes - let them be handled by API route handlers
+      logger.info('Development catch-all route', { path: req.path, method: req.method });
       if (req.path.startsWith('/api')) {
+        logger.info('Skipping API route (development)', { path: req.path });
         return next();
       }
+      logger.info('Returning route not found for', { path: req.path });
       res.status(404).json({ error: 'Route not found' });
     });
   }
