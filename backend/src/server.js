@@ -147,7 +147,8 @@ async function startServer() {
     if (fs.existsSync(distPath)) {
       const distFiles = fs.readdirSync(distPath);
       logger.info('Found dist directory', { fileCount: distFiles.length });
-      app.use(express.static(distPath));
+      // Serve static files for non-API paths only
+      app.use(/^(?!\/api)/, express.static(distPath));
 
       app.get('*', (req, res, next) => {
         // Skip API routes - let them be handled by API route handlers
