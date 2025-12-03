@@ -33,6 +33,8 @@ if (missingEnvVars.length > 0) {
   process.exit(1);
 }
 
+console.log('Environment variables validated');
+
 logger.info('Starting server...', {
   cwd: process.cwd(),
   nodeEnv: process.env.NODE_ENV,
@@ -46,6 +48,8 @@ import portfolioRoutes from './routes/portfolio/index.js';
 import authRoutes from './routes/auth.js';
 import pricingRoutes from './routes/pricing.js';
 import { initDatabase } from './config/database.js';
+
+console.log('Routes imported');
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -157,6 +161,7 @@ async function initDatabaseWithRetry(maxRetries = 2, delayMs = 1000) {
 
 // Initialize database and start server
 async function startServer() {
+  console.log('startServer() called');
   const fs = await import('fs');
 
   // Log directory contents for debugging
