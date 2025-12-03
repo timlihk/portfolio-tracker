@@ -2,34 +2,32 @@ import jwt from 'jsonwebtoken';
 import logger from '../services/logger.js';
 
 /**
- * Authentication middleware that verifies JWTs and populates req.userId.
+ * Temporary permissive auth for demo: tries to read JWT if present, otherwise
+ * falls back to userId=1. Do not use in production.
  */
 export const requireAuth = (req, res, next) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Authentication required' });
+  const authHeader = req.headers.authorization;
+
+  if (authHeader?.startsWith('Bearer ')) {
+    try {
+      const token = authHeader.replace('Bearer ', '');
+      if (process.env.JWT_SECRET) {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.userId = decoded.userId;
+      } else {
+        logger.warn('JWT_SECRET not set; skipping token verification');
+      }
+    } catch (error) {
+      logger.warn('Auth token ignored for demo (invalid/expired)', { error: error.message });
     }
-
-    const token = authHeader.replace('Bearer ', '');
-
-    if (!process.env.JWT_SECRET) {
-      logger.error('JWT_SECRET environment variable is not set');
-      return res.status(500).json({ error: 'Server configuration error' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.userId = decoded.userId;
-
-    next();
-  } catch (error) {
-    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: 'Invalid or expired token' });
-    }
-
-    logger.error('Authentication error:', { error: error.message });
-    return res.status(500).json({ error: 'Authentication failed' });
   }
+
+  // Demo fallback: default to user 1 when no valid token is provided.
+  if (!req.userId) {
+    req.userId = 1;
+  }
+
+  next();
 };
 
 export default requireAuth;
