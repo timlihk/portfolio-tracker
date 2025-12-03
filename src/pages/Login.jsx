@@ -39,7 +39,8 @@ export default function Login() {
       // Quick check that the secret works against the API
       await portfolioAPI.getDashboard();
       setStatus('Connected. Redirecting...');
-      setTimeout(() => navigate('/'), 500);
+      // Full page reload to re-initialize AuthContext with the new secret
+      setTimeout(() => window.location.href = '/', 500);
     } catch (err) {
       // Keep the stored secret but surface the error
       setError(err.message || 'Could not verify access. Please check the secret phrase.');
