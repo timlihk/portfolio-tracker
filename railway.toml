@@ -7,6 +7,7 @@ startCommand = "npm run start"
 
 [[services]]
 name = "portfolio-tracker"
+healthCheckPath = "/api/healthz"
 
 [services.env]
 NODE_ENV = "production"

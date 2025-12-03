@@ -9,6 +9,20 @@ import { fileURLToPath } from 'url';
 import logger from './services/logger.js';
 
 dotenv.config();
+console.log('Server initializing...');
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  logger.error('Unhandled Rejection', { reason: String(reason), stack: reason instanceof Error ? reason.stack : undefined });
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  logger.error('Uncaught Exception', { error: error.message, stack: error.stack });
+  process.exit(1);
+});
 
 // Validate required environment variables
 const requiredEnvVars = ['DATABASE_URL', 'JWT_SECRET'];
@@ -64,9 +78,24 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Cache control for API endpoints
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, max-age=0');
+  next();
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   logger.info('Health endpoint hit', { path: req.path, method: req.method });
+  res.json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Additional health check endpoint (common pattern for health checks)
+app.get('/api/healthz', (req, res) => {
   res.json({
     status: 'OK',
     timestamp: new Date().toISOString(),
@@ -100,7 +129,7 @@ app.use((err, req, res, next) => {
 });
 
 // Helper function to initialize database with retry logic
-async function initDatabaseWithRetry(maxRetries = 3, delayMs = 2000) {
+async function initDatabaseWithRetry(maxRetries = 2, delayMs = 1000) {
   let lastError;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
