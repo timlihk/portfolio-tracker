@@ -1,4 +1,3 @@
-import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 const ASSET_TYPES = ['All', 'Stock', 'Bond', 'PE Fund', 'PE Deal', 'Liquid Fund'];
 const TRANSACTION_TYPES = ['All', 'Buy', 'Sell', 'Transfer In', 'Transfer Out', 'Dividend', 'Distribution', 'Capital Call', 'Redemption'];

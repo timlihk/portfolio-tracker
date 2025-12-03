@@ -12,6 +12,13 @@ function getAuthToken() {
 }
 
 // Helper function for API calls
+/**
+ * @param {string} endpoint
+ * @param {Object} options
+ * @param {string} [options.method]
+ * @param {any} [options.headers]
+ * @param {any} [options.body]
+ */
 async function apiCall(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
   console.log(`📡 API Call: ${options.method || 'GET'} ${url}`);
@@ -27,6 +34,7 @@ async function apiCall(endpoint, options = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
+  /** @type {{ method?: string, headers?: any, body?: any }} */
   const config = {
     headers,
     ...options,

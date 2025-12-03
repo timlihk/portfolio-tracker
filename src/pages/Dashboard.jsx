@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { entities } from '@/api/backendClient';
 import StatCard from '@/components/portfolio/StatCard';
