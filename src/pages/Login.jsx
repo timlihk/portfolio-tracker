@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { backend } from '@/api/backendClient';
+import { portfolioAPI } from '@/api/backendClient';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -37,7 +37,7 @@ export default function Login() {
 
     try {
       // Quick check that the secret works against the API
-      await backend.portfolio.getDashboard();
+      await portfolioAPI.getDashboard();
       setStatus('Connected. Redirecting...');
       setTimeout(() => navigate('/'), 500);
     } catch (err) {
