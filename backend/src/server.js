@@ -148,12 +148,20 @@ async function startServer() {
       logger.info('Found dist directory', { fileCount: distFiles.length });
       app.use(express.static(distPath));
 
-      app.get('*', (req, res) => {
+      app.get('*', (req, res, next) => {
+        // Skip API routes - let them be handled by API route handlers
+        if (req.path.startsWith('/api')) {
+          return next();
+        }
         res.sendFile(path.join(distPath, 'index.html'));
       });
     } else {
       logger.warn('Dist directory not found', { distPath });
-      app.use('*', (req, res) => {
+      app.use('*', (req, res, next) => {
+        // Skip API routes - let them be handled by API route handlers
+        if (req.path.startsWith('/api')) {
+          return next();
+        }
         res.status(404).json({
           error: 'Frontend not built',
           message: 'The frontend static files were not found. Please check the build process.',
@@ -162,7 +170,11 @@ async function startServer() {
       });
     }
   } else {
-    app.use('*', (req, res) => {
+    app.use('*', (req, res, next) => {
+      // Skip API routes - let them be handled by API route handlers
+      if (req.path.startsWith('/api')) {
+        return next();
+      }
       res.status(404).json({ error: 'Route not found' });
     });
   }
