@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { entities } from '@/api/backendClient';
+import { entities, authAPI } from '@/api/backendClient';
 import StatCard from '@/components/portfolio/StatCard';
 import AllocationChart from '@/components/portfolio/AllocationChart';
 import AIPortfolioAnalysis from '@/components/portfolio/AIPortfolioAnalysis';
@@ -20,6 +20,12 @@ import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 
 export default function Dashboard() {
+  const { data: profile, error: profileError, isLoading: profileLoading } = useQuery({
+    queryKey: ['profile'],
+    queryFn: () => authAPI.getProfile(),
+    retry: false
+  });
+
   const { data: stocks = [] } = useQuery({
     queryKey: ['stocks'],
     queryFn: () => entities.Stock.list()
@@ -190,6 +196,15 @@ export default function Dashboard() {
     ...peDeals.map(d => ({ ...d, type: 'PE Deal', date: d.investment_date }))
   ].filter(a => a.date).sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
 
+  const isEmpty =
+    stocks.length === 0 &&
+    bonds.length === 0 &&
+    peFunds.length === 0 &&
+    peDeals.length === 0 &&
+    liquidFunds.length === 0 &&
+    cashDeposits.length === 0 &&
+    liabilities.length === 0;
+
   return (
     <div className="min-h-screen bg-slate-50/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -325,6 +340,34 @@ export default function Dashboard() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Auth / data status */}
+        <div className="mb-6 space-y-3">
+          {profileLoading && (
+            <div className="text-sm text-slate-600 bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm">
+              Checking access…
+            </div>
+          )}
+          {profileError && (
+            <div className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl px-4 py-3 shadow-sm">
+              Not authenticated. Please go to Login, enter the secret phrase, and refresh.
+            </div>
+          )}
+          {profile && (
+            <div className="text-sm text-slate-700 bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm flex flex-wrap items-center gap-3">
+              <span className="font-medium">Signed in as</span>
+              <span className="text-slate-900">{profile.email || `User #${profile.id}`}</span>
+              <span className="text-slate-400">•</span>
+              <span className="text-slate-600">User ID: {profile.id}</span>
+              {isEmpty && (
+                <>
+                  <span className="text-slate-400">•</span>
+                  <span className="text-slate-600">No portfolio data found for this user.</span>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* AI Portfolio Analysis */}
