@@ -66,6 +66,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
+  logger.info('Health endpoint hit', { path: req.path, method: req.method });
   res.json({
     status: 'OK',
     timestamp: new Date().toISOString(),
