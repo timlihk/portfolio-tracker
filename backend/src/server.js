@@ -88,13 +88,18 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
-// Health check endpoint
+// Track database initialization status
+let dbInitialized = false;
+let dbError = null;
+
+// Health check endpoint - responds immediately even before DB is ready
 app.get('/api/health', (req, res) => {
-  logger.info('Health endpoint hit', { path: req.path, method: req.method });
+  logger.info('Health endpoint hit', { path: req.path, method: req.method, dbReady: dbInitialized });
   res.json({
     status: 'OK',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    database: dbInitialized ? 'connected' : 'initializing'
   });
 });
 
@@ -103,8 +108,20 @@ app.get('/api/healthz', (req, res) => {
   res.json({
     status: 'OK',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    database: dbInitialized ? 'connected' : 'initializing'
   });
+});
+
+// Readiness check - only returns OK when DB is ready
+app.get('/api/ready', (req, res) => {
+  if (dbInitialized) {
+    res.json({ status: 'ready', database: 'connected' });
+  } else if (dbError) {
+    res.status(503).json({ status: 'not ready', error: dbError });
+  } else {
+    res.status(503).json({ status: 'initializing' });
+  }
 });
 
 // API v1 routes (versioned - recommended)
@@ -224,18 +241,25 @@ async function startServer() {
     });
   }
 
+  // Start HTTP server FIRST so health checks pass immediately
+  app.listen(PORT, () => {
+    logger.info('Server started', {
+      port: PORT,
+      environment: process.env.NODE_ENV || 'development'
+    });
+    console.log(`Server listening on port ${PORT}`);
+  });
+
+  // Initialize database AFTER server is listening (so health checks pass)
   try {
     await initDatabaseWithRetry();
-
-    app.listen(PORT, () => {
-      logger.info('Server started', {
-        port: PORT,
-        environment: process.env.NODE_ENV || 'development'
-      });
-    });
+    dbInitialized = true;
+    logger.info('Database initialization complete');
   } catch (error) {
-    logger.error('Failed to start server', { error: error.message, stack: error.stack });
-    process.exit(1);
+    dbError = error.message;
+    logger.error('Failed to initialize database', { error: error.message, stack: error.stack });
+    // Don't exit - server can still respond to health checks
+    // API routes will fail but at least Railway won't kill the process
   }
 }
 
