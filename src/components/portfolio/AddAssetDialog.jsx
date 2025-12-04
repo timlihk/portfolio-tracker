@@ -89,7 +89,8 @@ export default function AddAssetDialog({
   data,
   onChange,
   onSubmit,
-  isLoading
+  isLoading,
+  errorMessage
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -100,6 +101,11 @@ export default function AddAssetDialog({
         
         <div className="mt-4 max-h-[60vh] overflow-y-auto pr-1">
           <form onSubmit={onSubmit} className="space-y-5">
+            {errorMessage && (
+              <div className="text-sm text-red-700 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                {errorMessage}
+              </div>
+            )}
             {fields.map((field) => (
               <div key={field.name} className="space-y-2">
                 <Label htmlFor={field.name} className="text-sm font-medium text-slate-700">

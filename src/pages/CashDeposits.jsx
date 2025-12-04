@@ -28,7 +28,7 @@ const getCashFields = (accounts) => [
   { name: 'name', label: 'Name', required: true, placeholder: 'Emergency Fund' },
   { name: 'deposit_type', label: 'Type', type: 'select', options: DEPOSIT_TYPES },
   { name: 'amount', label: 'Amount', type: 'number', required: true, placeholder: '50000' },
-  { name: 'currency', label: 'Currency', type: 'select', options: CURRENCIES },
+  { name: 'currency', label: 'Currency', type: 'select', options: CURRENCIES, required: true },
   { name: 'interest_rate', label: 'Interest Rate (%)', type: 'number', placeholder: '4.5' },
   { name: 'maturity_date', label: 'Maturity Date', type: 'date' },
   { name: 'account', label: 'Institution', type: 'select', options: accounts.map(a => a.name), allowCustom: true, required: true },
@@ -39,6 +39,7 @@ export default function CashDeposits() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({});
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [submitError, setSubmitError] = useState('');
   
   const queryClient = useQueryClient();
 
@@ -62,6 +63,10 @@ export default function CashDeposits() {
       queryClient.invalidateQueries({ queryKey: ['cashDeposits'] });
       setDialogOpen(false);
       setFormData({});
+      setSubmitError('');
+    },
+    onError: (err) => {
+      setSubmitError(err?.message || 'Failed to add cash/deposit. Please try again.');
     }
   });
 
@@ -72,6 +77,10 @@ export default function CashDeposits() {
       queryClient.invalidateQueries({ queryKey: ['cashDeposits'] });
       setDialogOpen(false);
       setFormData({});
+      setSubmitError('');
+    },
+    onError: (err) => {
+      setSubmitError(err?.message || 'Failed to update cash/deposit. Please try again.');
     }
   });
 
@@ -86,11 +95,28 @@ export default function CashDeposits() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setSubmitError('');
+
+    const { name, amount, account, currency } = formData;
+    if (!name || !account || !currency || amount === undefined || amount === null || amount === '') {
+      setSubmitError('Please fill in Name, Amount, Currency, and Institution.');
+      return;
+    }
+    if (Number(amount) <= 0) {
+      setSubmitError('Amount must be greater than zero.');
+      return;
+    }
+
+    const payload = {
+      ...formData,
+      currency: currency || 'USD'
+    };
+
     if (formData.id) {
       const { id, ...data } = formData;
-      updateMutation.mutate({ id, data });
+      updateMutation.mutate({ id, data: payload });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(payload);
     }
   };
 
@@ -200,6 +226,7 @@ export default function CashDeposits() {
           onChange={(name, value) => setFormData(prev => ({ ...prev, [name]: value }))}
           onSubmit={handleSubmit}
           isLoading={createMutation.isPending || updateMutation.isPending}
+          errorMessage={submitError}
         />
 
         <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
