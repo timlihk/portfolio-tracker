@@ -31,3 +31,4 @@ dist-ssr
 
 # Claude settings with local permissions (may contain credentials)
 .claude/settings.local.json
+start-local.sh

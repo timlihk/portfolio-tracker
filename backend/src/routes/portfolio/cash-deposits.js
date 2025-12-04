@@ -50,8 +50,8 @@ router.post('/', requireAuth, async (req, res) => {
     const maturity = toDateOrNull(maturity_date);
 
     const result = await pool.query(
-      `INSERT INTO cash_deposits (user_id, name, deposit_type, amount, currency, interest_rate, maturity_date, account, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      `INSERT INTO cash_deposits (user_id, name, deposit_type, amount, currency, interest_rate, maturity_date, account, account_name, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9) RETURNING *`,
       [req.userId, name, deposit_type, amountNum, currency || 'USD', interestNum, maturity, account, notes]
     );
 
@@ -78,7 +78,7 @@ router.put('/:id', requireAuth, async (req, res) => {
 
     const result = await pool.query(
       `UPDATE cash_deposits SET name = $1, deposit_type = $2, amount = $3, currency = $4, interest_rate = $5,
-       maturity_date = $6, account = $7, notes = $8, updated_at = NOW()
+       maturity_date = $6, account = $7, account_name = $7, notes = $8, updated_at = NOW()
        WHERE id = $9 AND user_id = $10 RETURNING *`,
       [name, deposit_type, amountNum, currency, interestNum, maturity, account, notes, id, req.userId]
     );

@@ -80,7 +80,10 @@
       "Bash(npm run dev:backend:*)",
       "Bash(pg_isready:*)",
       "Bash(service postgresql status:*)",
-      "Bash(service postgresql start:*)"
+      "Bash(service postgresql start:*)",
+      "Bash(chmod:*)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:ZLaNFUopGxjObrwKRFQpmcgMPBIbNcVe@maglev.proxy.rlwy.net:54576/railway\" JWT_SECRET=\"local-dev-secret-key\" SHARED_SECRET=\"test123\" NODE_ENV=\"development\" PORT=\"3001\" node:*)",
+      "Bash(npm run dev:*)"
     ],
     "deny": [],
     "ask": []
