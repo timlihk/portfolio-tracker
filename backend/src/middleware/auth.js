@@ -1,5 +1,28 @@
 import jwt from 'jsonwebtoken';
 import logger from '../services/logger.js';
+import pool from '../config/database.js';
+
+let singleUserEnsured = false;
+
+async function ensureSingleUserExists(userId) {
+  if (singleUserEnsured) return;
+
+  try {
+    const existing = await pool.query('SELECT id FROM users WHERE id = $1', [userId]);
+    if (existing.rows.length === 0) {
+      await pool.query(
+        `INSERT INTO users (id, email, password_hash, name)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (id) DO NOTHING`,
+        [userId, process.env.SHARED_SECRET_USER_EMAIL || `family${userId}@local`, 'placeholder', 'Family User']
+      );
+      logger.info('Created default single-tenant user', { userId });
+    }
+    singleUserEnsured = true;
+  } catch (error) {
+    logger.error('Failed to ensure single-tenant user exists', { error: error.message, userId });
+  }
+}
 
 /**
  * Authentication middleware for single-tenant (family) use.
@@ -10,6 +33,9 @@ export const requireAuth = (req, res, next) => {
   const singleUserId = Number(process.env.SHARED_SECRET_USER_ID || 1);
 
   try {
+    // Ensure the single tenant user exists to avoid FK violations on inserts
+    ensureSingleUserExists(singleUserId);
+
     const authHeader = req.headers.authorization;
 
     // Primary: Bearer JWT (still accepted, but user is forced to singleUserId)
