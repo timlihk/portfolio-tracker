@@ -93,89 +93,91 @@ export default function AddAssetDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">{title}</DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={onSubmit} className="space-y-5 mt-4">
-          {fields.map((field) => (
-            <div key={field.name} className="space-y-2">
-              <Label htmlFor={field.name} className="text-sm font-medium text-slate-700">
-                {field.label}
-                {field.required && <span className="text-rose-500 ml-1">*</span>}
-              </Label>
-              
-              {field.type === 'select' && field.allowCustom ? (
-                <SelectWithCustom
-                  value={data[field.name] || undefined}
-                  onChange={(value) => onChange(field.name, value)}
-                  options={field.options}
-                  placeholder={field.placeholder || `Select ${field.label.toLowerCase()}`}
-                />
-              ) : field.type === 'select' ? (
-                <Select
-                  value={data[field.name] || undefined}
-                  onValueChange={(value) => onChange(field.name, value)}
-                >
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder={field.placeholder || `Select ${field.label.toLowerCase()}`} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {field.options.map((opt) => (
-                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : field.type === 'textarea' ? (
-                <Textarea
-                  id={field.name}
-                  value={data[field.name] || ''}
-                  onChange={(e) => onChange(field.name, e.target.value)}
-                  placeholder={field.placeholder}
-                  className="min-h-[100px] resize-none"
-                />
-              ) : (
-                <Input
-                  id={field.name}
-                  type={field.type || 'text'}
-                  step={field.step ?? (field.type === 'number' ? 'any' : undefined)}
-                  value={data[field.name] ?? ''}
-                  onChange={(e) => {
-                    if (field.type === 'number') {
-                      const val = e.target.value;
-                      onChange(field.name, val === '' ? '' : parseFloat(val));
-                    } else {
-                      onChange(field.name, e.target.value);
-                    }
-                  }}
-                  placeholder={field.placeholder}
-                  className="h-11"
-                  required={field.required}
-                />
-              )}
+        <div className="mt-4 max-h-[60vh] overflow-y-auto pr-1">
+          <form onSubmit={onSubmit} className="space-y-5">
+            {fields.map((field) => (
+              <div key={field.name} className="space-y-2">
+                <Label htmlFor={field.name} className="text-sm font-medium text-slate-700">
+                  {field.label}
+                  {field.required && <span className="text-rose-500 ml-1">*</span>}
+                </Label>
+                
+                {field.type === 'select' && field.allowCustom ? (
+                  <SelectWithCustom
+                    value={data[field.name] || undefined}
+                    onChange={(value) => onChange(field.name, value)}
+                    options={field.options}
+                    placeholder={field.placeholder || `Select ${field.label.toLowerCase()}`}
+                  />
+                ) : field.type === 'select' ? (
+                  <Select
+                    value={data[field.name] || undefined}
+                    onValueChange={(value) => onChange(field.name, value)}
+                  >
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder={field.placeholder || `Select ${field.label.toLowerCase()}`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {field.options.map((opt) => (
+                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : field.type === 'textarea' ? (
+                  <Textarea
+                    id={field.name}
+                    value={data[field.name] || ''}
+                    onChange={(e) => onChange(field.name, e.target.value)}
+                    placeholder={field.placeholder}
+                    className="min-h-[100px] resize-none"
+                  />
+                ) : (
+                  <Input
+                    id={field.name}
+                    type={field.type || 'text'}
+                    step={field.step ?? (field.type === 'number' ? 'any' : undefined)}
+                    value={data[field.name] ?? ''}
+                    onChange={(e) => {
+                      if (field.type === 'number') {
+                        const val = e.target.value;
+                        onChange(field.name, val === '' ? '' : parseFloat(val));
+                      } else {
+                        onChange(field.name, e.target.value);
+                      }
+                    }}
+                    placeholder={field.placeholder}
+                    className="h-11"
+                    required={field.required}
+                  />
+                )}
+              </div>
+            ))}
+            
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="px-6"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="px-6 bg-slate-900 hover:bg-slate-800"
+              >
+                {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {data.id ? 'Update' : 'Add'}
+              </Button>
             </div>
-          ))}
-          
-          <div className="flex justify-end gap-3 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="px-6"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="px-6 bg-slate-900 hover:bg-slate-800"
-            >
-              {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {data.id ? 'Update' : 'Add'}
-            </Button>
-          </div>
-        </form>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

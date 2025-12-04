@@ -31,7 +31,7 @@ const getCashFields = (accounts) => [
   { name: 'currency', label: 'Currency', type: 'select', options: CURRENCIES },
   { name: 'interest_rate', label: 'Interest Rate (%)', type: 'number', placeholder: '4.5' },
   { name: 'maturity_date', label: 'Maturity Date', type: 'date' },
-  { name: 'account', label: 'Institution', type: 'select', options: accounts.map(a => a.name), allowCustom: true },
+  { name: 'account', label: 'Institution', type: 'select', options: accounts.map(a => a.name), allowCustom: true, required: true },
   { name: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Additional notes...' }
 ];
 
