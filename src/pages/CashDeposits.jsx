@@ -107,13 +107,14 @@ export default function CashDeposits() {
       return;
     }
 
+    // Build payload without id field for API
+    const { id, ...dataWithoutId } = formData;
     const payload = {
-      ...formData,
+      ...dataWithoutId,
       currency: currency || 'USD'
     };
 
-    if (formData.id) {
-      const { id, ...data } = formData;
+    if (id) {
       updateMutation.mutate({ id, data: payload });
     } else {
       createMutation.mutate(payload);
