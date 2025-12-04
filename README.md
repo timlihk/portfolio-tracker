@@ -2,15 +2,15 @@
 
 A full-stack portfolio tracking application for managing investments across multiple asset classes including stocks, bonds, private equity funds, and private deals.
 
-> Last updated: December 1, 2025 - Added real-time stock pricing and currency conversion
+> Last updated: December 3, 2025 - Single-tenant shared-secret login and cash/deposit form fixes
 
 ## Features
 
 - **Multi-Asset Portfolio Management**: Track stocks, bonds, PE funds, and private deals
-- **Family Member Tracking**: Manage portfolios for multiple family members
+- **Single-Tenant Family Mode**: Shared-secret login mapped to a single user (no multi-user UI needed)
 - **Live Market Data**: Real-time stock pricing via Yahoo Finance API
 - **Dashboard Analytics**: Interactive charts and performance metrics
-- **Secure Authentication**: JWT-based user authentication
+- **Secure Authentication**: JWT-based user authentication with optional shared-secret shortcut
 - **Responsive Design**: Mobile-friendly interface built with React and Tailwind CSS
 
 ## Tech Stack
@@ -53,6 +53,16 @@ A full-stack portfolio tracking application for managing investments across mult
 ### Deployment
 
 The application is configured for deployment on Railway. See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions.
+
+### Authentication (single-tenant shared secret)
+
+For family/demo use, the app uses a shared secret mapped to a single user ID:
+
+- Set `SHARED_SECRET=<your phrase>` in the environment.
+- Optionally set `SHARED_SECRET_USER_ID=<user id>` (defaults to `1`) and `SHARED_SECRET_USER_EMAIL` (optional label).
+- The backend auto-creates the user if it does not exist.
+- Frontend login page: visit `/login`, enter the secret, and submit. The client stores it locally and sends it in `Authorization: Shared <secret>`.
+- JWTs still work, but they are forced to the same single user ID.
 
 ## Project Structure
 
@@ -100,4 +110,8 @@ curl -X POST https://your-app.railway.app/api/pricing/stocks \
 
 # Convert currency
 curl "https://your-app.railway.app/api/pricing/currency/convert?amount=100&from=EUR&to=USD"
+
+## Forms
+
+- Cash & Deposits: required fields include Name, Amount, Currency, and Institution. The dialog scrolls for long forms and shows inline errors if validation fails.
 ```

@@ -32,8 +32,13 @@ Ensure your repository has the following structure:
    Railway will automatically detect the `railway.toml` configuration. You need to add the following environment variables:
 
    ```bash
-   # Backend
+   # Backend (JWT still supported, but single-tenant shared secret is typical)
    JWT_SECRET=your-super-secret-jwt-key-here
+
+   # Shared secret single-tenant mode (recommended)
+   SHARED_SECRET=your-shared-phrase
+   SHARED_SECRET_USER_ID=1        # optional, defaults to 1
+   SHARED_SECRET_USER_EMAIL=family@example.com  # optional label
    ```
 
    Railway will automatically provide:

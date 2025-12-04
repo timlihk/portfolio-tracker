@@ -28,3 +28,6 @@ dist-ssr
 *.sw?
 
 .env.local
+
+# Claude settings with local permissions (may contain credentials)
+.claude/settings.local.json

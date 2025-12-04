@@ -28,13 +28,13 @@ async function ensureSingleUserExists(userId) {
  * Authentication middleware for single-tenant (family) use.
  * Requires a shared secret or a JWT, but always maps to the configured single user ID.
  */
-export const requireAuth = (req, res, next) => {
+export const requireAuth = async (req, res, next) => {
   const sharedSecret = process.env.SHARED_SECRET || process.env.SECRET_PHRASE;
   const singleUserId = Number(process.env.SHARED_SECRET_USER_ID || 1);
 
   try {
     // Ensure the single tenant user exists to avoid FK violations on inserts
-    ensureSingleUserExists(singleUserId);
+    await ensureSingleUserExists(singleUserId);
 
     const authHeader = req.headers.authorization;
 
