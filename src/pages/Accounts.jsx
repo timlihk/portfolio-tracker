@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { entities } from '@/api/backendClient';
 import { Button } from "@/components/ui/button";
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import AssetTable from '@/components/portfolio/AssetTable';
 import { Plus, Building2, TrendingUp, Landmark, ChevronDown, ChevronUp, Pencil, Trash2, CreditCard, Banknote } from 'lucide-react';
 import {
   Dialog,
@@ -35,7 +36,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { useExchangeRates, useStockPrices } from '@/components/portfolio/useMarketData';
+import { useExchangeRates, useStockPrices, CURRENCY_SYMBOLS } from '@/components/portfolio/useMarketData';
 
 const ACCOUNT_TYPES = ['Brokerage', 'IRA', '401k', 'Roth IRA', 'Bank', 'Other'];
 
@@ -76,6 +77,117 @@ export default function Accounts() {
   
   const stockTickers = stocks.map(s => s.ticker).filter(Boolean);
   const { prices: stockPrices } = useStockPrices(stockTickers);
+
+  // Helper to get current price (real-time or manual)
+  // Note: PostgreSQL returns DECIMAL as strings, so we need to convert to numbers
+  const getCurrentPrice = (stock) => Number(stockPrices[stock.ticker]?.price) || Number(stock.current_price) || Number(stock.average_cost) || 0;
+
+  // Columns for stocks table (matching Stocks page)
+  const stockColumns = useMemo(() => [
+    {
+      key: 'ticker',
+      label: 'Ticker',
+      render: (val, row) => {
+        // Use Yahoo Finance data if available, otherwise use stored data
+        const yahooData = stockPrices[row.ticker];
+        const companyName = row.company_name || yahooData?.name || yahooData?.shortName;
+        const sector = row.sector || yahooData?.sector;
+        return (
+          <div>
+            <span className="font-semibold text-slate-900">{val}</span>
+            {companyName && (
+              <p className="text-sm text-slate-500">{companyName}</p>
+            )}
+            {sector && (
+              <p className="text-xs text-slate-400">{sector}</p>
+            )}
+          </div>
+        );
+      }
+    },
+    {
+      key: 'shares',
+      label: 'Shares',
+      align: 'right',
+      render: (val) => (val || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+    },
+    {
+      key: 'average_cost',
+      label: 'Avg Cost',
+      align: 'right',
+      render: (val, row) => {
+        const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
+        return `${symbol}${(Number(val) || 0).toFixed(2)}`;
+      }
+    },
+    {
+      key: 'current_price',
+      label: 'Current',
+      align: 'right',
+      render: (val, row) => {
+        const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
+        const price = getCurrentPrice(row);
+        const isLive = stockPrices[row.ticker]?.price && !row.current_price;
+        return (
+          <div className="flex items-center justify-end gap-1">
+            <span>{symbol}{(price || 0).toFixed(2)}</span>
+            {isLive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Live price" />}
+          </div>
+        );
+      }
+    },
+    {
+      key: 'market_value',
+      label: 'Market Value',
+      align: 'right',
+      render: (_, row) => {
+        const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
+        const price = getCurrentPrice(row);
+        const value = (Number(row.shares) || 0) * price;
+        return <span className="font-medium">{symbol}{value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
+      }
+    },
+    {
+      key: 'gain_loss',
+      label: 'Gain/Loss',
+      align: 'right',
+      render: (_, row) => {
+        const price = getCurrentPrice(row);
+        const shares = Number(row.shares) || 0;
+        const avgCost = Number(row.average_cost) || 0;
+        const cost = shares * avgCost;
+        const value = shares * price;
+        const gain = value - cost;
+        const gainPct = cost > 0 ? ((gain / cost) * 100).toFixed(1) : '0.0';
+        const isPositive = gain >= 0;
+        const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
+        return (
+          <div className={isPositive ? 'text-emerald-600' : 'text-rose-600'}>
+            <span className="font-medium">{isPositive ? '+' : ''}{gainPct}%</span>
+            <p className="text-xs">{symbol}{Math.abs(gain).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          </div>
+        );
+      }
+    },
+    {
+      key: 'currency',
+      label: 'Ccy',
+      render: (val) => (
+        <Badge variant="outline" className="font-normal text-xs">
+          {val || 'USD'}
+        </Badge>
+      )
+    },
+    {
+      key: 'account',
+      label: 'Account',
+      render: (val) => val ? (
+        <Badge variant="outline" className="font-normal">
+          {val}
+        </Badge>
+      ) : '-'
+    }
+  ], [stockPrices, CURRENCY_SYMBOLS]);
 
   const createMutation = useMutation({
     mutationFn: (data) => entities.Account.create(data),
@@ -265,24 +377,13 @@ export default function Accounts() {
                                   ${assets.stocksValue.toLocaleString()}
                                 </span>
                               </div>
-                              <div className="grid gap-2">
-                                {assets.stocks.map((stock) => (
-                                  <div key={stock.id} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
-                                    <div>
-                                      <span className="font-medium text-slate-900">{stock.ticker}</span>
-                                      {stock.company_name && (
-                                        <span className="text-slate-500 ml-2">{stock.company_name}</span>
-                                      )}
-                                    </div>
-                                    <div className="text-right">
-                                      <p className="font-medium">
-                                        ${convertToUSD(Number(stock.shares) * (Number(stockPrices[stock.ticker]?.price) || Number(stock.current_price) || Number(stock.average_cost) || 0), stock.currency).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                      </p>
-                                      <p className="text-xs text-slate-500">{Number(stock.shares).toLocaleString()} shares {stock.currency && stock.currency !== 'USD' ? `(${stock.currency})` : ''}</p>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
+                              <AssetTable
+                                columns={stockColumns}
+                                data={assets.stocks}
+                                onEdit={undefined}
+                                onDelete={undefined}
+                                emptyMessage="No stocks in this account"
+                              />
                             </div>
                           )}
                           
@@ -434,21 +535,13 @@ export default function Accounts() {
                             <TrendingUp className="w-4 h-4 text-sky-600" />
                             <h4 className="font-medium text-slate-700">Stocks</h4>
                           </div>
-                          <div className="grid gap-2">
-                            {unassignedStocks.map((stock) => (
-                              <div key={stock.id} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
-                                <div>
-                                  <span className="font-medium text-slate-900">{stock.ticker}</span>
-                                  {stock.company_name && (
-                                    <span className="text-slate-500 ml-2">{stock.company_name}</span>
-                                  )}
-                                </div>
-                                <p className="font-medium">
-                                  ${convertToUSD(Number(stock.shares) * (Number(stockPrices[stock.ticker]?.price) || Number(stock.current_price) || Number(stock.average_cost) || 0), stock.currency).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
+                          <AssetTable
+                            columns={stockColumns}
+                            data={unassignedStocks}
+                            onEdit={undefined}
+                            onDelete={undefined}
+                            emptyMessage="No unassigned stocks"
+                          />
                         </div>
                       )}
                       

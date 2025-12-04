@@ -139,7 +139,7 @@ export default function AddAssetDialog({
                 <Input
                   id={field.name}
                   type={field.type || 'text'}
-                  step={field.type === 'number' ? 'any' : undefined}
+                  step={field.step ?? (field.type === 'number' ? 'any' : undefined)}
                   value={data[field.name] ?? ''}
                   onChange={(e) => {
                     if (field.type === 'number') {

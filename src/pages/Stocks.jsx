@@ -29,7 +29,7 @@ const getStockFields = (accounts) => [
   { name: 'company_name', label: 'Company Name', placeholder: 'Apple Inc.' },
   { name: 'currency', label: 'Currency', type: 'select', options: CURRENCIES },
   { name: 'account', label: 'Account', type: 'select', options: accounts.map(a => a.name), allowCustom: true },
-  { name: 'shares', label: 'Number of Shares', type: 'number', required: true, placeholder: '100' },
+  { name: 'shares', label: 'Number of Shares', type: 'number', required: true, placeholder: '100', step: '1' },
   { name: 'average_cost', label: 'Average Cost per Share', type: 'number', required: true, placeholder: '150.00' },
   { name: 'current_price', label: 'Current Price (leave empty for live)', type: 'number', placeholder: 'Auto-fetched' },
   { name: 'purchase_date', label: 'Purchase Date', type: 'date' },
@@ -173,11 +173,11 @@ export default function Stocks() {
         );
       }
     },
-    { 
-      key: 'shares', 
+    {
+      key: 'shares',
       label: 'Shares',
       align: 'right',
-      render: (val) => (val || 0).toLocaleString()
+      render: (val) => (val || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
     },
     {
       key: 'average_cost',

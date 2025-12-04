@@ -10,11 +10,11 @@ import {
 import { Pencil, Trash2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
-export default function AssetTable({ 
-  columns, 
-  data, 
-  onEdit, 
-  onDelete,
+export default function AssetTable({
+  columns,
+  data,
+  onEdit = undefined,
+  onDelete = undefined,
   emptyMessage = "No data available"
 }) {
   if (!data || data.length === 0) {
@@ -41,17 +41,17 @@ export default function AssetTable({
                 {col.label}
               </TableHead>
             ))}
-            <TableHead className="w-24" />
+            {(onEdit || onDelete) && <TableHead className="w-24" />}
           </TableRow>
         </TableHeader>
         <TableBody>
           {data.map((row) => (
-            <TableRow 
-              key={row.id} 
+            <TableRow
+              key={row.id}
               className="hover:bg-slate-50/50 transition-colors"
             >
               {columns.map((col) => (
-                <TableCell 
+                <TableCell
                   key={col.key}
                   className={cn(
                     "py-4",
@@ -62,26 +62,32 @@ export default function AssetTable({
                   {col.render ? col.render(row[col.key], row) : row[col.key]}
                 </TableCell>
               ))}
-              <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-slate-400 hover:text-slate-600"
-                    onClick={() => onEdit?.(row)}
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-slate-400 hover:text-rose-600"
-                    onClick={() => onDelete?.(row)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </TableCell>
+              {(onEdit || onDelete) && (
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    {onEdit && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-slate-400 hover:text-slate-600"
+                        onClick={() => onEdit(row)}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    )}
+                    {onDelete && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-slate-400 hover:text-rose-600"
+                        onClick={() => onDelete(row)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
+              )}
             </TableRow>
           ))}
         </TableBody>
