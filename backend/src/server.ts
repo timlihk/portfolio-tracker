@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { type Express, type Request, type Response, type NextFunction, type ErrorRequestHandler } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -7,25 +7,26 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import logger from './services/logger.js';
+import { prisma } from './lib/prisma.js';
 
 dotenv.config();
 console.log('Server initializing...');
 
 // Handle unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
   logger.error('Unhandled Rejection', { reason: String(reason), stack: reason instanceof Error ? reason.stack : undefined });
 });
 
 // Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
+process.on('uncaughtException', (error: Error) => {
   console.error('Uncaught Exception:', error);
   logger.error('Uncaught Exception', { error: error.message, stack: error.stack });
   process.exit(1);
 });
 
 // Validate required environment variables
-const requiredEnvVars = ['DATABASE_URL', 'JWT_SECRET'];
+const requiredEnvVars = ['DATABASE_URL', 'JWT_SECRET'] as const;
 const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
 
 if (missingEnvVars.length > 0) {
@@ -47,7 +48,6 @@ logger.info('Starting server...', {
 import portfolioRoutes from './routes/portfolio/index.js';
 import authRoutes from './routes/auth.js';
 import pricingRoutes from './routes/pricing.js';
-import { initDatabase } from './config/database.js';
 
 console.log('Routes imported');
 
@@ -55,7 +55,7 @@ console.log('Routes imported');
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const app = express();
+const app: Express = express();
 const PORT = process.env.PORT || 3001;
 
 // Trust proxy for Railway/Heroku/etc
@@ -83,17 +83,17 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Cache control for API endpoints
-app.use('/api', (req, res, next) => {
+app.use('/api', (req: Request, res: Response, next: NextFunction) => {
   res.set('Cache-Control', 'no-store, max-age=0');
   next();
 });
 
 // Track database initialization status
 let dbInitialized = false;
-let dbError = null;
+let dbError: string | null = null;
 
 // Health check endpoint - responds immediately even before DB is ready
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (req: Request, res: Response) => {
   logger.info('Health endpoint hit', { path: req.path, method: req.method, dbReady: dbInitialized });
   res.json({
     status: 'OK',
@@ -104,7 +104,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Additional health check endpoint (common pattern for health checks)
-app.get('/api/healthz', (req, res) => {
+app.get('/api/healthz', (req: Request, res: Response) => {
   res.json({
     status: 'OK',
     timestamp: new Date().toISOString(),
@@ -114,7 +114,7 @@ app.get('/api/healthz', (req, res) => {
 });
 
 // Readiness check - only returns OK when DB is ready
-app.get('/api/ready', (req, res) => {
+app.get('/api/ready', (req: Request, res: Response) => {
   if (dbInitialized) {
     res.json({ status: 'ready', database: 'connected' });
   } else if (dbError) {
@@ -135,7 +135,7 @@ app.use('/api/portfolio', portfolioRoutes);
 app.use('/api/pricing', pricingRoutes);
 
 // Error handling middleware
-app.use((err, req, res, next) => {
+const errorHandler: ErrorRequestHandler = (err: Error, req: Request, res: Response, next: NextFunction): void => {
   logger.error('Request error', {
     error: err.message,
     stack: err.stack,
@@ -147,21 +147,23 @@ app.use((err, req, res, next) => {
     error: 'Internal server error',
     message: process.env.NODE_ENV === 'production' ? 'Something went wrong' : err.message
   });
-});
+};
 
-// Helper function to initialize database with retry logic
-async function initDatabaseWithRetry(maxRetries = 2, delayMs = 1000) {
-  let lastError;
+app.use(errorHandler);
+
+// Helper function to connect to database with retry logic
+async function connectDatabaseWithRetry(maxRetries = 2, delayMs = 1000): Promise<boolean> {
+  let lastError: Error | undefined;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       logger.info(`Attempting database connection (attempt ${attempt}/${maxRetries})...`);
-      await initDatabase();
+      await prisma.$connect();
       logger.info('Database connection successful');
       return true;
     } catch (error) {
-      lastError = error;
-      logger.warn(`Database connection failed (attempt ${attempt}/${maxRetries}):`, { error: error.message });
+      lastError = error instanceof Error ? error : new Error(String(error));
+      logger.warn(`Database connection failed (attempt ${attempt}/${maxRetries}):`, { error: lastError.message });
 
       if (attempt < maxRetries) {
         logger.info(`Retrying in ${delayMs}ms...`);
@@ -172,12 +174,12 @@ async function initDatabaseWithRetry(maxRetries = 2, delayMs = 1000) {
     }
   }
 
-  logger.error('All database connection attempts failed', { error: lastError.message });
+  logger.error('All database connection attempts failed', { error: lastError?.message });
   throw lastError;
 }
 
 // Initialize database and start server
-async function startServer() {
+async function startServer(): Promise<void> {
   console.log('startServer() called');
   const fs = await import('fs');
 
@@ -187,7 +189,7 @@ async function startServer() {
     const files = fs.readdirSync(process.cwd());
     logger.debug('Directory contents', { files });
   } catch (e) {
-    logger.warn('Error reading directory', { error: e.message });
+    logger.warn('Error reading directory', { error: e instanceof Error ? e.message : String(e) });
   }
 
   // Serve static files in production
@@ -201,7 +203,7 @@ async function startServer() {
       // Serve static files for non-API paths only
       app.use(/^(?!\/api)/, express.static(distPath));
 
-      app.get('*', (req, res, next) => {
+      app.get('*', (req: Request, res: Response, next: NextFunction) => {
         // Skip API routes - let them be handled by API route handlers
         logger.info('Static file catch-all route', { path: req.path, method: req.method });
         if (req.path.startsWith('/api')) {
@@ -213,7 +215,7 @@ async function startServer() {
       });
     } else {
       logger.warn('Dist directory not found', { distPath });
-      app.use('*', (req, res, next) => {
+      app.use('*', (req: Request, res: Response, next: NextFunction) => {
         // Skip API routes - let them be handled by API route handlers
         logger.info('Dist not found catch-all route', { path: req.path, method: req.method });
         if (req.path.startsWith('/api')) {
@@ -229,7 +231,7 @@ async function startServer() {
       });
     }
   } else {
-    app.use('*', (req, res, next) => {
+    app.use('*', (req: Request, res: Response, next: NextFunction) => {
       // Skip API routes - let them be handled by API route handlers
       logger.info('Development catch-all route', { path: req.path, method: req.method });
       if (req.path.startsWith('/api')) {
@@ -252,15 +254,21 @@ async function startServer() {
 
   // Initialize database AFTER server is listening (so health checks pass)
   try {
-    await initDatabaseWithRetry();
+    await connectDatabaseWithRetry();
     dbInitialized = true;
     logger.info('Database initialization complete');
   } catch (error) {
-    dbError = error.message;
-    logger.error('Failed to initialize database', { error: error.message, stack: error.stack });
+    dbError = error instanceof Error ? error.message : String(error);
+    logger.error('Failed to initialize database', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
     // Don't exit - server can still respond to health checks
     // API routes will fail but at least Railway won't kill the process
   }
 }
 
 startServer();
+
+// Export app for testing
+export { app };

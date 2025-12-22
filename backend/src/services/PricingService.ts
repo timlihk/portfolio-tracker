@@ -3,11 +3,105 @@
  * Fetches real-time stock prices from Yahoo Finance API
  */
 import logger from './logger.js';
+import type { StockPriceData } from '../types/index.js';
+
+interface CachedPrice extends StockPriceData {
+  timestamp: number;
+}
+
+interface YahooChartMeta {
+  regularMarketPrice?: number;
+  previousClose?: number;
+  currency?: string;
+  shortName?: string;
+  longName?: string;
+  exchangeName?: string;
+  marketState?: string;
+}
+
+interface YahooQuote {
+  open?: (number | null)[];
+  high?: (number | null)[];
+  low?: (number | null)[];
+  volume?: (number | null)[];
+}
+
+interface YahooChartResult {
+  meta: YahooChartMeta;
+  indicators?: {
+    quote?: YahooQuote[];
+  };
+}
+
+interface YahooChartResponse {
+  chart: {
+    result?: YahooChartResult[];
+    error?: {
+      description?: string;
+    };
+  };
+}
+
+interface YahooAssetProfile {
+  sector?: string;
+  industry?: string;
+}
+
+interface YahooQuoteType {
+  longName?: string;
+}
+
+interface YahooSummaryResponse {
+  quoteSummary?: {
+    result?: Array<{
+      assetProfile?: YahooAssetProfile;
+      quoteType?: YahooQuoteType;
+    }>;
+  };
+}
+
+interface MultipleStockPricesResult {
+  results: Record<string, StockPriceData>;
+  errors: Record<string, string>;
+}
+
+interface TickerValidationSuccess {
+  valid: true;
+  ticker: string;
+  name: string;
+  exchange: string;
+  currency: string;
+  price: number;
+}
+
+interface TickerValidationFailure {
+  valid: false;
+  ticker: string;
+  error: string;
+}
+
+type TickerValidationResult = TickerValidationSuccess | TickerValidationFailure;
+
+interface CacheStats {
+  totalEntries: number;
+  validEntries: number;
+  expiredEntries: number;
+  cacheTTL: number;
+  circuitBreakerStatus: 'OPEN' | 'CLOSED';
+  failureCount: number;
+}
 
 class PricingService {
+  private priceCache: Map<string, CachedPrice>;
+  private readonly CACHE_TTL: number;
+  private failureCount: number;
+  private lastFailure: number | null;
+  private readonly CIRCUIT_BREAKER_THRESHOLD: number;
+  private readonly CIRCUIT_BREAKER_RESET: number;
+
   constructor() {
     // Cache for stock prices (5 minute TTL)
-    this.priceCache = new Map();
+    this.priceCache = new Map<string, CachedPrice>();
     this.CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
     // Circuit breaker state
@@ -20,9 +114,9 @@ class PricingService {
   /**
    * Check if circuit breaker is open (too many failures)
    */
-  isCircuitOpen() {
+  private isCircuitOpen(): boolean {
     if (this.failureCount >= this.CIRCUIT_BREAKER_THRESHOLD) {
-      const timeSinceLastFailure = Date.now() - this.lastFailure;
+      const timeSinceLastFailure = Date.now() - (this.lastFailure ?? 0);
       if (timeSinceLastFailure < this.CIRCUIT_BREAKER_RESET) {
         return true;
       }
@@ -35,7 +129,7 @@ class PricingService {
   /**
    * Record a failure for circuit breaker
    */
-  recordFailure() {
+  private recordFailure(): void {
     this.failureCount++;
     this.lastFailure = Date.now();
   }
@@ -43,14 +137,14 @@ class PricingService {
   /**
    * Record a success (reset failure count)
    */
-  recordSuccess() {
+  private recordSuccess(): void {
     this.failureCount = 0;
   }
 
   /**
    * Get cached price if valid
    */
-  getCachedPrice(ticker) {
+  private getCachedPrice(ticker: string): CachedPrice | null {
     const cached = this.priceCache.get(ticker.toUpperCase());
     if (cached && (Date.now() - cached.timestamp) < this.CACHE_TTL) {
       return cached;
@@ -61,7 +155,7 @@ class PricingService {
   /**
    * Set price in cache
    */
-  setCachedPrice(ticker, data) {
+  private setCachedPrice(ticker: string, data: StockPriceData): void {
     this.priceCache.set(ticker.toUpperCase(), {
       ...data,
       timestamp: Date.now()
@@ -70,10 +164,10 @@ class PricingService {
 
   /**
    * Fetch stock price from Yahoo Finance
-   * @param {string} ticker - Stock ticker symbol
-   * @returns {Promise<Object>} Price data
+   * @param ticker - Stock ticker symbol
+   * @returns Price data
    */
-  async getStockPrice(ticker) {
+  async getStockPrice(ticker: string): Promise<StockPriceData> {
     const upperTicker = ticker.toUpperCase();
 
     // Check cache first
@@ -118,7 +212,7 @@ class PricingService {
         throw new Error(`Yahoo Finance API error: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as YahooChartResponse;
 
       if (data.chart.error) {
         throw new Error(data.chart.error.description || 'Invalid ticker symbol');
@@ -133,9 +227,9 @@ class PricingService {
       const quote = result.indicators?.quote?.[0];
 
       // Fetch additional info (sector, industry) from quoteSummary API
-      let sector = null;
-      let industry = null;
-      let longName = null;
+      let sector: string | null = null;
+      let industry: string | null = null;
+      let longName: string | null = null;
       try {
         const summaryResponse = await fetch(
           `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(upperTicker)}?modules=assetProfile,quoteType`,
@@ -146,27 +240,28 @@ class PricingService {
           }
         );
         if (summaryResponse.ok) {
-          const summaryData = await summaryResponse.json();
+          const summaryData = await summaryResponse.json() as YahooSummaryResponse;
           const assetProfile = summaryData.quoteSummary?.result?.[0]?.assetProfile;
           const quoteType = summaryData.quoteSummary?.result?.[0]?.quoteType;
-          sector = assetProfile?.sector || null;
-          industry = assetProfile?.industry || null;
-          longName = quoteType?.longName || null;
+          sector = assetProfile?.sector ?? null;
+          industry = assetProfile?.industry ?? null;
+          longName = quoteType?.longName ?? null;
         }
       } catch (e) {
         // Ignore errors fetching additional info - price is most important
-        logger.warn(`Could not fetch sector info for ${upperTicker}:`, { error: e.message });
+        const error = e as Error;
+        logger.warn(`Could not fetch sector info for ${upperTicker}:`, { error: error.message });
       }
 
-      const priceData = {
+      const priceData: StockPriceData = {
         ticker: upperTicker,
-        price: meta.regularMarketPrice || meta.previousClose || 0,
-        currency: meta.currency || 'USD',
-        name: longName || meta.shortName || meta.longName || upperTicker,
-        shortName: meta.shortName || upperTicker,
+        price: meta.regularMarketPrice ?? meta.previousClose ?? 0,
+        currency: meta.currency ?? 'USD',
+        name: longName ?? meta.shortName ?? meta.longName ?? upperTicker,
+        shortName: meta.shortName ?? upperTicker,
         sector: sector,
         industry: industry,
-        exchange: meta.exchangeName || 'Unknown',
+        exchange: meta.exchangeName ?? 'Unknown',
         change: meta.regularMarketPrice && meta.previousClose
           ? meta.regularMarketPrice - meta.previousClose
           : 0,
@@ -174,10 +269,10 @@ class PricingService {
           ? ((meta.regularMarketPrice - meta.previousClose) / meta.previousClose) * 100
           : 0,
         previousClose: meta.previousClose,
-        open: quote?.open?.[0],
-        high: quote?.high?.[0],
-        low: quote?.low?.[0],
-        volume: quote?.volume?.[0],
+        open: quote?.open?.[0] ?? undefined,
+        high: quote?.high?.[0] ?? undefined,
+        low: quote?.low?.[0] ?? undefined,
+        volume: quote?.volume?.[0] ?? undefined,
         marketState: meta.marketState,
         cached: false,
         timestamp: Date.now()
@@ -192,26 +287,28 @@ class PricingService {
 
     } catch (error) {
       this.recordFailure();
-      logger.error(`Error fetching price for ${upperTicker}:`, { error: error.message });
+      const err = error as Error;
+      logger.error(`Error fetching price for ${upperTicker}:`, { error: err.message });
       throw error;
     }
   }
 
   /**
    * Fetch multiple stock prices
-   * @param {string[]} tickers - Array of ticker symbols
-   * @returns {Promise<Object>} Map of ticker to price data
+   * @param tickers - Array of ticker symbols
+   * @returns Map of ticker to price data
    */
-  async getMultipleStockPrices(tickers) {
-    const results = {};
-    const errors = {};
+  async getMultipleStockPrices(tickers: string[]): Promise<MultipleStockPricesResult> {
+    const results: Record<string, StockPriceData> = {};
+    const errors: Record<string, string> = {};
 
     await Promise.all(
       tickers.map(async (ticker) => {
         try {
           results[ticker] = await this.getStockPrice(ticker);
         } catch (error) {
-          errors[ticker] = error.message;
+          const err = error as Error;
+          errors[ticker] = err.message;
         }
       })
     );
@@ -221,10 +318,10 @@ class PricingService {
 
   /**
    * Validate a ticker symbol
-   * @param {string} ticker - Ticker to validate
-   * @returns {Promise<Object>} Validation result
+   * @param ticker - Ticker to validate
+   * @returns Validation result
    */
-  async validateTicker(ticker) {
+  async validateTicker(ticker: string): Promise<TickerValidationResult> {
     try {
       const priceData = await this.getStockPrice(ticker);
       return {
@@ -236,10 +333,11 @@ class PricingService {
         price: priceData.price
       };
     } catch (error) {
+      const err = error as Error;
       return {
         valid: false,
         ticker: ticker.toUpperCase(),
-        error: error.message
+        error: err.message
       };
     }
   }
@@ -247,7 +345,7 @@ class PricingService {
   /**
    * Clear the price cache
    */
-  clearCache() {
+  clearCache(): void {
     this.priceCache.clear();
     logger.info('Price cache cleared');
   }
@@ -255,7 +353,7 @@ class PricingService {
   /**
    * Get cache statistics
    */
-  getCacheStats() {
+  getCacheStats(): CacheStats {
     const now = Date.now();
     let validEntries = 0;
     let expiredEntries = 0;

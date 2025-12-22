@@ -1,0 +1,214 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique @db.VarChar(255)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  name         String?   @db.VarChar(255)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  stocks       Stock[]
+  bonds        Bond[]
+  peFunds      PeFund[]
+  peDeals      PeDeal[]
+  liquidFunds  LiquidFund[]
+  cashDeposits CashDeposit[]
+  liabilities  Liability[]
+  accounts     Account[]
+
+  @@map("users")
+}
+
+model Stock {
+  id           Int       @id @default(autoincrement())
+  userId       Int       @map("user_id")
+  ticker       String    @db.VarChar(20)
+  companyName  String?   @map("company_name") @db.VarChar(255)
+  sector       String?   @db.VarChar(100)
+  shares       Decimal?  @db.Decimal(15, 6)
+  averageCost  Decimal?  @map("average_cost") @db.Decimal(15, 6)
+  currentPrice Decimal?  @map("current_price") @db.Decimal(15, 6)
+  currency     String?   @default("USD") @db.VarChar(10)
+  account      String?   @db.VarChar(255)
+  purchaseDate DateTime? @map("purchase_date") @db.Date
+  notes        String?   @db.Text
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([ticker])
+  @@index([account])
+  @@map("stocks")
+}
+
+model Bond {
+  id            Int       @id @default(autoincrement())
+  userId        Int       @map("user_id")
+  name          String    @db.VarChar(255)
+  isin          String?   @db.VarChar(12)
+  bondType      String?   @map("bond_type") @db.VarChar(100)
+  faceValue     Decimal?  @map("face_value") @db.Decimal(15, 6)
+  couponRate    Decimal?  @map("coupon_rate") @db.Decimal(5, 3)
+  maturityDate  DateTime? @map("maturity_date") @db.Date
+  rating        String?   @db.VarChar(10)
+  purchasePrice Decimal?  @map("purchase_price") @db.Decimal(15, 6)
+  currentValue  Decimal?  @map("current_value") @db.Decimal(15, 6)
+  currency      String?   @default("USD") @db.VarChar(10)
+  account       String?   @db.VarChar(255)
+  purchaseDate  DateTime? @map("purchase_date") @db.Date
+  notes         String?   @db.Text
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([account])
+  @@map("bonds")
+}
+
+model PeFund {
+  id             Int       @id @default(autoincrement())
+  userId         Int       @map("user_id")
+  fundName       String    @map("fund_name") @db.VarChar(255)
+  manager        String?   @db.VarChar(255)
+  fundType       String?   @map("fund_type") @db.VarChar(100)
+  vintageYear    Int?      @map("vintage_year")
+  commitment     Decimal?  @db.Decimal(15, 6)
+  calledCapital  Decimal?  @map("called_capital") @db.Decimal(15, 6)
+  nav            Decimal?  @db.Decimal(15, 6)
+  distributions  Decimal?  @db.Decimal(15, 6)
+  commitmentDate DateTime? @map("commitment_date") @db.Date
+  status         String?   @default("Active") @db.VarChar(50)
+  notes          String?   @db.Text
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@map("pe_funds")
+}
+
+model PeDeal {
+  id                  Int       @id @default(autoincrement())
+  userId              Int       @map("user_id")
+  companyName         String    @map("company_name") @db.VarChar(255)
+  sector              String?   @db.VarChar(100)
+  dealType            String?   @map("deal_type") @db.VarChar(100)
+  investmentAmount    Decimal?  @map("investment_amount") @db.Decimal(15, 6)
+  currentValue        Decimal?  @map("current_value") @db.Decimal(15, 6)
+  ownershipPercentage Decimal?  @map("ownership_percentage") @db.Decimal(5, 3)
+  sponsor             String?   @db.VarChar(255)
+  status              String?   @default("Active") @db.VarChar(50)
+  investmentDate      DateTime? @map("investment_date") @db.Date
+  notes               String?   @db.Text
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@map("pe_deals")
+}
+
+model LiquidFund {
+  id                  Int       @id @default(autoincrement())
+  userId              Int       @map("user_id")
+  fundName            String    @map("fund_name") @db.VarChar(255)
+  manager             String?   @db.VarChar(255)
+  fundType            String?   @map("fund_type") @db.VarChar(100)
+  strategy            String?   @db.VarChar(100)
+  investmentAmount    Decimal?  @map("investment_amount") @db.Decimal(15, 6)
+  currentValue        Decimal?  @map("current_value") @db.Decimal(15, 6)
+  ytdReturn           Decimal?  @map("ytd_return") @db.Decimal(5, 3)
+  managementFee       Decimal?  @map("management_fee") @db.Decimal(5, 3)
+  performanceFee      Decimal?  @map("performance_fee") @db.Decimal(5, 3)
+  redemptionFrequency String?   @map("redemption_frequency") @db.VarChar(50)
+  lockupEndDate       DateTime? @map("lockup_end_date") @db.Date
+  investmentDate      DateTime? @map("investment_date") @db.Date
+  status              String?   @default("Active") @db.VarChar(50)
+  notes               String?   @db.Text
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@map("liquid_funds")
+}
+
+model CashDeposit {
+  id           Int       @id @default(autoincrement())
+  userId       Int       @map("user_id")
+  name         String    @db.VarChar(255)
+  depositType  String?   @map("deposit_type") @db.VarChar(100)
+  amount       Decimal?  @db.Decimal(15, 6)
+  currency     String?   @default("USD") @db.VarChar(10)
+  interestRate Decimal?  @map("interest_rate") @db.Decimal(5, 3)
+  maturityDate DateTime? @map("maturity_date") @db.Date
+  account      String?   @db.VarChar(255)
+  notes        String?   @db.Text
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("cash_deposits")
+}
+
+model Liability {
+  id                 Int       @id @default(autoincrement())
+  userId             Int       @map("user_id")
+  name               String    @db.VarChar(255)
+  liabilityType      String?   @map("liability_type") @db.VarChar(100)
+  account            String?   @db.VarChar(255)
+  principal          Decimal?  @db.Decimal(15, 6)
+  outstandingBalance Decimal?  @map("outstanding_balance") @db.Decimal(15, 6)
+  interestRate       Decimal?  @map("interest_rate") @db.Decimal(5, 3)
+  rateType           String?   @map("rate_type") @db.VarChar(50)
+  collateral         String?   @db.VarChar(255)
+  startDate          DateTime? @map("start_date") @db.Date
+  maturityDate       DateTime? @map("maturity_date") @db.Date
+  currency           String?   @default("USD") @db.VarChar(10)
+  status             String?   @default("Active") @db.VarChar(50)
+  notes              String?   @db.Text
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@map("liabilities")
+}
+
+model Account {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  name          String   @db.VarChar(255)
+  institution   String?  @db.VarChar(255)
+  accountType   String?  @map("account_type") @db.VarChar(100)
+  accountNumber String?  @map("account_number") @db.VarChar(20)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("accounts")
+}

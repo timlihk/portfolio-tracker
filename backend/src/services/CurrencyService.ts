@@ -3,11 +3,47 @@
  * Converts prices between currencies using exchangerate-api.com
  */
 import logger from './logger.js';
+import type { CurrencyConversion } from '../types/index.js';
+
+interface CachedRate {
+  rates: Record<string, number>;
+  timestamp: number;
+}
+
+interface ExchangeRateAPIResponse {
+  rates: Record<string, number>;
+}
+
+interface CurrencyConversionToUSD extends CurrencyConversion {
+  usdAmount: number;
+}
+
+interface CurrencyConversionBetween extends CurrencyConversion {
+  convertedAmount: number;
+  targetCurrency: string;
+}
+
+interface CacheStats {
+  totalEntries: number;
+  validEntries: number;
+  expiredEntries: number;
+  cacheTTL: number;
+  circuitBreakerStatus: 'OPEN' | 'CLOSED';
+  failureCount: number;
+}
 
 class CurrencyService {
+  private rateCache: Map<string, CachedRate>;
+  private readonly CACHE_TTL: number;
+  private readonly fallbackRates: Record<string, number>;
+  private failureCount: number;
+  private lastFailure: number | null;
+  private readonly CIRCUIT_BREAKER_THRESHOLD: number;
+  private readonly CIRCUIT_BREAKER_RESET: number;
+
   constructor() {
     // Cache for exchange rates (10 minute TTL)
-    this.rateCache = new Map();
+    this.rateCache = new Map<string, CachedRate>();
     this.CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
     // Fallback rates in case API fails
@@ -45,9 +81,9 @@ class CurrencyService {
   /**
    * Check if circuit breaker is open
    */
-  isCircuitOpen() {
+  private isCircuitOpen(): boolean {
     if (this.failureCount >= this.CIRCUIT_BREAKER_THRESHOLD) {
-      const timeSinceLastFailure = Date.now() - this.lastFailure;
+      const timeSinceLastFailure = Date.now() - (this.lastFailure ?? 0);
       if (timeSinceLastFailure < this.CIRCUIT_BREAKER_RESET) {
         return true;
       }
@@ -59,7 +95,7 @@ class CurrencyService {
   /**
    * Record a failure
    */
-  recordFailure() {
+  private recordFailure(): void {
     this.failureCount++;
     this.lastFailure = Date.now();
   }
@@ -67,14 +103,14 @@ class CurrencyService {
   /**
    * Record a success
    */
-  recordSuccess() {
+  private recordSuccess(): void {
     this.failureCount = 0;
   }
 
   /**
    * Get cached rate if valid
    */
-  getCachedRate(fromCurrency) {
+  private getCachedRate(fromCurrency: string): CachedRate | null {
     const cached = this.rateCache.get(fromCurrency.toUpperCase());
     if (cached && (Date.now() - cached.timestamp) < this.CACHE_TTL) {
       return cached;
@@ -85,19 +121,47 @@ class CurrencyService {
   /**
    * Set rate in cache
    */
-  setCachedRate(fromCurrency, data) {
+  private setCachedRate(fromCurrency: string, data: { rates: Record<string, number> }): void {
     this.rateCache.set(fromCurrency.toUpperCase(), {
       ...data,
       timestamp: Date.now()
     });
   }
 
+  private buildFallbackRates(baseCurrency: string): Record<string, number> {
+    const upperBase = baseCurrency.toUpperCase();
+    // If base is USD, return the fallback map directly
+    if (upperBase === 'USD') {
+      return this.fallbackRates;
+    }
+
+    const baseToUsd = this.fallbackRates[upperBase];
+    if (!baseToUsd) {
+      // If we don't have a fallback for the requested base, fall back to USD rates
+      return this.fallbackRates;
+    }
+
+    const derived: Record<string, number> = { [upperBase]: 1, USD: baseToUsd };
+
+    // Derive cross rates using USD as the pivot: rate(base -> target) = (USD/base) / (USD/target)
+    for (const [currency, usdPerCurrency] of Object.entries(this.fallbackRates)) {
+      const upperCurrency = currency.toUpperCase();
+      if (upperCurrency === upperBase) continue;
+
+      // usdPerCurrency is USD per 1 currency unit
+      const baseToTarget = baseToUsd / usdPerCurrency;
+      derived[upperCurrency] = baseToTarget;
+    }
+
+    return derived;
+  }
+
   /**
    * Fetch exchange rates from API
-   * @param {string} baseCurrency - Base currency code
-   * @returns {Promise<Object>} Exchange rates
+   * @param baseCurrency - Base currency code
+   * @returns Exchange rates
    */
-  async fetchExchangeRates(baseCurrency = 'USD') {
+  async fetchExchangeRates(baseCurrency: string = 'USD'): Promise<Record<string, number>> {
     const upperCurrency = baseCurrency.toUpperCase();
 
     // Check cache first
@@ -129,7 +193,7 @@ class CurrencyService {
         throw new Error(`Exchange rate API error: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as ExchangeRateAPIResponse;
 
       if (!data.rates) {
         throw new Error('Invalid response from exchange rate API');
@@ -144,19 +208,20 @@ class CurrencyService {
 
     } catch (error) {
       this.recordFailure();
-      logger.error(`Error fetching exchange rates`, { error: error.message, currency: upperCurrency });
+      const err = error as Error;
+      logger.error(`Error fetching exchange rates`, { error: err.message, currency: upperCurrency });
       logger.warn(`Using fallback rates`, { currency: upperCurrency });
-      return this.fallbackRates;
+      return this.buildFallbackRates(upperCurrency);
     }
   }
 
   /**
    * Convert amount from one currency to USD
-   * @param {number} amount - Amount to convert
-   * @param {string} fromCurrency - Source currency code
-   * @returns {Promise<Object>} Conversion result
+   * @param amount - Amount to convert
+   * @param fromCurrency - Source currency code
+   * @returns Conversion result
    */
-  async convertToUSD(amount, fromCurrency) {
+  async convertToUSD(amount: number, fromCurrency: string): Promise<CurrencyConversionToUSD> {
     const upperCurrency = fromCurrency.toUpperCase();
 
     if (upperCurrency === 'USD') {
@@ -172,7 +237,7 @@ class CurrencyService {
     try {
       // Get rates with base = fromCurrency
       const rates = await this.fetchExchangeRates(upperCurrency);
-      const usdRate = rates['USD'] || rates['usd'];
+      const usdRate = rates['USD'] ?? rates['usd'];
 
       if (!usdRate) {
         // Try reverse lookup
@@ -223,12 +288,12 @@ class CurrencyService {
 
   /**
    * Convert amount between any two currencies
-   * @param {number} amount - Amount to convert
-   * @param {string} fromCurrency - Source currency
-   * @param {string} toCurrency - Target currency
-   * @returns {Promise<Object>} Conversion result
+   * @param amount - Amount to convert
+   * @param fromCurrency - Source currency
+   * @param toCurrency - Target currency
+   * @returns Conversion result
    */
-  async convert(amount, fromCurrency, toCurrency) {
+  async convert(amount: number, fromCurrency: string, toCurrency: string): Promise<CurrencyConversionBetween> {
     const upperFrom = fromCurrency.toUpperCase();
     const upperTo = toCurrency.toUpperCase();
 
@@ -263,16 +328,17 @@ class CurrencyService {
       };
 
     } catch (error) {
-      logger.error(`Error converting currency`, { error: error.message, from: upperFrom, to: upperTo });
+      const err = error as Error;
+      logger.error(`Error converting currency`, { error: err.message, from: upperFrom, to: upperTo });
       throw error;
     }
   }
 
   /**
    * Get list of supported currencies
-   * @returns {Promise<string[]>} Array of currency codes
+   * @returns Array of currency codes
    */
-  async getSupportedCurrencies() {
+  async getSupportedCurrencies(): Promise<string[]> {
     try {
       const rates = await this.fetchExchangeRates('USD');
       return Object.keys(rates).sort();
@@ -284,7 +350,7 @@ class CurrencyService {
   /**
    * Clear the rate cache
    */
-  clearCache() {
+  clearCache(): void {
     this.rateCache.clear();
     logger.info('Currency rate cache cleared');
   }
@@ -292,7 +358,7 @@ class CurrencyService {
   /**
    * Get cache statistics
    */
-  getCacheStats() {
+  getCacheStats(): CacheStats {
     const now = Date.now();
     let validEntries = 0;
     let expiredEntries = 0;

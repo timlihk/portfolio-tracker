@@ -83,7 +83,14 @@
       "Bash(service postgresql start:*)",
       "Bash(chmod:*)",
       "Bash(DATABASE_URL=\"postgresql://postgres:ZLaNFUopGxjObrwKRFQpmcgMPBIbNcVe@maglev.proxy.rlwy.net:54576/railway\" JWT_SECRET=\"local-dev-secret-key\" SHARED_SECRET=\"test123\" NODE_ENV=\"development\" PORT=\"3001\" node:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(wc:*)",
+      "Bash(npx prisma init:*)",
+      "Bash(npx prisma:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(git tag:*)"
     ],
     "deny": [],
     "ask": []
