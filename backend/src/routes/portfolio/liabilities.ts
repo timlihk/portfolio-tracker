@@ -4,15 +4,24 @@ import { requireAuth } from '../../middleware/auth.js';
 import logger from '../../services/logger.js';
 import { AuthRequest, serializeDecimals, Liability, CreateLiabilityRequest, UpdateLiabilityRequest } from '../../types/index.js';
 import { toDateOrNull, toNumberOrNull } from './utils.js';
+import { getPaginationParams, setPaginationHeaders } from './pagination.js';
 
 const router = Router();
 
 // GET /liabilities - List all liabilities
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
+    const { skip, take, paginated, page, limit } = getPaginationParams(req);
     const liabilities = await prisma.liability.findMany({
-      where: { userId: req.userId }
+      where: { userId: req.userId },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take
     });
+    if (paginated && page && limit) {
+      const total = await prisma.liability.count({ where: { userId: req.userId } });
+      setPaginationHeaders(res, total, page, limit);
+    }
 
     const serializedLiabilities = liabilities.map(liability => serializeDecimals(liability));
     res.json(serializedLiabilities);

@@ -4,6 +4,7 @@ import { requireAuth } from '../../middleware/auth.js';
 import logger from '../../services/logger.js';
 import { AuthRequest, serializeDecimals, CashDeposit, CreateCashDepositRequest, UpdateCashDepositRequest } from '../../types/index.js';
 import { toDateOrNull, toNumberOrNull } from './utils.js';
+import { getPaginationParams, setPaginationHeaders } from './pagination.js';
 
 const router = Router();
 const serializeCashDepositWithAliases = (deposit: any) => {
@@ -19,10 +20,17 @@ const serializeCashDepositWithAliases = (deposit: any) => {
 // GET /cash-deposits - List all cash deposits
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
+    const { skip, take, paginated, page, limit } = getPaginationParams(req);
     const cashDeposits = await prisma.cashDeposit.findMany({
       where: { userId: req.userId },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take
     });
+    if (paginated && page && limit) {
+      const total = await prisma.cashDeposit.count({ where: { userId: req.userId } });
+      setPaginationHeaders(res, total, page, limit);
+    }
 
     const serializedDeposits = cashDeposits.map(deposit => serializeCashDepositWithAliases(deposit));
     res.json(serializedDeposits);

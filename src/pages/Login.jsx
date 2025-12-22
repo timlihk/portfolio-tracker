@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { portfolioAPI, authAPI } from '@/api/backendClient';
+import { Loader2 } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -77,7 +78,7 @@ export default function Login() {
             disabled={isSubmitting}
             className="w-full rounded-lg bg-slate-900 text-white py-2.5 font-medium hover:bg-slate-800 transition disabled:opacity-50"
           >
-            {isSubmitting ? 'Connecting...' : 'Save & Continue'}
+            {isSubmitting ? <span className="flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Connecting...</span> : 'Save & Continue'}
           </button>
         </form>
       </div>

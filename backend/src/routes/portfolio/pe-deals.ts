@@ -5,16 +5,24 @@ import { requireAuth } from '../../middleware/auth.js';
 import logger from '../../services/logger.js';
 import type { AuthRequest, CreatePeDealRequest, UpdatePeDealRequest } from '../../types/index.js';
 import { serializeDecimals } from '../../types/index.js';
+import { getPaginationParams, setPaginationHeaders } from './pagination.js';
 
 const router = express.Router();
 
 // GET /pe-deals - List all PE deals
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
+    const { skip, take, paginated, page, limit } = getPaginationParams(req);
     const peDeals = await prisma.peDeal.findMany({
       where: { userId: req.userId },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take
     });
+    if (paginated && page && limit) {
+      const total = await prisma.peDeal.count({ where: { userId: req.userId } });
+      setPaginationHeaders(res, total, page, limit);
+    }
 
     const serializedPeDeals = peDeals.map(deal => serializeDecimals(deal));
     res.json(serializedPeDeals);

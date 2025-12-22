@@ -49,8 +49,15 @@ router.post('/shared-secret', authLimiter, async (req: Request, res: Response) =
   }
 
   const secure = process.env.NODE_ENV === 'production';
+  const csrfToken = crypto.randomUUID();
   res.cookie('shared_secret', provided, {
     httpOnly: true,
+    sameSite: 'strict',
+    secure,
+    maxAge: 7 * 24 * 60 * 60 * 1000
+  });
+  res.cookie('csrf_token', csrfToken, {
+    httpOnly: false,
     sameSite: 'strict',
     secure,
     maxAge: 7 * 24 * 60 * 60 * 1000
@@ -58,8 +65,14 @@ router.post('/shared-secret', authLimiter, async (req: Request, res: Response) =
   return res.json({ message: 'Shared secret accepted' });
 });
 
-router.delete('/shared-secret', authLimiter, async (_req: Request, res: Response) => {
-  res.clearCookie('shared_secret', { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' });
+router.delete('/shared-secret', authLimiter, async (req: Request, res: Response) => {
+  const headerCsrf = req.headers['x-csrf-token'];
+  const cookieCsrf = (req as Request & { cookies?: Record<string, string> }).cookies?.csrf_token;
+  if (!cookieCsrf || headerCsrf !== cookieCsrf) {
+    return res.status(403).json({ error: 'CSRF token mismatch' });
+  }
+  res.clearCookie('shared_secret', { httpOnly: true, sameSite: 'strict', secure: process.env.NODE_ENV === 'production' });
+  res.clearCookie('csrf_token', { sameSite: 'strict', secure: process.env.NODE_ENV === 'production' });
   res.json({ message: 'Shared secret cleared' });
 });
 

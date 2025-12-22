@@ -18,9 +18,13 @@ function getAuthToken() {
  * @param {string} [options.method]
  * @param {any} [options.headers]
  * @param {any} [options.body]
+ * @param {Record<string,string|number>} [options.params]
  */
 async function apiCall(endpoint, options = {}) {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const params = options.params
+    ? '?' + new URLSearchParams(Object.entries(options.params).map(([k, v]) => [k, String(v)])).toString()
+    : '';
+  const url = `${API_BASE_URL}${endpoint}${params}`;
 
   // Get authentication token if available
   const token = getAuthToken();
@@ -96,7 +100,7 @@ export const portfolioAPI = {
   getDashboard: () => apiCall('/portfolio/dashboard'),
 
   // Accounts
-  getAccounts: () => apiCall('/portfolio/accounts'),
+  getAccounts: (params) => apiCall('/portfolio/accounts', { params }),
   createAccount: (accountData) => apiCall('/portfolio/accounts', {
     method: 'POST',
     body: accountData,
@@ -110,7 +114,7 @@ export const portfolioAPI = {
   }),
 
   // Stocks
-  getStocks: () => apiCall('/portfolio/stocks'),
+  getStocks: (params) => apiCall('/portfolio/stocks', { params }),
   createStock: (stockData) => apiCall('/portfolio/stocks', {
     method: 'POST',
     body: stockData,
@@ -124,7 +128,7 @@ export const portfolioAPI = {
   }),
 
   // Bonds
-  getBonds: () => apiCall('/portfolio/bonds'),
+  getBonds: (params) => apiCall('/portfolio/bonds', { params }),
   createBond: (bondData) => apiCall('/portfolio/bonds', {
     method: 'POST',
     body: bondData,
@@ -138,7 +142,7 @@ export const portfolioAPI = {
   }),
 
   // PE Funds
-  getPEFunds: () => apiCall('/portfolio/pe-funds'),
+  getPEFunds: (params) => apiCall('/portfolio/pe-funds', { params }),
   createPEFund: (fundData) => apiCall('/portfolio/pe-funds', {
     method: 'POST',
     body: fundData,
@@ -152,7 +156,7 @@ export const portfolioAPI = {
   }),
 
   // PE Deals
-  getPEDeals: () => apiCall('/portfolio/pe-deals'),
+  getPEDeals: (params) => apiCall('/portfolio/pe-deals', { params }),
   createPEDeal: (dealData) => apiCall('/portfolio/pe-deals', {
     method: 'POST',
     body: dealData,
@@ -166,7 +170,7 @@ export const portfolioAPI = {
   }),
 
   // Liquid Funds
-  getLiquidFunds: () => apiCall('/portfolio/liquid-funds'),
+  getLiquidFunds: (params) => apiCall('/portfolio/liquid-funds', { params }),
   createLiquidFund: (fundData) => apiCall('/portfolio/liquid-funds', {
     method: 'POST',
     body: fundData,
@@ -180,7 +184,7 @@ export const portfolioAPI = {
   }),
 
   // Cash Deposits
-  getCashDeposits: () => apiCall('/portfolio/cash-deposits'),
+  getCashDeposits: (params) => apiCall('/portfolio/cash-deposits', { params }),
   createCashDeposit: (depositData) => apiCall('/portfolio/cash-deposits', {
     method: 'POST',
     body: depositData,
@@ -194,7 +198,7 @@ export const portfolioAPI = {
   }),
 
   // Liabilities
-  getLiabilities: () => apiCall('/portfolio/liabilities'),
+  getLiabilities: (params) => apiCall('/portfolio/liabilities', { params }),
   createLiability: (liabilityData) => apiCall('/portfolio/liabilities', {
     method: 'POST',
     body: liabilityData,
@@ -247,49 +251,49 @@ export const pricingAPI = {
 // Mock entities to maintain compatibility with existing code
 export const entities = {
   Account: {
-    list: () => portfolioAPI.getAccounts(),
+    list: (params) => portfolioAPI.getAccounts(params),
     create: (data) => portfolioAPI.createAccount(data),
     update: (id, data) => portfolioAPI.updateAccount(id, data),
     delete: (id) => portfolioAPI.deleteAccount(id),
   },
   Stock: {
-    list: () => portfolioAPI.getStocks(),
+    list: (params) => portfolioAPI.getStocks(params),
     create: (data) => portfolioAPI.createStock(data),
     update: (id, data) => portfolioAPI.updateStock(id, data),
     delete: (id) => portfolioAPI.deleteStock(id),
   },
   Bond: {
-    list: () => portfolioAPI.getBonds(),
+    list: (params) => portfolioAPI.getBonds(params),
     create: (data) => portfolioAPI.createBond(data),
     update: (id, data) => portfolioAPI.updateBond(id, data),
     delete: (id) => portfolioAPI.deleteBond(id),
   },
   PEFund: {
-    list: () => portfolioAPI.getPEFunds(),
+    list: (params) => portfolioAPI.getPEFunds(params),
     create: (data) => portfolioAPI.createPEFund(data),
     update: (id, data) => portfolioAPI.updatePEFund(id, data),
     delete: (id) => portfolioAPI.deletePEFund(id),
   },
   PEDeal: {
-    list: () => portfolioAPI.getPEDeals(),
+    list: (params) => portfolioAPI.getPEDeals(params),
     create: (data) => portfolioAPI.createPEDeal(data),
     update: (id, data) => portfolioAPI.updatePEDeal(id, data),
     delete: (id) => portfolioAPI.deletePEDeal(id),
   },
   LiquidFund: {
-    list: () => portfolioAPI.getLiquidFunds(),
+    list: (params) => portfolioAPI.getLiquidFunds(params),
     create: (data) => portfolioAPI.createLiquidFund(data),
     update: (id, data) => portfolioAPI.updateLiquidFund(id, data),
     delete: (id) => portfolioAPI.deleteLiquidFund(id),
   },
   CashDeposit: {
-    list: () => portfolioAPI.getCashDeposits(),
+    list: (params) => portfolioAPI.getCashDeposits(params),
     create: (data) => portfolioAPI.createCashDeposit(data),
     update: (id, data) => portfolioAPI.updateCashDeposit(id, data),
     delete: (id) => portfolioAPI.deleteCashDeposit(id),
   },
   Liability: {
-    list: () => portfolioAPI.getLiabilities(),
+    list: (params) => portfolioAPI.getLiabilities(params),
     create: (data) => portfolioAPI.createLiability(data),
     update: (id, data) => portfolioAPI.updateLiability(id, data),
     delete: (id) => portfolioAPI.deleteLiability(id),

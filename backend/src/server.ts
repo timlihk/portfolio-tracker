@@ -23,7 +23,10 @@ process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) =>
 process.on('uncaughtException', (error: Error) => {
   console.error('Uncaught Exception:', error);
   logger.error('Uncaught Exception', { error: error.message, stack: error.stack });
-  process.exit(1);
+  // Don't call process.exit in test environment (Vitest intercepts it)
+  if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
+    process.exit(1);
+  }
 });
 
 // Validate required environment variables
@@ -161,7 +164,7 @@ app.use('/api/v1/portfolio', portfolioRoutes);
 app.use('/api/v1/pricing', pricingRoutes);
 
 // Error handling middleware
-const errorHandler: ErrorRequestHandler = (err: Error, req: Request, res: Response, next: NextFunction): void => {
+const errorHandler: ErrorRequestHandler = (err: Error, req: Request, res: Response, _next: NextFunction): void => {
   logger.error('Request error', {
     error: err.message,
     stack: err.stack,

@@ -42,6 +42,7 @@ export default function Stocks() {
   const [formData, setFormData] = useState({});
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [tickerLookupLoading, setTickerLookupLoading] = useState(false);
+  const [tickerError, setTickerError] = useState('');
 
   const queryClient = useQueryClient();
 
@@ -118,6 +119,7 @@ export default function Stocks() {
     if (!ticker || ticker.length < 1) return;
 
     setTickerLookupLoading(true);
+    setTickerError('');
     try {
       const data = await pricingAPI.getStockPrice(ticker.toUpperCase());
       if (data && data.price) {
@@ -130,6 +132,7 @@ export default function Stocks() {
         }));
       }
     } catch (error) {
+      setTickerError(error?.message || 'Ticker lookup failed');
     } finally {
       setTickerLookupLoading(false);
     }
@@ -297,6 +300,7 @@ export default function Stocks() {
           onChange={handleFieldChange}
           onSubmit={handleSubmit}
           isLoading={createMutation.isPending || updateMutation.isPending}
+          errorMessage={tickerError}
         />
 
         <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>

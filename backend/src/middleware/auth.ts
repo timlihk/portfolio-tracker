@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import logger from '../services/logger.js';
 import prisma from '../lib/prisma.js';
 import type { AuthRequest, JWTPayload } from '../types/index.js';
+import { sendUnauthorized } from '../routes/response.js';
 
 let singleUserEnsured = false;
 let ensurePromise: Promise<void> | null = null;
@@ -70,10 +71,13 @@ export const requireAuth = async (
 
       if (!process.env.JWT_SECRET) {
         logger.warn('JWT auth attempted but JWT_SECRET is not set; rejecting Bearer token');
-        return res.status(401).json({ error: 'Authentication required' });
+        return sendUnauthorized(res);
       }
 
       const payload = jwt.verify(token, process.env.JWT_SECRET) as JWTPayload;
+      if (payload.userId && payload.userId !== singleUserId) {
+        return res.status(403).json({ error: 'Invalid user for this tenant' });
+      }
       req.userId = payload.userId || singleUserId;
       return next();
     }
@@ -88,7 +92,7 @@ export const requireAuth = async (
       return next();
     }
 
-    return res.status(401).json({ error: 'Authentication required' });
+    return sendUnauthorized(res);
 
   } catch (error) {
     const err = error as Error & { name?: string };

@@ -44,7 +44,7 @@ class CurrencyService {
   constructor() {
     // Cache for exchange rates (10 minute TTL)
     this.rateCache = new Map<string, CachedRate>();
-    this.CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+    this.CACHE_TTL = Number(process.env.CURRENCY_CACHE_TTL_MS) || 10 * 60 * 1000; // default 10 minutes
 
     // Fallback rates in case API fails
     this.fallbackRates = {
@@ -74,8 +74,8 @@ class CurrencyService {
     // Circuit breaker state
     this.failureCount = 0;
     this.lastFailure = null;
-    this.CIRCUIT_BREAKER_THRESHOLD = 3;
-    this.CIRCUIT_BREAKER_RESET = 60 * 1000; // 1 minute
+    this.CIRCUIT_BREAKER_THRESHOLD = Number(process.env.CURRENCY_CIRCUIT_THRESHOLD) || 3;
+    this.CIRCUIT_BREAKER_RESET = Number(process.env.CURRENCY_CIRCUIT_RESET_MS) || 60 * 1000; // 1 minute default
   }
 
   /**

@@ -4,6 +4,7 @@ import prisma from '../../lib/prisma.js';
 import { requireAuth } from '../../middleware/auth.js';
 import logger from '../../services/logger.js';
 import type { AuthRequest, Account, CreateAccountRequest, UpdateAccountRequest } from '../../types/index.js';
+import { getPaginationParams, setPaginationHeaders } from './pagination.js';
 
 const router = express.Router();
 const normalizeAccountBody = (body: any) => ({
@@ -16,10 +17,17 @@ const normalizeAccountBody = (body: any) => ({
 // GET /accounts - List all accounts
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
+    const { skip, take, paginated, page, limit } = getPaginationParams(req);
     const accounts = await prisma.account.findMany({
       where: { userId: req.userId },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take
     });
+    if (paginated && page && limit) {
+      const total = await prisma.account.count({ where: { userId: req.userId } });
+      setPaginationHeaders(res, total, page, limit);
+    }
 
     res.json(accounts);
   } catch (error) {
