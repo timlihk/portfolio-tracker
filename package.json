@@ -13,7 +13,7 @@
     "build:frontend": "vite build --outDir dist",
     "build:backend": "npm --prefix backend run build",
     "build:all": "npm run build:backend && npm run build:frontend && echo '✅ Frontend built successfully' && ls -la dist",
-    "start": "npm --prefix backend run build && npm --prefix backend run start:prod",
+    "start": "npm run build:all && npm --prefix backend run start:prod",
     "dev:backend": "cd backend && npm run dev",
     "install:backend": "cd backend && npm install"
   },
