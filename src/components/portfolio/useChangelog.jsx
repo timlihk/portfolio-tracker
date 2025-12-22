@@ -3,7 +3,6 @@
 
 export async function logChange(action, assetType, assetName, details = '') {
   // Disabled - just log to console for now
-  console.log(`[Changelog] ${action} ${assetType}: ${assetName}`, details);
 }
 
 export function createChangeLogger(assetType) {

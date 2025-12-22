@@ -41,7 +41,6 @@ export function useExchangeRates() {
             }
           }
 
-          console.log('Exchange rates fetched:', convertedRates);
           setRates(convertedRates);
         }
       } catch (error) {
@@ -109,7 +108,6 @@ export function useStockPrices(tickers) {
           }
         }
 
-        console.log('Stock prices from Yahoo Finance:', fetchedPrices);
         setPrices(fetchedPrices);
       } catch (err) {
         console.error('Failed to fetch stock prices:', err);

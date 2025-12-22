@@ -29,7 +29,6 @@ function getSharedSecret() {
  */
 async function apiCall(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
-  console.log(`📡 API Call: ${options.method || 'GET'} ${url}`);
 
   // Get authentication token if available
   const token = getAuthToken();
@@ -54,12 +53,11 @@ async function apiCall(endpoint, options = {}) {
 
   if (config.body && typeof config.body === 'object') {
     config.body = JSON.stringify(config.body);
-    console.log('📦 Request body:', config.body);
+    // Request body logged via network tools; omit noisy console logging in production
   }
 
   try {
     const response = await fetch(url, config);
-    console.log(`📥 Response status: ${response.status}`);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -68,10 +66,8 @@ async function apiCall(endpoint, options = {}) {
     }
 
     const data = await response.json();
-    console.log('✅ Response data:', data);
     return data;
   } catch (error) {
-    console.error('❌ API call failed:', error);
     throw error;
   }
 }

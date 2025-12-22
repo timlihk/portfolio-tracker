@@ -3,6 +3,7 @@ import { prisma } from '../../lib/prisma.js';
 import { requireAuth } from '../../middleware/auth.js';
 import logger from '../../services/logger.js';
 import { AuthRequest, serializeDecimals, CashDeposit, CreateCashDepositRequest, UpdateCashDepositRequest } from '../../types/index.js';
+import { toDateOrNull, toNumberOrNull } from './utils.js';
 
 const router = Router();
 const serializeCashDepositWithAliases = (deposit: any) => {
@@ -15,27 +16,12 @@ const serializeCashDepositWithAliases = (deposit: any) => {
   };
 };
 
-const toNumberOrNull = (val: unknown): number | null => {
-  if (val === null || val === undefined || val === '') return null;
-  const num = Number(val);
-  return Number.isFinite(num) ? num : null;
-};
-
-const toDateOrNull = (val: unknown): Date | null => {
-  if (!val) return null;
-  if (val instanceof Date) return val;
-  if (typeof val === 'string') {
-    const date = new Date(val);
-    return isNaN(date.getTime()) ? null : date;
-  }
-  return null;
-};
-
 // GET /cash-deposits - List all cash deposits
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const cashDeposits = await prisma.cashDeposit.findMany({
-      where: { userId: req.userId }
+      where: { userId: req.userId },
+      orderBy: { createdAt: 'desc' }
     });
 
     const serializedDeposits = cashDeposits.map(deposit => serializeCashDepositWithAliases(deposit));
@@ -120,11 +106,16 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const cashDeposit = await prisma.cashDeposit.updateMany({
-      where: {
-        id: parseInt(id),
-        userId: req.userId
-      },
+    const existing = await prisma.cashDeposit.findFirst({
+      where: { id: parseInt(id, 10), userId: req.userId }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Cash Deposit not found' });
+    }
+
+    const updatedDeposit = await prisma.cashDeposit.update({
+      where: { id: parseInt(id, 10) },
       data: {
         name,
         depositType: depositType || null,
@@ -137,19 +128,6 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
         updatedAt: new Date()
       }
     });
-
-    if (cashDeposit.count === 0) {
-      return res.status(404).json({ error: 'Cash Deposit not found' });
-    }
-
-    // Fetch the updated record to return it
-    const updatedDeposit = await prisma.cashDeposit.findUnique({
-      where: { id: parseInt(id) }
-    });
-
-    if (!updatedDeposit) {
-      return res.status(404).json({ error: 'Cash Deposit not found' });
-    }
 
     res.json(serializeCashDepositWithAliases(updatedDeposit));
   } catch (error) {
@@ -171,7 +149,7 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
 
     const cashDeposit = await prisma.cashDeposit.deleteMany({
       where: {
-        id: parseInt(id),
+        id: parseInt(id, 10),
         userId: req.userId
       }
     });

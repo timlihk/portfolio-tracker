@@ -1,4 +1,5 @@
 import express, { Response } from 'express';
+import { body, param, validationResult } from 'express-validator';
 import prisma from '../../lib/prisma.js';
 import { requireAuth } from '../../middleware/auth.js';
 import logger from '../../services/logger.js';
@@ -15,7 +16,6 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    // Convert Prisma Decimal fields to numbers for JSON response and add legacy snake_case keys
     const serializedPeFunds = peFunds.map(fund => serializeDecimals(fund));
     res.json(serializedPeFunds);
   } catch (error) {
@@ -25,8 +25,25 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
 });
 
 // POST /pe-funds - Create a PE fund
-router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/', requireAuth, [
+  body('fundName').notEmpty().isLength({ max: 255 }),
+  body('manager').optional().isLength({ max: 255 }),
+  body('fundType').optional().isLength({ max: 100 }),
+  body('vintageYear').optional().isInt({ min: 1900, max: 2100 }),
+  body('commitment').optional().isFloat({ gt: 0 }),
+  body('calledCapital').optional().isFloat({ min: 0 }),
+  body('nav').optional().isFloat({ min: 0 }),
+  body('distributions').optional().isFloat({ min: 0 }),
+  body('commitmentDate').optional().isISO8601(),
+  body('status').optional().isLength({ max: 50 }),
+  body('notes').optional().isLength({ max: 1000 }),
+], async (req: AuthRequest, res: Response) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
     const body = req.body as any;
     const fundName = body.fundName;
     const manager = body.manager;
@@ -66,8 +83,26 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
 });
 
 // PUT /pe-funds/:id - Update a PE fund
-router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+router.put('/:id', requireAuth, [
+  param('id').isInt({ gt: 0 }),
+  body('fundName').optional().isLength({ max: 255 }),
+  body('manager').optional().isLength({ max: 255 }),
+  body('fundType').optional().isLength({ max: 100 }),
+  body('vintageYear').optional().isInt({ min: 1900, max: 2100 }),
+  body('commitment').optional().isFloat({ gt: 0 }),
+  body('calledCapital').optional().isFloat({ min: 0 }),
+  body('nav').optional().isFloat({ min: 0 }),
+  body('distributions').optional().isFloat({ min: 0 }),
+  body('commitmentDate').optional().isISO8601(),
+  body('status').optional().isLength({ max: 50 }),
+  body('notes').optional().isLength({ max: 1000 }),
+], async (req: AuthRequest, res: Response) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
     const { id } = req.params;
     const body = req.body as any;
     const fundName = body.fundName;

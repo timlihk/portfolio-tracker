@@ -87,6 +87,22 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Request logging (basic structured)
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const durationMs = Date.now() - start;
+    logger.info('HTTP request completed', {
+      method: req.method,
+      path: req.originalUrl,
+      status: res.statusCode,
+      durationMs,
+      userAgent: req.get('user-agent')
+    });
+  });
+  next();
+});
+
 // Cache control for API endpoints
 app.use('/api', (req: Request, res: Response, next: NextFunction) => {
   res.set('Cache-Control', 'no-store, max-age=0');

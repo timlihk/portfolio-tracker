@@ -1,4 +1,5 @@
 import express, { Response } from 'express';
+import { body, param, validationResult } from 'express-validator';
 import prisma from '../../lib/prisma.js';
 import { requireAuth } from '../../middleware/auth.js';
 import logger from '../../services/logger.js';
@@ -15,7 +16,6 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    // Convert Prisma Decimal fields to numbers for JSON response and add legacy snake_case keys
     const serializedPeDeals = peDeals.map(deal => serializeDecimals(deal));
     res.json(serializedPeDeals);
   } catch (error) {
@@ -25,8 +25,23 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
 });
 
 // POST /pe-deals - Create a PE deal
-router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/', requireAuth, [
+  body('companyName').notEmpty().isLength({ max: 255 }),
+  body('dealType').optional().isLength({ max: 100 }),
+  body('sector').optional().isLength({ max: 100 }),
+  body('investmentAmount').optional().isFloat({ gt: 0 }),
+  body('currentValue').optional().isFloat({ min: 0 }),
+  body('ownershipPercentage').optional().isFloat({ min: 0 }),
+  body('investmentDate').optional().isISO8601(),
+  body('status').optional().isLength({ max: 50 }),
+  body('notes').optional().isLength({ max: 1000 }),
+], async (req: AuthRequest, res: Response) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
     const body = req.body as any;
     const companyName = body.companyName;
     const sector = body.sector;
@@ -64,8 +79,24 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
 });
 
 // PUT /pe-deals/:id - Update a PE deal
-router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+router.put('/:id', requireAuth, [
+  param('id').isInt({ gt: 0 }),
+  body('companyName').optional().isLength({ max: 255 }),
+  body('dealType').optional().isLength({ max: 100 }),
+  body('sector').optional().isLength({ max: 100 }),
+  body('investmentAmount').optional().isFloat({ gt: 0 }),
+  body('currentValue').optional().isFloat({ min: 0 }),
+  body('ownershipPercentage').optional().isFloat({ min: 0 }),
+  body('investmentDate').optional().isISO8601(),
+  body('status').optional().isLength({ max: 50 }),
+  body('notes').optional().isLength({ max: 1000 }),
+], async (req: AuthRequest, res: Response) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
     const { id } = req.params;
     const body = req.body as any;
     const companyName = body.companyName;

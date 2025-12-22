@@ -128,10 +128,8 @@ export default function Stocks() {
           sector: prev.sector || data.sector || '',
           currency: prev.currency || data.currency || 'USD',
         }));
-        console.log('✅ Ticker lookup:', data);
       }
     } catch (error) {
-      console.log('⚠️ Ticker lookup failed:', error.message);
     } finally {
       setTickerLookupLoading(false);
     }

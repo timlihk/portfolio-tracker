@@ -24,7 +24,6 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       setIsLoadingAuth(false);
     } catch (error) {
-      console.log('User not authenticated, continuing without auth');
       setIsLoadingAuth(false);
       setIsAuthenticated(false);
       // Don't set auth error - allow app to work without authentication

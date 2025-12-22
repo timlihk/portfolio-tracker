@@ -3,24 +3,9 @@ import { prisma } from '../../lib/prisma.js';
 import { requireAuth } from '../../middleware/auth.js';
 import logger from '../../services/logger.js';
 import { AuthRequest, serializeDecimals, Liability, CreateLiabilityRequest, UpdateLiabilityRequest } from '../../types/index.js';
+import { toDateOrNull, toNumberOrNull } from './utils.js';
 
 const router = Router();
-
-const toNumberOrNull = (val: unknown): number | null => {
-  if (val === null || val === undefined || val === '') return null;
-  const num = Number(val);
-  return Number.isFinite(num) ? num : null;
-};
-
-const toDateOrNull = (val: unknown): Date | null => {
-  if (!val) return null;
-  if (val instanceof Date) return val;
-  if (typeof val === 'string') {
-    const date = new Date(val);
-    return isNaN(date.getTime()) ? null : date;
-  }
-  return null;
-};
 
 // GET /liabilities - List all liabilities
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
@@ -124,11 +109,16 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     const startDateVal = toDateOrNull(startDate);
     const maturityDateVal = toDateOrNull(maturityDate);
 
-    const liability = await prisma.liability.updateMany({
-      where: {
-        id: parseInt(id),
-        userId: req.userId
-      },
+    const existingLiability = await prisma.liability.findFirst({
+      where: { id: parseInt(id, 10), userId: req.userId }
+    });
+
+    if (!existingLiability) {
+      return res.status(404).json({ error: 'Liability not found' });
+    }
+
+    const updatedLiability = await prisma.liability.update({
+      where: { id: parseInt(id, 10) },
       data: {
         name,
         liabilityType: liabilityType || null,
@@ -146,19 +136,6 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
         updatedAt: new Date()
       }
     });
-
-    if (liability.count === 0) {
-      return res.status(404).json({ error: 'Liability not found' });
-    }
-
-    // Fetch the updated record to return it
-    const updatedLiability = await prisma.liability.findUnique({
-      where: { id: parseInt(id) }
-    });
-
-    if (!updatedLiability) {
-      return res.status(404).json({ error: 'Liability not found' });
-    }
 
     res.json(serializeDecimals(updatedLiability));
   } catch (error) {
@@ -180,7 +157,7 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
 
     const liability = await prisma.liability.deleteMany({
       where: {
-        id: parseInt(id),
+        id: parseInt(id, 10),
         userId: req.userId
       }
     });

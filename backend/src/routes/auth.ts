@@ -1,11 +1,18 @@
 import express, { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 import { prisma } from '../lib/prisma.js';
 import logger from '../services/logger.js';
 import type { RegisterRequest, LoginRequest, AuthResponse, JWTPayload } from '../types/index.js';
 
 const router = express.Router();
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 50,
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 function getSharedSecretFromHeaders(req: Request): string | undefined {
   const authHeader = req.headers.authorization;
@@ -29,7 +36,7 @@ function requireSharedSecretIfConfigured(req: Request, res: Response): boolean {
 }
 
 // Register new user
-router.post('/register', async (req: Request<{}, {}, RegisterRequest>, res: Response) => {
+router.post('/register', authLimiter, async (req: Request<{}, {}, RegisterRequest>, res: Response) => {
   try {
     if (!requireSharedSecretIfConfigured(req, res)) return;
 
@@ -98,7 +105,7 @@ router.post('/register', async (req: Request<{}, {}, RegisterRequest>, res: Resp
 });
 
 // Login user
-router.post('/login', async (req: Request<{}, {}, LoginRequest>, res: Response) => {
+router.post('/login', authLimiter, async (req: Request<{}, {}, LoginRequest>, res: Response) => {
   try {
     if (!requireSharedSecretIfConfigured(req, res)) return;
 
