@@ -19,7 +19,8 @@ function getSharedSecretFromHeaders(req: Request): string | undefined {
   const sharedHeader =
     (authHeader?.startsWith('Shared ') && authHeader.replace('Shared ', '')) ||
     (req.headers['x-shared-secret'] as string | undefined);
-  return sharedHeader;
+  const cookieSecret = (req as Request & { cookies?: Record<string, string> }).cookies?.shared_secret;
+  return cookieSecret || sharedHeader;
 }
 
 function requireSharedSecretIfConfigured(req: Request, res: Response): boolean {
@@ -34,6 +35,33 @@ function requireSharedSecretIfConfigured(req: Request, res: Response): boolean {
   res.status(403).json({ error: 'Shared secret required' });
   return false;
 }
+
+// Set shared secret cookie (httpOnly)
+router.post('/shared-secret', authLimiter, async (req: Request, res: Response) => {
+  const sharedSecret = process.env.SHARED_SECRET || process.env.SECRET_PHRASE;
+  if (!sharedSecret) {
+    return res.status(400).json({ error: 'Shared secret not configured on server' });
+  }
+
+  const provided = (req.body as { secret?: string }).secret?.trim();
+  if (!provided || provided !== sharedSecret) {
+    return res.status(403).json({ error: 'Invalid shared secret' });
+  }
+
+  const secure = process.env.NODE_ENV === 'production';
+  res.cookie('shared_secret', provided, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure,
+    maxAge: 7 * 24 * 60 * 60 * 1000
+  });
+  return res.json({ message: 'Shared secret accepted' });
+});
+
+router.delete('/shared-secret', authLimiter, async (_req: Request, res: Response) => {
+  res.clearCookie('shared_secret', { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production' });
+  res.json({ message: 'Shared secret cleared' });
+});
 
 // Register new user
 router.post('/register', authLimiter, async (req: Request<{}, {}, RegisterRequest>, res: Response) => {

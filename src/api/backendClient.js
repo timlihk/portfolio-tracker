@@ -11,14 +11,6 @@ function getAuthToken() {
   return token;
 }
 
-// Helper to get shared secret (family/demo login)
-function getSharedSecret() {
-  const secret = sessionStorage.getItem('shared_secret') ||
-                 localStorage.getItem('shared_secret') ||
-                 localStorage.getItem('secret_phrase');
-  return secret;
-}
-
 // Helper function for API calls
 /**
  * @param {string} endpoint
@@ -32,17 +24,14 @@ async function apiCall(endpoint, options = {}) {
 
   // Get authentication token if available
   const token = getAuthToken();
-  const sharedSecret = getSharedSecret();
   const headers = {
     'Content-Type': 'application/json',
     ...options.headers,
+    credentials: 'include',
   };
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
-  } else if (sharedSecret) {
-    headers['Authorization'] = `Shared ${sharedSecret}`;
-    headers['x-shared-secret'] = sharedSecret;
   }
 
   /** @type {{ method?: string, headers?: any, body?: any }} */
@@ -57,7 +46,10 @@ async function apiCall(endpoint, options = {}) {
   }
 
   try {
-    const response = await fetch(url, config);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const response = await fetch(url, { ...config, signal: controller.signal });
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -85,6 +77,13 @@ export const authAPI = {
   }),
 
   getProfile: () => apiCall('/auth/profile'),
+  setSharedSecret: (secret) => apiCall('/auth/shared-secret', {
+    method: 'POST',
+    body: { secret },
+  }),
+  clearSharedSecret: () => apiCall('/auth/shared-secret', {
+    method: 'DELETE',
+  }),
 };
 
 // Portfolio API

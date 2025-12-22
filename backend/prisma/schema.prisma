@@ -48,6 +48,7 @@ model Stock {
   @@index([userId])
   @@index([ticker])
   @@index([account])
+  @@index([userId, createdAt])
   @@map("stocks")
 }
 
@@ -74,6 +75,7 @@ model Bond {
 
   @@index([userId])
   @@index([account])
+  @@index([userId, createdAt])
   @@map("bonds")
 }
 
@@ -98,6 +100,7 @@ model PeFund {
 
   @@index([userId])
   @@index([status])
+  @@index([userId, createdAt])
   @@map("pe_funds")
 }
 
@@ -121,6 +124,7 @@ model PeDeal {
 
   @@index([userId])
   @@index([status])
+  @@index([userId, createdAt])
   @@map("pe_deals")
 }
 
@@ -148,6 +152,7 @@ model LiquidFund {
 
   @@index([userId])
   @@index([status])
+  @@index([userId, createdAt])
   @@map("liquid_funds")
 }
 
@@ -168,6 +173,7 @@ model CashDeposit {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
+  @@index([userId, createdAt])
   @@map("cash_deposits")
 }
 
@@ -194,6 +200,7 @@ model Liability {
 
   @@index([userId])
   @@index([status])
+  @@index([userId, createdAt])
   @@map("liabilities")
 }
 
@@ -210,5 +217,6 @@ model Account {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId])
+  @@index([userId, createdAt])
   @@map("accounts")
 }

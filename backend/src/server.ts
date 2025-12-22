@@ -6,6 +6,7 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import cookieParser from 'cookie-parser';
 import logger from './services/logger.js';
 import { prisma } from './lib/prisma.js';
 
@@ -69,6 +70,7 @@ app.set('trust proxy', 1);
 // Security middleware
 app.use(helmet());
 app.use(compression());
+app.use(cookieParser());
 
 // Rate limiting
 const limiter = rateLimit({
