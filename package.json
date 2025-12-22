@@ -8,12 +8,12 @@
     "build": "vite build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "typecheck": "tsc -p ./jsconfig.json",
+    "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "build:frontend": "vite build --outDir dist",
-    "build:backend": "echo 'Backend dependencies already installed in root package.json'",
-    "build:all": "npm run build:frontend && echo '✅ Frontend built successfully' && ls -la dist",
-    "start": "node backend/src/server.js",
+    "build:backend": "npm --prefix backend run build",
+    "build:all": "npm run build:backend && npm run build:frontend && echo '✅ Frontend built successfully' && ls -la dist",
+    "start": "npm --prefix backend run build && npm --prefix backend run start:prod",
     "dev:backend": "cd backend && npm run dev",
     "install:backend": "cd backend && npm install"
   },
@@ -98,6 +98,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.1",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22.13.5",
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
@@ -107,7 +110,9 @@
     "eslint-plugin-react-refresh": "^0.4.18",
     "eslint-plugin-unused-imports": "^4.3.0",
     "globals": "^15.14.0",
-    "typescript": "^5.8.2"
+    "jsdom": "^27.3.0",
+    "typescript": "^5.8.2",
+    "vitest": "^4.0.16"
   },
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "^4.52.0",

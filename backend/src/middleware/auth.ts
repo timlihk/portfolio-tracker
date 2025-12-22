@@ -60,8 +60,8 @@ export const requireAuth = async (
       const token = authHeader.replace('Bearer ', '');
 
       if (!process.env.JWT_SECRET) {
-        logger.error('JWT_SECRET environment variable is not set');
-        return res.status(500).json({ error: 'Server configuration error' });
+        logger.warn('JWT auth attempted but JWT_SECRET is not set; rejecting Bearer token');
+        return res.status(401).json({ error: 'Authentication required' });
       }
 
       jwt.verify(token, process.env.JWT_SECRET) as JWTPayload;

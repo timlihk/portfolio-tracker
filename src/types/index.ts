@@ -145,8 +145,6 @@ export interface CashDeposit {
   maturityDate: Date | string | null;
   maturity_date?: Date | string | null;
   account: string | null;
-  accountName: string | null;
-  account_name?: string | null;
   notes: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
