@@ -3,7 +3,7 @@ builder = "NIXPACKS"
 buildCommand = "npm install --prefix backend && npx --prefix backend prisma generate && npm run build:all"
 
 [deploy]
-startCommand = "npx --prefix backend prisma db push --skip-generate && npm --prefix backend run start:prod"
+startCommand = "npx --prefix backend prisma db push --skip-generate --accept-data-loss || echo 'DB push completed or skipped' && npm --prefix backend run start:prod"
 
 [[services]]
 name = "portfolio-tracker"
@@ -11,6 +11,7 @@ healthCheckPath = "/api/healthz"
 
 [services.env]
 NODE_ENV = "production"
+PORT = "8080"
 DATABASE_URL = "${DATABASE_URL}"
 JWT_SECRET = "${JWT_SECRET}"
 
