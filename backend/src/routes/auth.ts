@@ -51,7 +51,7 @@ router.post('/shared-secret', authLimiter, async (req: Request, res: Response) =
   const secure = process.env.NODE_ENV === 'production';
   res.cookie('shared_secret', provided, {
     httpOnly: true,
-    sameSite: 'lax',
+    sameSite: 'strict',
     secure,
     maxAge: 7 * 24 * 60 * 60 * 1000
   });

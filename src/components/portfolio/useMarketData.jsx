@@ -156,6 +156,9 @@ export function useBondPrices(bonds) {
 
     setPrices(bondPrices);
     setLoading(false);
+    return () => {
+      setPrices({});
+    };
   }, [bonds?.map(b => b.id).join(',')]);
 
   return { prices, loading };

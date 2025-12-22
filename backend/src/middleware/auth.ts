@@ -7,11 +7,16 @@ import prisma from '../lib/prisma.js';
 import type { AuthRequest, JWTPayload } from '../types/index.js';
 
 let singleUserEnsured = false;
+let ensurePromise: Promise<void> | null = null;
 
 async function ensureSingleUserExists(userId: number): Promise<void> {
   if (singleUserEnsured) return;
+  if (ensurePromise) {
+    await ensurePromise;
+    return;
+  }
 
-  try {
+  ensurePromise = (async () => {
     const existing = await prisma.user.findUnique({
       where: { id: userId },
       select: { id: true }
@@ -31,10 +36,14 @@ async function ensureSingleUserExists(userId: number): Promise<void> {
       logger.info('Created default single-tenant user', { userId });
     }
     singleUserEnsured = true;
-  } catch (error) {
+  })().catch((error) => {
     const err = error as Error;
     logger.error('Failed to ensure single-tenant user exists', { error: err.message, userId });
-  }
+  }).finally(() => {
+    ensurePromise = null;
+  });
+
+  await ensurePromise;
 }
 
 /**
@@ -64,8 +73,8 @@ export const requireAuth = async (
         return res.status(401).json({ error: 'Authentication required' });
       }
 
-      jwt.verify(token, process.env.JWT_SECRET) as JWTPayload;
-      req.userId = singleUserId;
+      const payload = jwt.verify(token, process.env.JWT_SECRET) as JWTPayload;
+      req.userId = payload.userId || singleUserId;
       return next();
     }
 

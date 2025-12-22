@@ -11,7 +11,7 @@ import logger from './services/logger.js';
 import { prisma } from './lib/prisma.js';
 
 dotenv.config();
-console.log('Server initializing...');
+// Server initializing...
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
@@ -40,8 +40,6 @@ if (missingEnvVars.length > 0) {
   process.exit(1);
 }
 
-console.log('Environment variables validated');
-
 logger.info('Starting server...', {
   cwd: process.cwd(),
   nodeEnv: process.env.NODE_ENV,
@@ -54,8 +52,6 @@ logger.info('Starting server...', {
 import portfolioRoutes from './routes/portfolio/index.js';
 import authRoutes from './routes/auth.js';
 import pricingRoutes from './routes/pricing.js';
-
-console.log('Routes imported');
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -147,23 +143,15 @@ app.get('/api/healthz', (req: Request, res: Response) => {
 
 // Readiness probe that checks DB connectivity
 app.get('/api/ready', async (_req: Request, res: Response) => {
+  if (!dbInitialized) {
+    return res.status(503).json({ status: 'initializing', error: dbError });
+  }
   try {
     await prisma.$queryRaw`SELECT 1`;
-    return res.json({ status: 'READY', timestamp: new Date().toISOString() });
+    return res.json({ status: 'ready', database: 'connected' });
   } catch (error) {
     logger.error('Readiness probe failed', { error: (error as Error).message });
-    return res.status(503).json({ status: 'UNAVAILABLE' });
-  }
-});
-
-// Readiness check - only returns OK when DB is ready
-app.get('/api/ready', (req: Request, res: Response) => {
-  if (dbInitialized) {
-    res.json({ status: 'ready', database: 'connected' });
-  } else if (dbError) {
-    res.status(503).json({ status: 'not ready', error: dbError });
-  } else {
-    res.status(503).json({ status: 'initializing' });
+    return res.status(503).json({ status: 'not ready', error: 'db unavailable' });
   }
 });
 
@@ -171,11 +159,6 @@ app.get('/api/ready', (req: Request, res: Response) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/portfolio', portfolioRoutes);
 app.use('/api/v1/pricing', pricingRoutes);
-
-// Legacy API routes (backward compatibility - will be deprecated)
-app.use('/api/auth', authRoutes);
-app.use('/api/portfolio', portfolioRoutes);
-app.use('/api/pricing', pricingRoutes);
 
 // Error handling middleware
 const errorHandler: ErrorRequestHandler = (err: Error, req: Request, res: Response, next: NextFunction): void => {
@@ -223,7 +206,6 @@ async function connectDatabaseWithRetry(maxRetries = 2, delayMs = 1000): Promise
 
 // Initialize database and start server
 async function startServer(): Promise<void> {
-  console.log('startServer() called');
   const fs = await import('fs');
 
   // Log directory contents for debugging
@@ -295,7 +277,6 @@ async function startServer(): Promise<void> {
       port: PORT,
       environment: process.env.NODE_ENV || 'development'
     });
-    console.log(`Server listening on port ${PORT}`);
   });
 
   // Initialize database AFTER server is listening (so health checks pass)
