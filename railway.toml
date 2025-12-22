@@ -1,9 +1,9 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "npm install --prefix backend && npx --prefix backend prisma generate && npm run build:all"
+buildCommand = "DATABASE_URL=${DATABASE_URL:-$DATABASE_PUBLIC_URL} npm install --prefix backend && DATABASE_URL=${DATABASE_URL:-$DATABASE_PUBLIC_URL} npx --prefix backend prisma generate && npm run build:all"
 
 [deploy]
-startCommand = "cd backend && npx prisma db push --skip-generate --accept-data-loss || echo 'DB push completed or skipped' && node dist/main.js"
+startCommand = "cd backend && DATABASE_URL=${DATABASE_URL:-$DATABASE_PUBLIC_URL} npx prisma db push --skip-generate --accept-data-loss || echo 'DB push completed or skipped' && DATABASE_URL=${DATABASE_URL:-$DATABASE_PUBLIC_URL} node dist/main.js"
 
 [[services]]
 name = "portfolio-tracker"
