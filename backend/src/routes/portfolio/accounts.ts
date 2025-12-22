@@ -5,6 +5,7 @@ import { requireAuth } from '../../middleware/auth.js';
 import logger from '../../services/logger.js';
 import type { AuthRequest, Account, CreateAccountRequest, UpdateAccountRequest } from '../../types/index.js';
 import { getPaginationParams, setPaginationHeaders } from './pagination.js';
+import { sendNotFound, sendServerError, sendValidationError } from '../response.js';
 
 const router = express.Router();
 const normalizeAccountBody = (body: any) => ({
@@ -32,7 +33,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
     res.json(accounts);
   } catch (error) {
     logger.error('Error fetching accounts:', { error: (error as Error).message, userId: req.userId });
-    res.status(500).json({ error: 'Failed to fetch accounts' });
+    sendServerError(res, 'Failed to fetch accounts');
   }
 });
 
@@ -47,7 +48,7 @@ router.post('/', requireAuth, [
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      return sendValidationError(res, errors.array());
     }
 
     const { name, institution, accountType, accountNumber } = normalizeAccountBody(req.body);
@@ -65,7 +66,7 @@ router.post('/', requireAuth, [
     res.status(201).json(account);
   } catch (error) {
     logger.error('Error creating account:', { error: (error as Error).message, userId: req.userId });
-    res.status(500).json({ error: 'Failed to create account' });
+    sendServerError(res, 'Failed to create account');
   }
 });
 
@@ -81,7 +82,7 @@ router.put('/:id', requireAuth, [
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      return sendValidationError(res, errors.array());
     }
 
     const { id } = req.params;
@@ -96,7 +97,7 @@ router.put('/:id', requireAuth, [
     });
 
     if (!existingAccount) {
-      return res.status(404).json({ error: 'Account not found' });
+      return sendNotFound(res, 'Account not found');
     }
 
     const account = await prisma.account.update({
@@ -112,7 +113,7 @@ router.put('/:id', requireAuth, [
     res.json(account);
   } catch (error) {
     logger.error('Error updating account:', { error: (error as Error).message, userId: req.userId, accountId: req.params.id });
-    res.status(500).json({ error: 'Failed to update account' });
+    sendServerError(res, 'Failed to update account');
   }
 });
 
@@ -124,7 +125,7 @@ router.delete('/:id', requireAuth, [
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      return sendValidationError(res, errors.array());
     }
 
     const { id } = req.params;
@@ -138,7 +139,7 @@ router.delete('/:id', requireAuth, [
     });
 
     if (!existingAccount) {
-      return res.status(404).json({ error: 'Account not found' });
+      return sendNotFound(res, 'Account not found');
     }
 
     await prisma.account.delete({
@@ -148,7 +149,7 @@ router.delete('/:id', requireAuth, [
     res.json({ message: 'Account deleted successfully' });
   } catch (error) {
     logger.error('Error deleting account:', { error: (error as Error).message, userId: req.userId, accountId: req.params.id });
-    res.status(500).json({ error: 'Failed to delete account' });
+    sendServerError(res, 'Failed to delete account');
   }
 });
 

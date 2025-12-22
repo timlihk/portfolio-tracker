@@ -6,6 +6,7 @@ import logger from '../../services/logger.js';
 import type { AuthRequest, CreatePeDealRequest, UpdatePeDealRequest } from '../../types/index.js';
 import { serializeDecimals } from '../../types/index.js';
 import { getPaginationParams, setPaginationHeaders } from './pagination.js';
+import { sendNotFound, sendServerError, sendValidationError } from '../response.js';
 
 const router = express.Router();
 
@@ -28,7 +29,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
     res.json(serializedPeDeals);
   } catch (error) {
     logger.error('Error fetching PE deals:', { error: (error as Error).message, userId: req.userId });
-    res.status(500).json({ error: 'Failed to fetch PE deals' });
+    sendServerError(res, 'Failed to fetch PE deals');
   }
 });
 
@@ -42,25 +43,26 @@ router.post('/', requireAuth, [
   body('ownershipPercentage').optional().isFloat({ min: 0 }),
   body('investmentDate').optional().isISO8601(),
   body('status').optional().isLength({ max: 50 }),
-  body('notes').optional().isLength({ max: 1000 }),
+  body('notes').optional().isLength({ max: 1000 })
 ], async (req: AuthRequest, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      return sendValidationError(res, errors.array());
     }
 
-    const body = req.body as any;
-    const companyName = body.companyName;
-    const sector = body.sector;
-    const dealType = body.dealType;
-    const investmentAmount = body.investmentAmount;
-    const currentValue = body.currentValue;
-    const ownershipPercentage = body.ownershipPercentage;
-    const sponsor = body.sponsor;
-    const status = body.status;
-    const investmentDate = body.investmentDate;
-    const notes = body.notes;
+    const {
+      companyName,
+      sector,
+      dealType,
+      investmentAmount,
+      currentValue,
+      ownershipPercentage,
+      sponsor,
+      status,
+      investmentDate,
+      notes
+    } = req.body as CreatePeDealRequest;
 
     const peDeal = await prisma.peDeal.create({
       data: {
@@ -82,7 +84,7 @@ router.post('/', requireAuth, [
     res.status(201).json(serializedPeDeal);
   } catch (error) {
     logger.error('Error creating PE deal:', { error: (error as Error).message, userId: req.userId });
-    res.status(500).json({ error: 'Failed to create PE deal' });
+    sendServerError(res, 'Failed to create PE deal');
   }
 });
 
@@ -97,26 +99,27 @@ router.put('/:id', requireAuth, [
   body('ownershipPercentage').optional().isFloat({ min: 0 }),
   body('investmentDate').optional().isISO8601(),
   body('status').optional().isLength({ max: 50 }),
-  body('notes').optional().isLength({ max: 1000 }),
+  body('notes').optional().isLength({ max: 1000 })
 ], async (req: AuthRequest, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      return sendValidationError(res, errors.array());
     }
 
     const { id } = req.params;
-    const body = req.body as any;
-    const companyName = body.companyName;
-    const sector = body.sector;
-    const dealType = body.dealType;
-    const investmentAmount = body.investmentAmount;
-    const currentValue = body.currentValue;
-    const ownershipPercentage = body.ownershipPercentage;
-    const sponsor = body.sponsor;
-    const status = body.status;
-    const investmentDate = body.investmentDate;
-    const notes = body.notes;
+    const {
+      companyName,
+      sector,
+      dealType,
+      investmentAmount,
+      currentValue,
+      ownershipPercentage,
+      sponsor,
+      status,
+      investmentDate,
+      notes
+    } = req.body as UpdatePeDealRequest;
 
     // Check if PE deal exists and belongs to user
     const existingPeDeal = await prisma.peDeal.findFirst({
@@ -127,7 +130,7 @@ router.put('/:id', requireAuth, [
     });
 
     if (!existingPeDeal) {
-      return res.status(404).json({ error: 'PE Deal not found' });
+      return sendNotFound(res, 'PE Deal not found');
     }
 
     const peDeal = await prisma.peDeal.update({
@@ -150,13 +153,20 @@ router.put('/:id', requireAuth, [
     res.json(serializedPeDeal);
   } catch (error) {
     logger.error('Error updating PE deal:', { error: (error as Error).message, userId: req.userId, peDealId: req.params.id });
-    res.status(500).json({ error: 'Failed to update PE deal' });
+    sendServerError(res, 'Failed to update PE deal');
   }
 });
 
 // DELETE /pe-deals/:id - Delete a PE deal
-router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+router.delete('/:id', requireAuth, [
+  param('id').isInt({ gt: 0 })
+], async (req: AuthRequest, res: Response) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return sendValidationError(res, errors.array());
+    }
+
     const { id } = req.params;
 
     // Check if PE deal exists and belongs to user
@@ -168,7 +178,7 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     });
 
     if (!existingPeDeal) {
-      return res.status(404).json({ error: 'PE Deal not found' });
+      return sendNotFound(res, 'PE Deal not found');
     }
 
     await prisma.peDeal.delete({
@@ -178,7 +188,7 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     res.json({ message: 'PE Deal deleted successfully' });
   } catch (error) {
     logger.error('Error deleting PE deal:', { error: (error as Error).message, userId: req.userId, peDealId: req.params.id });
-    res.status(500).json({ error: 'Failed to delete PE deal' });
+    sendServerError(res, 'Failed to delete PE deal');
   }
 });
 

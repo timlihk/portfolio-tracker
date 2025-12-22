@@ -6,6 +6,7 @@ import logger from '../../services/logger.js';
 import type { AuthRequest, CreatePeFundRequest, UpdatePeFundRequest } from '../../types/index.js';
 import { serializeDecimals } from '../../types/index.js';
 import { getPaginationParams, setPaginationHeaders } from './pagination.js';
+import { sendNotFound, sendServerError, sendValidationError } from '../response.js';
 
 const router = express.Router();
 
@@ -28,7 +29,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
     res.json(serializedPeFunds);
   } catch (error) {
     logger.error('Error fetching PE funds:', { error: (error as Error).message, userId: req.userId });
-    res.status(500).json({ error: 'Failed to fetch PE funds' });
+    sendServerError(res, 'Failed to fetch PE funds');
   }
 });
 
@@ -44,26 +45,27 @@ router.post('/', requireAuth, [
   body('distributions').optional().isFloat({ min: 0 }),
   body('commitmentDate').optional().isISO8601(),
   body('status').optional().isLength({ max: 50 }),
-  body('notes').optional().isLength({ max: 1000 }),
+  body('notes').optional().isLength({ max: 1000 })
 ], async (req: AuthRequest, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      return sendValidationError(res, errors.array());
     }
 
-    const body = req.body as any;
-    const fundName = body.fundName;
-    const manager = body.manager;
-    const fundType = body.fundType;
-    const vintageYear = body.vintageYear;
-    const commitment = body.commitment;
-    const calledCapital = body.calledCapital;
-    const nav = body.nav;
-    const distributions = body.distributions;
-    const commitmentDate = body.commitmentDate;
-    const status = body.status;
-    const notes = body.notes;
+    const {
+      fundName,
+      manager,
+      fundType,
+      vintageYear,
+      commitment,
+      calledCapital,
+      nav,
+      distributions,
+      commitmentDate,
+      status,
+      notes
+    } = req.body as CreatePeFundRequest;
 
     const peFund = await prisma.peFund.create({
       data: {
@@ -86,7 +88,7 @@ router.post('/', requireAuth, [
     res.status(201).json(serializedPeFund);
   } catch (error) {
     logger.error('Error creating PE fund:', { error: (error as Error).message, userId: req.userId });
-    res.status(500).json({ error: 'Failed to create PE fund' });
+    sendServerError(res, 'Failed to create PE fund');
   }
 });
 
@@ -103,27 +105,28 @@ router.put('/:id', requireAuth, [
   body('distributions').optional().isFloat({ min: 0 }),
   body('commitmentDate').optional().isISO8601(),
   body('status').optional().isLength({ max: 50 }),
-  body('notes').optional().isLength({ max: 1000 }),
+  body('notes').optional().isLength({ max: 1000 })
 ], async (req: AuthRequest, res: Response) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      return sendValidationError(res, errors.array());
     }
 
     const { id } = req.params;
-    const body = req.body as any;
-    const fundName = body.fundName;
-    const manager = body.manager;
-    const fundType = body.fundType;
-    const vintageYear = body.vintageYear;
-    const commitment = body.commitment;
-    const calledCapital = body.calledCapital;
-    const nav = body.nav;
-    const distributions = body.distributions;
-    const commitmentDate = body.commitmentDate;
-    const status = body.status;
-    const notes = body.notes;
+    const {
+      fundName,
+      manager,
+      fundType,
+      vintageYear,
+      commitment,
+      calledCapital,
+      nav,
+      distributions,
+      commitmentDate,
+      status,
+      notes
+    } = req.body as UpdatePeFundRequest;
 
     // Check if PE fund exists and belongs to user
     const existingPeFund = await prisma.peFund.findFirst({
@@ -134,7 +137,7 @@ router.put('/:id', requireAuth, [
     });
 
     if (!existingPeFund) {
-      return res.status(404).json({ error: 'PE Fund not found' });
+      return sendNotFound(res, 'PE Fund not found');
     }
 
     const peFund = await prisma.peFund.update({
@@ -158,13 +161,20 @@ router.put('/:id', requireAuth, [
     res.json(serializedPeFund);
   } catch (error) {
     logger.error('Error updating PE fund:', { error: (error as Error).message, userId: req.userId, peFundId: req.params.id });
-    res.status(500).json({ error: 'Failed to update PE fund' });
+    sendServerError(res, 'Failed to update PE fund');
   }
 });
 
 // DELETE /pe-funds/:id - Delete a PE fund
-router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+router.delete('/:id', requireAuth, [
+  param('id').isInt({ gt: 0 })
+], async (req: AuthRequest, res: Response) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return sendValidationError(res, errors.array());
+    }
+
     const { id } = req.params;
 
     // Check if PE fund exists and belongs to user
@@ -176,7 +186,7 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     });
 
     if (!existingPeFund) {
-      return res.status(404).json({ error: 'PE Fund not found' });
+      return sendNotFound(res, 'PE Fund not found');
     }
 
     await prisma.peFund.delete({
@@ -186,7 +196,7 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     res.json({ message: 'PE Fund deleted successfully' });
   } catch (error) {
     logger.error('Error deleting PE fund:', { error: (error as Error).message, userId: req.userId, peFundId: req.params.id });
-    res.status(500).json({ error: 'Failed to delete PE fund' });
+    sendServerError(res, 'Failed to delete PE fund');
   }
 });
 

@@ -1,10 +1,12 @@
 import { Router, Response } from 'express';
+import { body, param, validationResult } from 'express-validator';
 import { prisma } from '../../lib/prisma.js';
 import { requireAuth } from '../../middleware/auth.js';
 import logger from '../../services/logger.js';
-import { AuthRequest, serializeDecimals, Liability, CreateLiabilityRequest, UpdateLiabilityRequest } from '../../types/index.js';
+import { AuthRequest, serializeDecimals, CreateLiabilityRequest, UpdateLiabilityRequest } from '../../types/index.js';
 import { toDateOrNull, toNumberOrNull } from './utils.js';
 import { getPaginationParams, setPaginationHeaders } from './pagination.js';
+import { sendNotFound, sendServerError, sendUnauthorized, sendValidationError } from '../response.js';
 
 const router = Router();
 
@@ -28,13 +30,36 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   } catch (error) {
     const err = error as Error;
     logger.error('Error fetching liabilities:', { error: err.message, userId: req.userId });
-    res.status(500).json({ error: 'Failed to fetch liabilities' });
+    sendServerError(res, 'Failed to fetch liabilities');
   }
 });
 
 // POST /liabilities - Create a liability
-router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/', requireAuth, [
+  body('name').notEmpty().isLength({ max: 255 }),
+  body('liabilityType').optional().isLength({ max: 100 }),
+  body('account').optional().isLength({ max: 255 }),
+  body('principal').optional().isFloat(),
+  body('outstandingBalance').optional().isFloat(),
+  body('interestRate').optional().isFloat(),
+  body('rateType').optional().isLength({ max: 50 }),
+  body('collateral').optional().isLength({ max: 255 }),
+  body('startDate').optional().isISO8601(),
+  body('maturityDate').optional().isISO8601(),
+  body('currency').optional().isLength({ max: 10 }),
+  body('status').optional().isLength({ max: 50 }),
+  body('notes').optional().isLength({ max: 1000 })
+], async (req: AuthRequest, res: Response) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return sendValidationError(res, errors.array());
+    }
+
+    if (!req.userId) {
+      return sendUnauthorized(res);
+    }
+
     const {
       name,
       liabilityType,
@@ -50,10 +75,6 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
       status,
       notes
     } = req.body as CreateLiabilityRequest;
-
-    if (!req.userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
 
     const principalNum = toNumberOrNull(principal);
     const outstandingNum = toNumberOrNull(outstandingBalance);
@@ -84,13 +105,33 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
   } catch (error) {
     const err = error as Error;
     logger.error('Error creating liability:', { error: err.message, userId: req.userId });
-    res.status(500).json({ error: 'Failed to create liability' });
+    sendServerError(res, 'Failed to create liability');
   }
 });
 
 // PUT /liabilities/:id - Update a liability
-router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+router.put('/:id', requireAuth, [
+  param('id').isInt({ gt: 0 }),
+  body('name').optional().notEmpty().isLength({ max: 255 }),
+  body('liabilityType').optional().isLength({ max: 100 }),
+  body('account').optional().isLength({ max: 255 }),
+  body('principal').optional().isFloat(),
+  body('outstandingBalance').optional().isFloat(),
+  body('interestRate').optional().isFloat(),
+  body('rateType').optional().isLength({ max: 50 }),
+  body('collateral').optional().isLength({ max: 255 }),
+  body('startDate').optional().isISO8601(),
+  body('maturityDate').optional().isISO8601(),
+  body('currency').optional().isLength({ max: 10 }),
+  body('status').optional().isLength({ max: 50 }),
+  body('notes').optional().isLength({ max: 1000 })
+], async (req: AuthRequest, res: Response) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return sendValidationError(res, errors.array());
+    }
+
     const { id } = req.params;
     const {
       name,
@@ -109,7 +150,7 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     } = req.body as UpdateLiabilityRequest;
 
     if (!req.userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return sendUnauthorized(res);
     }
 
     const principalNum = toNumberOrNull(principal);
@@ -123,7 +164,7 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     });
 
     if (!existingLiability) {
-      return res.status(404).json({ error: 'Liability not found' });
+      return sendNotFound(res, 'Liability not found');
     }
 
     const updatedLiability = await prisma.liability.update({
@@ -151,17 +192,24 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const err = error as Error;
     logger.error('Error updating liability:', { error: err.message, userId: req.userId, liabilityId: id });
-    res.status(500).json({ error: 'Failed to update liability' });
+    sendServerError(res, 'Failed to update liability');
   }
 });
 
 // DELETE /liabilities/:id - Delete a liability
-router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+router.delete('/:id', requireAuth, [
+  param('id').isInt({ gt: 0 })
+], async (req: AuthRequest, res: Response) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return sendValidationError(res, errors.array());
+    }
+
     const { id } = req.params;
 
     if (!req.userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return sendUnauthorized(res);
     }
 
     const liability = await prisma.liability.deleteMany({
@@ -172,7 +220,7 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     });
 
     if (liability.count === 0) {
-      return res.status(404).json({ error: 'Liability not found' });
+      return sendNotFound(res, 'Liability not found');
     }
 
     res.json({ message: 'Liability deleted successfully' });
@@ -180,7 +228,7 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const err = error as Error;
     logger.error('Error deleting liability:', { error: err.message, userId: req.userId, liabilityId: id });
-    res.status(500).json({ error: 'Failed to delete liability' });
+    sendServerError(res, 'Failed to delete liability');
   }
 });
 

@@ -6,6 +6,7 @@ import logger from '../../services/logger.js';
 import type { AuthRequest, Bond, CreateBondRequest, UpdateBondRequest } from '../../types/index.js';
 import { serializeDecimals } from '../../types/index.js';
 import { getPaginationParams, setPaginationHeaders } from './pagination.js';
+import { sendValidationError, sendNotFound, sendServerError } from '../response.js';
 
 const router = express.Router();
 
@@ -29,7 +30,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
     res.json(serializedBonds);
   } catch (error) {
     logger.error('Error fetching bonds:', { error: (error as Error).message, userId: req.userId });
-    res.status(500).json({ error: 'Failed to fetch bonds' });
+    sendServerError(res, 'Failed to fetch bonds');
   }
 });
 
@@ -53,7 +54,7 @@ router.post('/', requireAuth, [
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      return sendValidationError(res, errors.array());
     }
 
     const body = req.body as any;
@@ -94,7 +95,7 @@ router.post('/', requireAuth, [
     res.status(201).json(serializedBond);
   } catch (error) {
     logger.error('Error creating bond:', { error: (error as Error).message, userId: req.userId });
-    res.status(500).json({ error: 'Failed to create bond' });
+    sendServerError(res, 'Failed to create bond');
   }
 });
 
@@ -119,7 +120,7 @@ router.put('/:id', requireAuth, [
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      return sendValidationError(res, errors.array());
     }
 
     const { id } = req.params;
@@ -147,7 +148,7 @@ router.put('/:id', requireAuth, [
     });
 
     if (!existingBond) {
-      return res.status(404).json({ error: 'Bond not found' });
+      return sendNotFound(res, 'Bond not found');
     }
 
     const bond = await prisma.bond.update({
@@ -173,7 +174,7 @@ router.put('/:id', requireAuth, [
     res.json(serializedBond);
   } catch (error) {
     logger.error('Error updating bond:', { error: (error as Error).message, userId: req.userId, bondId: req.params.id });
-    res.status(500).json({ error: 'Failed to update bond' });
+    sendServerError(res, 'Failed to update bond');
   }
 });
 
@@ -185,7 +186,7 @@ router.delete('/:id', requireAuth, [
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      return sendValidationError(res, errors.array());
     }
 
     const { id } = req.params;
@@ -199,7 +200,7 @@ router.delete('/:id', requireAuth, [
     });
 
     if (!existingBond) {
-      return res.status(404).json({ error: 'Bond not found' });
+      return sendNotFound(res, 'Bond not found');
     }
 
     await prisma.bond.delete({
@@ -209,7 +210,7 @@ router.delete('/:id', requireAuth, [
     res.json({ message: 'Bond deleted successfully' });
   } catch (error) {
     logger.error('Error deleting bond:', { error: (error as Error).message, userId: req.userId, bondId: req.params.id });
-    res.status(500).json({ error: 'Failed to delete bond' });
+    sendServerError(res, 'Failed to delete bond');
   }
 });
 

@@ -11,6 +11,10 @@ import logger from './services/logger.js';
 import { prisma } from './lib/prisma.js';
 
 dotenv.config();
+// Normalize database URL for environments that expose DATABASE_PUBLIC_URL (e.g., Railway)
+if (!process.env.DATABASE_URL && process.env.DATABASE_PUBLIC_URL) {
+  process.env.DATABASE_URL = process.env.DATABASE_PUBLIC_URL;
+}
 // Server initializing...
 
 // Handle unhandled promise rejections
@@ -30,7 +34,8 @@ process.on('uncaughtException', (error: Error) => {
 });
 
 // Validate required environment variables
-const requiredEnvVars = ['DATABASE_URL'] as const;
+const databaseUrl = process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL;
+const requiredEnvVars = databaseUrl ? [] as const : ['DATABASE_URL'] as const;
 const missingEnvVars: string[] = requiredEnvVars.filter(varName => !process.env[varName]);
 
 const jwtRequired = !(process.env.SHARED_SECRET || process.env.SECRET_PHRASE);
@@ -208,7 +213,7 @@ async function connectDatabaseWithRetry(maxRetries = 2, delayMs = 1000): Promise
 }
 
 // Initialize database and start server
-async function startServer(): Promise<void> {
+export async function startServer(): Promise<void> {
   const fs = await import('fs');
 
   // Log directory contents for debugging
@@ -297,8 +302,6 @@ async function startServer(): Promise<void> {
     // API routes will fail but at least Railway won't kill the process
   }
 }
-
-startServer();
 
 // Export app for testing
 export { app };

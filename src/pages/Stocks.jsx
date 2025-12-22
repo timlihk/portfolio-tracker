@@ -5,6 +5,7 @@ import PageHeader from '@/components/portfolio/PageHeader';
 import AssetTable from '@/components/portfolio/AssetTable';
 import AddAssetDialog from '@/components/portfolio/AddAssetDialog';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useExchangeRates, useStockPrices, CURRENCY_SYMBOLS } from '@/components/portfolio/useMarketData';
 import { createChangeLogger } from '@/components/portfolio/useChangelog';
 import { RefreshCw } from 'lucide-react';
@@ -43,13 +44,18 @@ export default function Stocks() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [tickerLookupLoading, setTickerLookupLoading] = useState(false);
   const [tickerError, setTickerError] = useState('');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
   const queryClient = useQueryClient();
 
-  const { data: stocks = [] } = useQuery({
-    queryKey: ['stocks'],
-    queryFn: () => entities.Stock.list()
+  const { data: stocksResponse, isFetching: stocksLoading } = useQuery({
+    queryKey: ['stocks', page, limit],
+    queryFn: () => entities.Stock.listWithPagination({ page, limit }),
+    keepPreviousData: true
   });
+  const stocks = stocksResponse?.data || [];
+  const pagination = stocksResponse?.pagination || { total: stocks.length, page, limit };
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
@@ -113,6 +119,11 @@ export default function Stocks() {
     setFormData(stock);
     setDialogOpen(true);
   };
+
+  const total = pagination?.total ?? stocks.length;
+  const maxPage = pagination?.limit ? Math.ceil(total / pagination.limit || 1) : undefined;
+  const showingStart = (page - 1) * limit + 1;
+  const showingEnd = showingStart + stocks.length - 1;
 
   // Lookup ticker info from Yahoo Finance
   const lookupTicker = useCallback(async (ticker) => {
@@ -264,6 +275,7 @@ export default function Stocks() {
     const value = (Number(s.shares) || 0) * price;
     return sum + convertToUSD(value || 0, s.currency);
   }, 0);
+  const totalPositions = total || stocks.length;
 
   return (
     <div className="min-h-screen bg-slate-50/50">
@@ -272,7 +284,7 @@ export default function Stocks() {
           title="Stocks"
           subtitle={
             <div className="flex items-center gap-2">
-              <span>{stocks.length} positions • ${totalValueUSD.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USD</span>
+              <span>{totalPositions} positions • ${totalValueUSD.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USD</span>
               {isLoadingPrices && <RefreshCw className="w-3 h-3 animate-spin text-slate-400" />}
             </div>
           }
@@ -290,6 +302,44 @@ export default function Stocks() {
           onDelete={setDeleteTarget}
           emptyMessage="No stocks in your portfolio yet"
         />
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-4">
+          <div className="text-sm text-slate-500">
+            Showing {stocks.length === 0 ? 0 : showingStart} - {stocks.length === 0 ? 0 : showingEnd} of {total || '...'}
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              className="border rounded-md px-3 py-2 text-sm text-slate-700"
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value));
+                setPage(1);
+              }}
+            >
+              {[10, 25, 50].map(size => (
+                <option key={size} value={size}>{size} / page</option>
+              ))}
+            </select>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === 1 || stocksLoading}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                Prev
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={stocksLoading || (maxPage ? page >= maxPage : stocks.length < limit)}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        </div>
 
         <AddAssetDialog
           open={dialogOpen}

@@ -1,10 +1,12 @@
 import { Router, Response } from 'express';
+import { body, param, validationResult } from 'express-validator';
 import { prisma } from '../../lib/prisma.js';
 import { requireAuth } from '../../middleware/auth.js';
 import logger from '../../services/logger.js';
 import { AuthRequest, serializeDecimals, CashDeposit, CreateCashDepositRequest, UpdateCashDepositRequest } from '../../types/index.js';
 import { toDateOrNull, toNumberOrNull } from './utils.js';
 import { getPaginationParams, setPaginationHeaders } from './pagination.js';
+import { sendNotFound, sendServerError, sendUnauthorized, sendValidationError } from '../response.js';
 
 const router = Router();
 const serializeCashDepositWithAliases = (deposit: any) => {
@@ -37,34 +39,45 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   } catch (error) {
     const err = error as Error;
     logger.error('Error fetching cash deposits:', { error: err.message, userId: req.userId });
-    res.status(500).json({ error: 'Failed to fetch cash deposits' });
+    sendServerError(res, 'Failed to fetch cash deposits');
   }
 });
 
 // POST /cash-deposits - Create a cash deposit
-router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/', requireAuth, [
+  body('name').notEmpty().isLength({ max: 255 }),
+  body('depositType').optional().isLength({ max: 100 }),
+  body('amount').isFloat({ gt: 0 }),
+  body('currency').notEmpty().isLength({ max: 10 }),
+  body('interestRate').optional().isFloat(),
+  body('maturityDate').optional().isISO8601(),
+  body('account').notEmpty().isLength({ max: 255 }),
+  body('notes').optional().isLength({ max: 1000 })
+], async (req: AuthRequest, res: Response) => {
   try {
-    const body = req.body as any;
-    const name = body.name;
-    const depositType = body.depositType;
-    const amount = body.amount;
-    const currency = body.currency;
-    const interestRate = body.interestRate;
-    const maturityDate = body.maturityDate;
-    const account = body.account;
-    const notes = body.notes;
-
-    if (!name || amount === undefined || amount === null || Number(amount) <= 0 || !currency || !account) {
-      return res.status(400).json({ error: 'Name, Amount (>0), Currency, and Institution are required' });
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return sendValidationError(res, errors.array());
     }
+
+    if (!req.userId) {
+      return sendUnauthorized(res);
+    }
+
+    const {
+      name,
+      depositType,
+      amount,
+      currency,
+      interestRate,
+      maturityDate,
+      account,
+      notes
+    } = req.body as CreateCashDepositRequest;
 
     const amountNum = toNumberOrNull(amount);
     const interestNum = toNumberOrNull(interestRate);
     const maturity = toDateOrNull(maturityDate);
-
-    if (!req.userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
 
     const cashDeposit = await prisma.cashDeposit.create({
       data: {
@@ -84,42 +97,55 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
   } catch (error) {
     const err = error as Error;
     logger.error('Error creating cash deposit:', { error: err.message, userId: req.userId });
-    res.status(500).json({ error: 'Failed to create cash deposit' });
+    sendServerError(res, 'Failed to create cash deposit');
   }
 });
 
 // PUT /cash-deposits/:id - Update a cash deposit
-router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+router.put('/:id', requireAuth, [
+  param('id').isInt({ gt: 0 }),
+  body('name').optional().notEmpty().isLength({ max: 255 }),
+  body('depositType').optional().isLength({ max: 100 }),
+  body('amount').optional().isFloat({ gt: 0 }),
+  body('currency').optional().isLength({ max: 10 }),
+  body('interestRate').optional().isFloat(),
+  body('maturityDate').optional().isISO8601(),
+  body('account').optional().isLength({ max: 255 }),
+  body('notes').optional().isLength({ max: 1000 })
+], async (req: AuthRequest, res: Response) => {
   try {
-    const { id } = req.params;
-    const body = req.body as any;
-    const name = body.name;
-    const depositType = body.depositType;
-    const amount = body.amount;
-    const currency = body.currency;
-    const interestRate = body.interestRate;
-    const maturityDate = body.maturityDate;
-    const account = body.account;
-    const notes = body.notes;
-
-    if (!name || amount === undefined || amount === null || Number(amount) <= 0 || !currency || !account) {
-      return res.status(400).json({ error: 'Name, Amount (>0), Currency, and Institution are required' });
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return sendValidationError(res, errors.array());
     }
+
+    const { id } = req.params;
+
+    if (!req.userId) {
+      return sendUnauthorized(res);
+    }
+
+    const {
+      name,
+      depositType,
+      amount,
+      currency,
+      interestRate,
+      maturityDate,
+      account,
+      notes
+    } = req.body as UpdateCashDepositRequest;
 
     const amountNum = toNumberOrNull(amount);
     const interestNum = toNumberOrNull(interestRate);
     const maturity = toDateOrNull(maturityDate);
-
-    if (!req.userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
 
     const existing = await prisma.cashDeposit.findFirst({
       where: { id: parseInt(id, 10), userId: req.userId }
     });
 
     if (!existing) {
-      return res.status(404).json({ error: 'Cash Deposit not found' });
+      return sendNotFound(res, 'Cash Deposit not found');
     }
 
     const updatedDeposit = await prisma.cashDeposit.update({
@@ -142,17 +168,24 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const err = error as Error;
     logger.error('Error updating cash deposit:', { error: err.message, userId: req.userId, cashDepositId: id });
-    res.status(500).json({ error: 'Failed to update cash deposit' });
+    sendServerError(res, 'Failed to update cash deposit');
   }
 });
 
 // DELETE /cash-deposits/:id - Delete a cash deposit
-router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+router.delete('/:id', requireAuth, [
+  param('id').isInt({ gt: 0 })
+], async (req: AuthRequest, res: Response) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return sendValidationError(res, errors.array());
+    }
+
     const { id } = req.params;
 
     if (!req.userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return sendUnauthorized(res);
     }
 
     const cashDeposit = await prisma.cashDeposit.deleteMany({
@@ -163,7 +196,7 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     });
 
     if (cashDeposit.count === 0) {
-      return res.status(404).json({ error: 'Cash Deposit not found' });
+      return sendNotFound(res, 'Cash Deposit not found');
     }
 
     res.json({ message: 'Cash Deposit deleted successfully' });
@@ -171,7 +204,7 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const err = error as Error;
     logger.error('Error deleting cash deposit:', { error: err.message, userId: req.userId, cashDepositId: id });
-    res.status(500).json({ error: 'Failed to delete cash deposit' });
+    sendServerError(res, 'Failed to delete cash deposit');
   }
 });
 

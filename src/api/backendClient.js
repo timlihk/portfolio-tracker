@@ -19,10 +19,12 @@ function getAuthToken() {
  * @param {any} [options.headers]
  * @param {any} [options.body]
  * @param {Record<string,string|number>} [options.params]
+ * @param {boolean} [options.includePagination] include pagination headers in the response
  */
 async function apiCall(endpoint, options = {}) {
-  const params = options.params
-    ? '?' + new URLSearchParams(Object.entries(options.params).map(([k, v]) => [k, String(v)])).toString()
+  const { includePagination, ...restOptions } = options;
+  const params = restOptions.params
+    ? '?' + new URLSearchParams(Object.entries(restOptions.params).map(([k, v]) => [k, String(v)])).toString()
     : '';
   const url = `${API_BASE_URL}${endpoint}${params}`;
 
@@ -30,7 +32,7 @@ async function apiCall(endpoint, options = {}) {
   const token = getAuthToken();
   const headers = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...restOptions.headers,
   };
 
   if (token) {
@@ -40,7 +42,7 @@ async function apiCall(endpoint, options = {}) {
   /** @type {{ method?: string, headers?: any, body?: any }} */
   const config = {
     headers,
-    ...options,
+    ...restOptions,
     credentials: 'include',
   };
 
@@ -55,19 +57,34 @@ async function apiCall(endpoint, options = {}) {
     const response = await fetch(url, { ...config, signal: controller.signal });
     clearTimeout(timeoutId);
 
+    const responseData = await response.json().catch(() => ({}));
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      const errorData = responseData || {};
       throw new Error(errorData.error || errorData.message || `HTTP error! status: ${response.status}`);
     }
 
-    const data = await response.json();
-    return data;
+    if (includePagination) {
+      const total = Number(response.headers.get('x-total-count')) || 0;
+      const page = Number(response.headers.get('x-page')) || undefined;
+      const limit = Number(response.headers.get('x-limit')) || undefined;
+      return {
+        data: responseData,
+        pagination: {
+          total,
+          page,
+          limit
+        }
+      };
+    }
+
+    return responseData;
   } catch (error) {
     // Retry once on network/timeout errors
-    if (options.__retry) throw error;
+    if (restOptions.__retry) throw error;
     const retryable = error?.name === 'AbortError' || (error?.message && /Network|fetch/i.test(error.message));
     if (retryable) {
-      return apiCall(endpoint, { ...options, __retry: true });
+      return apiCall(endpoint, { ...restOptions, includePagination, __retry: true });
     }
     throw error;
   }
@@ -115,6 +132,7 @@ export const portfolioAPI = {
 
   // Stocks
   getStocks: (params) => apiCall('/portfolio/stocks', { params }),
+  getStocksWithPagination: (params) => apiCall('/portfolio/stocks', { params, includePagination: true }),
   createStock: (stockData) => apiCall('/portfolio/stocks', {
     method: 'POST',
     body: stockData,
@@ -258,6 +276,7 @@ export const entities = {
   },
   Stock: {
     list: (params) => portfolioAPI.getStocks(params),
+    listWithPagination: (params) => portfolioAPI.getStocksWithPagination(params),
     create: (data) => portfolioAPI.createStock(data),
     update: (id, data) => portfolioAPI.updateStock(id, data),
     delete: (id) => portfolioAPI.deleteStock(id),

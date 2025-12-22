@@ -3,6 +3,7 @@ import { prisma } from '../../lib/prisma.js';
 import { requireAuth } from '../../middleware/auth.js';
 import logger from '../../services/logger.js';
 import { AuthRequest, serializeDecimals } from '../../types/index.js';
+import { sendServerError, sendUnauthorized } from '../response.js';
 
 const router = Router();
 
@@ -12,7 +13,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
     const userId = req.userId;
 
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return sendUnauthorized(res);
     }
 
     // Fetch all asset types in parallel
@@ -48,7 +49,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   } catch (error) {
     const err = error as Error;
     logger.error('Error fetching portfolio data:', { error: err.message, userId: req.userId });
-    res.status(500).json({ error: 'Failed to fetch portfolio data' });
+    sendServerError(res, 'Failed to fetch portfolio data');
   }
 });
 
