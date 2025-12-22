@@ -197,16 +197,19 @@ async function startServer(): Promise<void> {
     logger.warn('Error reading directory', { error: e instanceof Error ? e.message : String(e) });
   }
 
+  // Resolve project root (two levels up from backend/src)
+  const projectRoot = path.resolve(__dirname, '..', '..');
+  const frontendDistPath = path.join(projectRoot, 'dist');
+
   // Serve static files in production
   if (process.env.NODE_ENV === 'production') {
-    const distPath = path.join(process.cwd(), 'dist');
-    logger.info('Looking for static files', { distPath });
+    logger.info('Looking for static files', { distPath: frontendDistPath });
 
-    if (fs.existsSync(distPath)) {
-      const distFiles = fs.readdirSync(distPath);
+    if (fs.existsSync(frontendDistPath)) {
+      const distFiles = fs.readdirSync(frontendDistPath);
       logger.info('Found dist directory', { fileCount: distFiles.length });
       // Serve static files for non-API paths only
-      app.use(/^(?!\/api)/, express.static(distPath));
+      app.use(/^(?!\/api)/, express.static(frontendDistPath));
 
       app.get('*', (req: Request, res: Response, next: NextFunction) => {
         // Skip API routes - let them be handled by API route handlers
@@ -216,10 +219,10 @@ async function startServer(): Promise<void> {
           return next();
         }
         logger.info('Serving index.html for', { path: req.path });
-        res.sendFile(path.join(distPath, 'index.html'));
+        res.sendFile(path.join(frontendDistPath, 'index.html'));
       });
     } else {
-      logger.warn('Dist directory not found', { distPath });
+      logger.warn('Dist directory not found', { distPath: frontendDistPath });
       app.use('*', (req: Request, res: Response, next: NextFunction) => {
         // Skip API routes - let them be handled by API route handlers
         logger.info('Dist not found catch-all route', { path: req.path, method: req.method });
