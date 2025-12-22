@@ -18,6 +18,12 @@
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/compression": "^1.8.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^25.0.3",
     "bcryptjs": "^2.4.3",
     "compression": "^1.7.4",
     "cors": "^2.8.5",
@@ -31,18 +37,12 @@
     "prisma": "^5.22.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
-    "winston": "^3.18.3",
-    "@types/node": "^25.0.3"
+    "winston": "^3.18.3"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
     "@testing-library/user-event": "^14.6.1",
-    "@types/bcryptjs": "^2.4.6",
-    "@types/compression": "^1.8.1",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
-    "@types/jsonwebtoken": "^9.0.10",
     "@types/supertest": "^6.0.3",
     "@vitest/coverage-v8": "^4.0.16",
     "jsdom": "^27.3.0",
