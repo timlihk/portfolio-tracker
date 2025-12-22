@@ -18,10 +18,10 @@ export default function TransactionAIAnalysis({ transactions }) {
     try {
       const transactionSummary = transactions.map(t => ({
         date: t.date,
-        type: t.transaction_type,
-        asset: t.asset_name,
-        asset_type: t.asset_type,
-        amount: t.total_amount,
+        type: t.transactionType,
+        asset: t.assetName,
+        asset_type: t.assetType,
+        amount: t.totalAmount,
         fees: t.fees || 0
       }));
 

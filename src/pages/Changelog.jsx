@@ -45,9 +45,16 @@ export default function Changelog() {
     queryFn: () => base44.entities.Changelog.list('-created_date', 100)
   });
 
+  const normalizedLogs = logs.map((log) => ({
+    ...log,
+    createdDate: log.createdDate ?? log.created_date,
+    assetType: log.assetType ?? log.asset_type,
+    assetName: log.assetName ?? log.asset_name
+  }));
+
   // Group logs by date
-  const groupedLogs = logs.reduce((groups, log) => {
-    const date = format(new Date(log.created_date), 'yyyy-MM-dd');
+  const groupedLogs = normalizedLogs.reduce((groups, log) => {
+    const date = format(new Date(log.createdDate), 'yyyy-MM-dd');
     if (!groups[date]) groups[date] = [];
     groups[date].push(log);
     return groups;
@@ -63,7 +70,7 @@ export default function Changelog() {
 
         {isLoading ? (
           <div className="text-center py-12 text-slate-400">Loading...</div>
-        ) : logs.length === 0 ? (
+        ) : normalizedLogs.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">
             <History className="w-12 h-12 text-slate-300 mx-auto mb-4" />
             <p className="text-slate-500">No changes recorded yet</p>
@@ -79,21 +86,21 @@ export default function Changelog() {
                 <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
                   {dayLogs.map((log, index) => {
                     const ActionIcon = ACTION_CONFIG[log.action]?.icon || Pencil;
-                    const AssetIcon = ASSET_ICONS[log.asset_type] || Wallet;
+                    const AssetIcon = ASSET_ICONS[log.assetType] || Wallet;
                     
                     return (
                       <div 
                         key={log.id}
                         className={`flex items-center gap-4 p-4 ${index !== dayLogs.length - 1 ? 'border-b border-slate-50' : ''}`}
                       >
-                        <div className={`p-2 rounded-xl ${ASSET_COLORS[log.asset_type] || 'bg-slate-50 text-slate-600'}`}>
+                        <div className={`p-2 rounded-xl ${ASSET_COLORS[log.assetType] || 'bg-slate-50 text-slate-600'}`}>
                           <AssetIcon className="w-4 h-4" />
                         </div>
                         
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-slate-900 truncate">
-                              {log.asset_name}
+                              {log.assetName}
                             </span>
                             <Badge className={`${ACTION_CONFIG[log.action]?.color} text-xs`}>
                               <ActionIcon className="w-3 h-3 mr-1" />
@@ -101,7 +108,7 @@ export default function Changelog() {
                             </Badge>
                           </div>
                           <div className="flex items-center gap-2 mt-1">
-                            <span className="text-sm text-slate-500">{log.asset_type}</span>
+                            <span className="text-sm text-slate-500">{log.assetType}</span>
                             {log.details && (
                               <>
                                 <span className="text-slate-300">•</span>
@@ -112,7 +119,7 @@ export default function Changelog() {
                         </div>
                         
                         <div className="text-right text-sm text-slate-400">
-                          {format(new Date(log.created_date), 'h:mm a')}
+                          {format(new Date(log.createdDate), 'h:mm a')}
                         </div>
                       </div>
                     );

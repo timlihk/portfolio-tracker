@@ -29,15 +29,15 @@ const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS'];
 const getBondFields = (accounts) => [
   { name: 'name', label: 'Bond Name / Issuer', required: true, placeholder: 'US Treasury 10Y' },
   { name: 'isin', label: 'ISIN', placeholder: 'US912810RZ49 (12 characters)' },
-  { name: 'bond_type', label: 'Bond Type', type: 'select', options: BOND_TYPES },
+  { name: 'bondType', label: 'Bond Type', type: 'select', options: BOND_TYPES },
   { name: 'currency', label: 'Currency', type: 'select', options: CURRENCIES },
   { name: 'account', label: 'Account', type: 'select', options: accounts.map(a => a.name), allowCustom: true },
-  { name: 'face_value', label: 'Face Value', type: 'number', required: true, placeholder: '10000' },
-  { name: 'purchase_price', label: 'Purchase Price', type: 'number', required: true, placeholder: '9800' },
-  { name: 'current_value', label: 'Current Value (leave empty for estimate)', type: 'number', placeholder: 'Auto-estimated' },
-  { name: 'coupon_rate', label: 'Coupon Rate (%)', type: 'number', placeholder: '4.5' },
-  { name: 'maturity_date', label: 'Maturity Date', type: 'date' },
-  { name: 'purchase_date', label: 'Purchase Date', type: 'date' },
+  { name: 'faceValue', label: 'Face Value', type: 'number', required: true, placeholder: '10000' },
+  { name: 'purchasePrice', label: 'Purchase Price', type: 'number', required: true, placeholder: '9800' },
+  { name: 'currentValue', label: 'Current Value (leave empty for estimate)', type: 'number', placeholder: 'Auto-estimated' },
+  { name: 'couponRate', label: 'Coupon Rate (%)', type: 'number', placeholder: '4.5' },
+  { name: 'maturityDate', label: 'Maturity Date', type: 'date' },
+  { name: 'purchaseDate', label: 'Purchase Date', type: 'date' },
   { name: 'rating', label: 'Credit Rating', type: 'select', options: RATINGS },
   { name: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Additional notes...' }
 ];
@@ -69,12 +69,12 @@ export default function Bonds() {
 
   // Helper to get current value (estimated or manual)
   // Note: PostgreSQL returns DECIMAL as strings, so we need to convert to numbers
-  const getCurrentValue = (bond) => Number(bondPrices[bond.name]) || Number(bond.current_value) || Number(bond.purchase_price) || 0;
+  const getCurrentValue = (bond) => Number(bondPrices[bond.name]) || Number(bond.currentValue) || Number(bond.purchasePrice) || 0;
 
   const createMutation = useMutation({
     mutationFn: (data) => entities.Bond.create(data),
     onSuccess: (_, data) => {
-      bondLogger.logCreate(data.name, `Face value ${data.face_value}`);
+      bondLogger.logCreate(data.name, `Face value ${data.faceValue}`);
       queryClient.invalidateQueries({ queryKey: ['bonds'] });
       setDialogOpen(false);
       setFormData({});
@@ -132,14 +132,14 @@ export default function Bonds() {
           {row.isin && (
             <p className="text-xs text-slate-400 font-mono">{row.isin}</p>
           )}
-          {row.bond_type && !row.isin && (
-            <p className="text-sm text-slate-500">{row.bond_type}</p>
+          {row.bondType && !row.isin && (
+            <p className="text-sm text-slate-500">{row.bondType}</p>
           )}
         </div>
       )
     },
     {
-      key: 'face_value',
+      key: 'faceValue',
       label: 'Face Value',
       align: 'right',
       render: (val, row) => {
@@ -148,13 +148,13 @@ export default function Bonds() {
       }
     },
     {
-      key: 'current_value',
+      key: 'currentValue',
       label: 'Current Value',
       align: 'right',
       render: (val, row) => {
         const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
         const value = getCurrentValue(row);
-        const isLive = bondPrices[row.name] && !row.current_value;
+        const isLive = bondPrices[row.name] && !row.currentValue;
         return (
           <div className="flex items-center justify-end gap-1">
             <span className="font-medium">{symbol}{value.toLocaleString()}</span>
@@ -164,13 +164,13 @@ export default function Bonds() {
       }
     },
     { 
-      key: 'coupon_rate', 
+      key: 'couponRate', 
       label: 'Coupon',
       align: 'right',
       render: (val) => val ? `${val}%` : '-'
     },
     { 
-      key: 'maturity_date', 
+      key: 'maturityDate', 
       label: 'Maturity',
       render: (val) => val ? format(new Date(val), 'MMM d, yyyy') : '-'
     },

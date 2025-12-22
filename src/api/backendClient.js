@@ -19,6 +19,53 @@ function getSharedSecret() {
   return secret;
 }
 
+// Normalize legacy snake_case payloads to camelCase for outbound requests
+function normalizePayload(body) {
+  if (!body || typeof body !== 'object') return body;
+  const map = {
+    company_name: 'companyName',
+    average_cost: 'averageCost',
+    current_price: 'currentPrice',
+    purchase_date: 'purchaseDate',
+    bond_type: 'bondType',
+    face_value: 'faceValue',
+    coupon_rate: 'couponRate',
+    maturity_date: 'maturityDate',
+    purchase_price: 'purchasePrice',
+    current_value: 'currentValue',
+    fund_name: 'fundName',
+    fund_type: 'fundType',
+    vintage_year: 'vintageYear',
+    called_capital: 'calledCapital',
+    commitment_date: 'commitmentDate',
+    deal_type: 'dealType',
+    investment_amount: 'investmentAmount',
+    ownership_percentage: 'ownershipPercentage',
+    investment_date: 'investmentDate',
+    ytd_return: 'ytdReturn',
+    management_fee: 'managementFee',
+    performance_fee: 'performanceFee',
+    redemption_frequency: 'redemptionFrequency',
+    lockup_end_date: 'lockupEndDate',
+    deposit_type: 'depositType',
+    interest_rate: 'interestRate',
+    liability_type: 'liabilityType',
+    outstanding_balance: 'outstandingBalance',
+    rate_type: 'rateType',
+    start_date: 'startDate',
+    account_type: 'accountType',
+    account_number: 'accountNumber',
+  };
+  const normalized = { ...body };
+  for (const [snake, camel] of Object.entries(map)) {
+    if (snake in normalized && !(camel in normalized)) {
+      normalized[camel] = normalized[snake];
+      delete normalized[snake];
+    }
+  }
+  return normalized;
+}
+
 // Helper function for API calls
 /**
  * @param {string} endpoint
@@ -53,7 +100,7 @@ async function apiCall(endpoint, options = {}) {
   };
 
   if (config.body && typeof config.body === 'object') {
-    config.body = JSON.stringify(config.body);
+    config.body = JSON.stringify(normalizePayload(config.body));
     console.log('📦 Request body:', config.body);
   }
 

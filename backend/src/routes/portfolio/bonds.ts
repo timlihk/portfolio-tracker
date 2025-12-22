@@ -8,20 +8,6 @@ import { serializeDecimals } from '../../types/index.js';
 
 const router = express.Router();
 
-const serializeBondWithAliases = (bond: any) => {
-  const s = serializeDecimals(bond);
-  return {
-    ...s,
-    bond_type: s.bondType,
-    face_value: s.faceValue,
-    coupon_rate: s.couponRate,
-    maturity_date: s.maturityDate,
-    purchase_price: s.purchasePrice,
-    current_value: s.currentValue,
-    purchase_date: s.purchaseDate
-  };
-};
-
 // GET /bonds - List all bonds
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
@@ -31,7 +17,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
     });
 
     // Convert Prisma Decimal fields to numbers for JSON response
-    const serializedBonds = bonds.map(bond => serializeBondWithAliases(bond));
+    const serializedBonds = bonds.map(bond => serializeDecimals(bond));
     res.json(serializedBonds);
   } catch (error) {
     logger.error('Error fetching bonds:', { error: (error as Error).message, userId: req.userId });
@@ -62,50 +48,41 @@ router.post('/', requireAuth, [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const {
-      name,
-      isin,
-      bond_type,
-      face_value,
-      coupon_rate,
-      maturity_date,
-      rating,
-      purchase_price,
-      current_value,
-      currency,
-      account,
-      purchase_date,
-      notes
-    } = req.body as CreateBondRequest & {
-      bond_type?: string;
-      face_value?: number;
-      coupon_rate?: number;
-      maturity_date?: string;
-      purchase_price?: number;
-      current_value?: number;
-      purchase_date?: string;
-    };
+    const body = req.body as any;
+    const name = body.name;
+    const isin = body.isin;
+    const bondType = body.bondType ?? body.bond_type;
+    const faceValue = body.faceValue ?? body.face_value;
+    const couponRate = body.couponRate ?? body.coupon_rate;
+    const maturityDate = body.maturityDate ?? body.maturity_date;
+    const rating = body.rating;
+    const purchasePrice = body.purchasePrice ?? body.purchase_price;
+    const currentValue = body.currentValue ?? body.current_value;
+    const currency = body.currency;
+    const account = body.account;
+    const purchaseDate = body.purchaseDate ?? body.purchase_date;
+    const notes = body.notes;
 
     const bond = await prisma.bond.create({
       data: {
         userId: req.userId!,
         name,
         isin,
-        bondType: bond_type,
-        faceValue: face_value,
-        couponRate: coupon_rate,
-        maturityDate: maturity_date ? new Date(maturity_date) : null,
+        bondType,
+        faceValue,
+        couponRate,
+        maturityDate: maturityDate ? new Date(maturityDate) : null,
         rating,
-        purchasePrice: purchase_price,
-        currentValue: current_value,
+        purchasePrice,
+        currentValue,
         currency: currency || 'USD',
         account,
-        purchaseDate: purchase_date ? new Date(purchase_date) : null,
+        purchaseDate: purchaseDate ? new Date(purchaseDate) : null,
         notes
       }
     });
 
-    const serializedBond = serializeBondWithAliases(bond);
+    const serializedBond = serializeDecimals(bond);
     res.status(201).json(serializedBond);
   } catch (error) {
     logger.error('Error creating bond:', { error: (error as Error).message, userId: req.userId });
@@ -138,29 +115,20 @@ router.put('/:id', requireAuth, [
     }
 
     const { id } = req.params;
-    const {
-      name,
-      isin,
-      bond_type,
-      face_value,
-      coupon_rate,
-      maturity_date,
-      rating,
-      purchase_price,
-      current_value,
-      currency,
-      account,
-      purchase_date,
-      notes
-    } = req.body as UpdateBondRequest & {
-      bond_type?: string;
-      face_value?: number;
-      coupon_rate?: number;
-      maturity_date?: string;
-      purchase_price?: number;
-      current_value?: number;
-      purchase_date?: string;
-    };
+    const body = req.body as any;
+    const name = body.name;
+    const isin = body.isin;
+    const bondType = body.bondType ?? body.bond_type;
+    const faceValue = body.faceValue ?? body.face_value;
+    const couponRate = body.couponRate ?? body.coupon_rate;
+    const maturityDate = body.maturityDate ?? body.maturity_date;
+    const rating = body.rating;
+    const purchasePrice = body.purchasePrice ?? body.purchase_price;
+    const currentValue = body.currentValue ?? body.current_value;
+    const currency = body.currency;
+    const account = body.account;
+    const purchaseDate = body.purchaseDate ?? body.purchase_date;
+    const notes = body.notes;
 
     // Check if bond exists and belongs to user
     const existingBond = await prisma.bond.findFirst({
@@ -179,21 +147,21 @@ router.put('/:id', requireAuth, [
       data: {
         name,
         isin,
-        bondType: bond_type,
-        faceValue: face_value,
-        couponRate: coupon_rate,
-        maturityDate: maturity_date ? new Date(maturity_date) : undefined,
+        bondType,
+        faceValue,
+        couponRate,
+        maturityDate: maturityDate ? new Date(maturityDate) : undefined,
         rating,
-        purchasePrice: purchase_price,
-        currentValue: current_value,
+        purchasePrice,
+        currentValue,
         currency,
         account,
-        purchaseDate: purchase_date ? new Date(purchase_date) : undefined,
+        purchaseDate: purchaseDate ? new Date(purchaseDate) : undefined,
         notes
       }
     });
 
-    const serializedBond = serializeBondWithAliases(bond);
+    const serializedBond = serializeDecimals(bond);
     res.json(serializedBond);
   } catch (error) {
     logger.error('Error updating bond:', { error: (error as Error).message, userId: req.userId, bondId: req.params.id });

@@ -40,42 +40,30 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
 // POST /pe-deals - Create a PE deal
 router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const {
-      company_name,
-      sector,
-      deal_type,
-      investment_amount,
-      current_value,
-      ownership_percentage,
-      sponsor,
-      status,
-      investment_date,
-      notes
-    } = req.body as {
-      company_name: string;
-      sector?: string;
-      deal_type?: string;
-      investment_amount?: number;
-      current_value?: number;
-      ownership_percentage?: number;
-      sponsor?: string;
-      status?: string;
-      investment_date?: string;
-      notes?: string;
-    };
+    const body = req.body as any;
+    const companyName = body.companyName ?? body.company_name;
+    const sector = body.sector;
+    const dealType = body.dealType ?? body.deal_type;
+    const investmentAmount = body.investmentAmount ?? body.investment_amount;
+    const currentValue = body.currentValue ?? body.current_value;
+    const ownershipPercentage = body.ownershipPercentage ?? body.ownership_percentage;
+    const sponsor = body.sponsor;
+    const status = body.status;
+    const investmentDate = body.investmentDate ?? body.investment_date;
+    const notes = body.notes;
 
     const peDeal = await prisma.peDeal.create({
       data: {
         userId: req.userId!,
-        companyName: company_name,
+        companyName,
         sector,
-        dealType: deal_type,
-        investmentAmount: investment_amount,
-        currentValue: current_value,
-        ownershipPercentage: ownership_percentage,
+        dealType,
+        investmentAmount,
+        currentValue,
+        ownershipPercentage,
         sponsor,
         status: status || 'Active',
-        investmentDate: investment_date ? new Date(investment_date) : null,
+        investmentDate: investmentDate ? new Date(investmentDate) : null,
         notes
       }
     });
@@ -92,29 +80,17 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
 router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const {
-      company_name,
-      sector,
-      deal_type,
-      investment_amount,
-      current_value,
-      ownership_percentage,
-      sponsor,
-      status,
-      investment_date,
-      notes
-    } = req.body as {
-      company_name?: string;
-      sector?: string;
-      deal_type?: string;
-      investment_amount?: number;
-      current_value?: number;
-      ownership_percentage?: number;
-      sponsor?: string;
-      status?: string;
-      investment_date?: string;
-      notes?: string;
-    };
+    const body = req.body as any;
+    const companyName = body.companyName ?? body.company_name;
+    const sector = body.sector;
+    const dealType = body.dealType ?? body.deal_type;
+    const investmentAmount = body.investmentAmount ?? body.investment_amount;
+    const currentValue = body.currentValue ?? body.current_value;
+    const ownershipPercentage = body.ownershipPercentage ?? body.ownership_percentage;
+    const sponsor = body.sponsor;
+    const status = body.status;
+    const investmentDate = body.investmentDate ?? body.investment_date;
+    const notes = body.notes;
 
     // Check if PE deal exists and belongs to user
     const existingPeDeal = await prisma.peDeal.findFirst({
@@ -131,15 +107,15 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     const peDeal = await prisma.peDeal.update({
       where: { id: parseInt(id, 10) },
       data: {
-        companyName: company_name,
+        companyName,
         sector,
-        dealType: deal_type,
-        investmentAmount: investment_amount,
-        currentValue: current_value,
-        ownershipPercentage: ownership_percentage,
+        dealType,
+        investmentAmount,
+        currentValue,
+        ownershipPercentage,
         sponsor,
         status,
-        investmentDate: investment_date ? new Date(investment_date) : undefined,
+        investmentDate: investmentDate ? new Date(investmentDate) : undefined,
         notes
       }
     });

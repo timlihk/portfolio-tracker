@@ -39,44 +39,31 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
 // POST /pe-funds - Create a PE fund
 router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const {
-      fund_name,
-      manager,
-      fund_type,
-      vintage_year,
-      commitment,
-      called_capital,
-      nav,
-      distributions,
-      commitment_date,
-      status,
-      notes
-    } = req.body as {
-      fund_name: string;
-      manager?: string;
-      fund_type?: string;
-      vintage_year?: number;
-      commitment?: number;
-      called_capital?: number;
-      nav?: number;
-      distributions?: number;
-      commitment_date?: string;
-      status?: string;
-      notes?: string;
-    };
+    const body = req.body as any;
+    const fundName = body.fundName ?? body.fund_name;
+    const manager = body.manager;
+    const fundType = body.fundType ?? body.fund_type;
+    const vintageYear = body.vintageYear ?? body.vintage_year;
+    const commitment = body.commitment;
+    const calledCapital = body.calledCapital ?? body.called_capital;
+    const nav = body.nav;
+    const distributions = body.distributions;
+    const commitmentDate = body.commitmentDate ?? body.commitment_date;
+    const status = body.status;
+    const notes = body.notes;
 
     const peFund = await prisma.peFund.create({
       data: {
         userId: req.userId!,
-        fundName: fund_name,
+        fundName,
         manager,
-        fundType: fund_type,
-        vintageYear: vintage_year,
+        fundType,
+        vintageYear,
         commitment,
-        calledCapital: called_capital,
+        calledCapital,
         nav,
         distributions,
-        commitmentDate: commitment_date ? new Date(commitment_date) : null,
+        commitmentDate: commitmentDate ? new Date(commitmentDate) : null,
         status: status || 'Active',
         notes
       }
@@ -94,31 +81,18 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
 router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const {
-      fund_name,
-      manager,
-      fund_type,
-      vintage_year,
-      commitment,
-      called_capital,
-      nav,
-      distributions,
-      commitment_date,
-      status,
-      notes
-    } = req.body as {
-      fund_name?: string;
-      manager?: string;
-      fund_type?: string;
-      vintage_year?: number;
-      commitment?: number;
-      called_capital?: number;
-      nav?: number;
-      distributions?: number;
-      commitment_date?: string;
-      status?: string;
-      notes?: string;
-    };
+    const body = req.body as any;
+    const fundName = body.fundName ?? body.fund_name;
+    const manager = body.manager;
+    const fundType = body.fundType ?? body.fund_type;
+    const vintageYear = body.vintageYear ?? body.vintage_year;
+    const commitment = body.commitment;
+    const calledCapital = body.calledCapital ?? body.called_capital;
+    const nav = body.nav;
+    const distributions = body.distributions;
+    const commitmentDate = body.commitmentDate ?? body.commitment_date;
+    const status = body.status;
+    const notes = body.notes;
 
     // Check if PE fund exists and belongs to user
     const existingPeFund = await prisma.peFund.findFirst({
@@ -135,15 +109,15 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     const peFund = await prisma.peFund.update({
       where: { id: parseInt(id, 10) },
       data: {
-        fundName: fund_name,
+        fundName,
         manager,
-        fundType: fund_type,
-        vintageYear: vintage_year,
+        fundType,
+        vintageYear,
         commitment,
-        calledCapital: called_capital,
+        calledCapital,
         nav,
         distributions,
-        commitmentDate: commitment_date ? new Date(commitment_date) : undefined,
+        commitmentDate: commitmentDate ? new Date(commitmentDate) : undefined,
         status,
         notes
       }

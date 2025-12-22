@@ -90,7 +90,8 @@
       "Bash(npm uninstall:*)",
       "Bash(npx tsc:*)",
       "Bash(npm run:*)",
-      "Bash(git tag:*)"
+      "Bash(git tag:*)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []

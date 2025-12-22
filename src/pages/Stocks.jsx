@@ -26,13 +26,13 @@ const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS', 'HKD
 
 const getStockFields = (accounts) => [
   { name: 'ticker', label: 'Ticker Symbol', required: true, placeholder: 'AAPL' },
-  { name: 'company_name', label: 'Company Name', placeholder: 'Apple Inc.' },
+  { name: 'companyName', label: 'Company Name', placeholder: 'Apple Inc.' },
   { name: 'currency', label: 'Currency', type: 'select', options: CURRENCIES },
   { name: 'account', label: 'Account', type: 'select', options: accounts.map(a => a.name), allowCustom: true },
   { name: 'shares', label: 'Number of Shares', type: 'number', required: true, placeholder: '100', step: '1' },
-  { name: 'average_cost', label: 'Average Cost per Share', type: 'number', required: true, placeholder: '150.00' },
-  { name: 'current_price', label: 'Current Price (leave empty for live)', type: 'number', placeholder: 'Auto-fetched' },
-  { name: 'purchase_date', label: 'Purchase Date', type: 'date' },
+  { name: 'averageCost', label: 'Average Cost per Share', type: 'number', required: true, placeholder: '150.00' },
+  { name: 'currentPrice', label: 'Current Price (leave empty for live)', type: 'number', placeholder: 'Auto-fetched' },
+  { name: 'purchaseDate', label: 'Purchase Date', type: 'date' },
   { name: 'sector', label: 'Sector', type: 'select', options: SECTORS },
   { name: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Additional notes...' }
 ];
@@ -67,12 +67,12 @@ export default function Stocks() {
   // Helper to get current price (real-time or manual)
   // Note: PostgreSQL returns DECIMAL as strings, so we need to convert to numbers
   // stockPrices[ticker] is an object with { price, currency, name, ... }
-  const getCurrentPrice = (stock) => Number(stockPrices[stock.ticker]?.price) || Number(stock.current_price) || Number(stock.average_cost) || 0;
+  const getCurrentPrice = (stock) => Number(stockPrices[stock.ticker]?.price) || Number(stock.currentPrice) || Number(stock.averageCost) || 0;
 
   const createMutation = useMutation({
     mutationFn: (data) => entities.Stock.create(data),
     onSuccess: (_, data) => {
-      stockLogger.logCreate(data.ticker, `${data.shares} shares at ${data.average_cost}`);
+      stockLogger.logCreate(data.ticker, `${data.shares} shares at ${data.averageCost}`);
       queryClient.invalidateQueries({ queryKey: ['stocks'] });
       setDialogOpen(false);
       setFormData({});
@@ -124,7 +124,7 @@ export default function Stocks() {
         setFormData(prev => ({
           ...prev,
           ticker: data.ticker || ticker.toUpperCase(),
-          company_name: prev.company_name || data.name || data.shortName || '',
+          companyName: prev.companyName || data.name || data.shortName || '',
           sector: prev.sector || data.sector || '',
           currency: prev.currency || data.currency || 'USD',
         }));
@@ -158,7 +158,7 @@ export default function Stocks() {
       render: (val, row) => {
         // Use Yahoo Finance data if available, otherwise use stored data
         const yahooData = stockPrices[row.ticker];
-        const companyName = row.company_name || yahooData?.name || yahooData?.shortName;
+        const companyName = row.companyName || yahooData?.name || yahooData?.shortName;
         const sector = row.sector || yahooData?.sector;
         return (
           <div>
@@ -180,7 +180,7 @@ export default function Stocks() {
       render: (val) => (val || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
     },
     {
-      key: 'average_cost',
+      key: 'averageCost',
       label: 'Avg Cost',
       align: 'right',
       render: (val, row) => {
@@ -189,13 +189,13 @@ export default function Stocks() {
       }
     },
     {
-      key: 'current_price',
+      key: 'currentPrice',
       label: 'Current',
       align: 'right',
       render: (val, row) => {
         const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
         const price = getCurrentPrice(row);
-        const isLive = stockPrices[row.ticker]?.price && !row.current_price;
+        const isLive = stockPrices[row.ticker]?.price && !row.currentPrice;
         return (
           <div className="flex items-center justify-end gap-1">
             <span>{symbol}{(price || 0).toFixed(2)}</span>
@@ -205,7 +205,7 @@ export default function Stocks() {
       }
     },
     {
-      key: 'market_value',
+      key: 'marketValue',
       label: 'Market Value',
       align: 'right',
       render: (_, row) => {
@@ -216,13 +216,13 @@ export default function Stocks() {
       }
     },
     {
-      key: 'gain_loss',
+      key: 'gainLoss',
       label: 'Gain/Loss',
       align: 'right',
       render: (_, row) => {
         const price = getCurrentPrice(row);
         const shares = Number(row.shares) || 0;
-        const avgCost = Number(row.average_cost) || 0;
+        const avgCost = Number(row.averageCost) || 0;
         const cost = shares * avgCost;
         const value = shares * price;
         const gain = value - cost;

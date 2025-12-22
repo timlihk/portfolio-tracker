@@ -9,9 +9,9 @@ const serializeCashDepositWithAliases = (deposit: any) => {
   const s = serializeDecimals(deposit);
   return {
     ...s,
-    deposit_type: s.depositType,
-    interest_rate: s.interestRate,
-    maturity_date: s.maturityDate
+    depositType: s.depositType,
+    interestRate: s.interestRate,
+    maturityDate: s.maturityDate
   };
 };
 
@@ -50,28 +50,23 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
 // POST /cash-deposits - Create a cash deposit
 router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const {
-      name,
-      deposit_type,
-      amount,
-      currency,
-      interest_rate,
-      maturity_date,
-      account,
-      notes
-    } = req.body as CreateCashDepositRequest & {
-      deposit_type?: string;
-      interest_rate?: number;
-      maturity_date?: string;
-    };
+    const body = req.body as any;
+    const name = body.name;
+    const depositType = body.depositType ?? body.deposit_type;
+    const amount = body.amount;
+    const currency = body.currency;
+    const interestRate = body.interestRate ?? body.interest_rate;
+    const maturityDate = body.maturityDate ?? body.maturity_date;
+    const account = body.account;
+    const notes = body.notes;
 
     if (!name || amount === undefined || amount === null || Number(amount) <= 0 || !currency || !account) {
       return res.status(400).json({ error: 'Name, Amount (>0), Currency, and Institution are required' });
     }
 
     const amountNum = toNumberOrNull(amount);
-    const interestNum = toNumberOrNull(interest_rate);
-    const maturity = toDateOrNull(maturity_date);
+    const interestNum = toNumberOrNull(interestRate);
+    const maturity = toDateOrNull(maturityDate);
 
     if (!req.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -81,15 +76,15 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
       data: {
         userId: req.userId,
         name,
-        depositType: deposit_type || null,
+        depositType: depositType || null,
         amount: amountNum,
         currency: currency || 'USD',
-      interestRate: interestNum,
-      maturityDate: maturity,
-      account,
-      notes: notes || null
-    }
-  });
+        interestRate: interestNum,
+        maturityDate: maturity,
+        account,
+        notes: notes || null
+      }
+    });
 
     res.status(201).json(serializeCashDepositWithAliases(cashDeposit));
   } catch (error) {
@@ -103,28 +98,23 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
 router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const {
-      name,
-      deposit_type,
-      amount,
-      currency,
-      interest_rate,
-      maturity_date,
-      account,
-      notes
-    } = req.body as UpdateCashDepositRequest & {
-      deposit_type?: string;
-      interest_rate?: number;
-      maturity_date?: string;
-    };
+    const body = req.body as any;
+    const name = body.name;
+    const depositType = body.depositType ?? body.deposit_type;
+    const amount = body.amount;
+    const currency = body.currency;
+    const interestRate = body.interestRate ?? body.interest_rate;
+    const maturityDate = body.maturityDate ?? body.maturity_date;
+    const account = body.account;
+    const notes = body.notes;
 
     if (!name || amount === undefined || amount === null || Number(amount) <= 0 || !currency || !account) {
       return res.status(400).json({ error: 'Name, Amount (>0), Currency, and Institution are required' });
     }
 
     const amountNum = toNumberOrNull(amount);
-    const interestNum = toNumberOrNull(interest_rate);
-    const maturity = toDateOrNull(maturity_date);
+    const interestNum = toNumberOrNull(interestRate);
+    const maturity = toDateOrNull(maturityDate);
 
     if (!req.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -137,16 +127,16 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
       },
       data: {
         name,
-        depositType: deposit_type || null,
+        depositType: depositType || null,
         amount: amountNum,
         currency,
-      interestRate: interestNum,
-      maturityDate: maturity,
-      account,
-      notes: notes || null,
-      updatedAt: new Date()
-    }
-  });
+        interestRate: interestNum,
+        maturityDate: maturity,
+        account,
+        notes: notes || null,
+        updatedAt: new Date()
+      }
+    });
 
     if (cashDeposit.count === 0) {
       return res.status(404).json({ error: 'Cash Deposit not found' });

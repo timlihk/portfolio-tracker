@@ -73,7 +73,7 @@ export default function Dashboard() {
   // Calculate totals with real-time prices and currency conversion
   // stockPrices[ticker] is an object with { price, currency, name, ... }
   const stocksValue = stocks.reduce((sum, s) => {
-    const realTimePrice = Number(stockPrices[s.ticker]?.price) || Number(s.current_price) || Number(s.average_cost) || 0;
+    const realTimePrice = Number(stockPrices[s.ticker]?.price) || Number(s.currentPrice) || Number(s.averageCost) || 0;
     const shares = Number(s.shares) || 0;
     const valueInOriginalCurrency = shares * realTimePrice;
     const converted = convertToUSD(valueInOriginalCurrency, s.currency);
@@ -81,7 +81,7 @@ export default function Dashboard() {
   }, 0);
   const stocksCost = stocks.reduce((sum, s) => {
     const shares = Number(s.shares) || 0;
-    const avgCost = Number(s.average_cost) || 0;
+    const avgCost = Number(s.averageCost) || 0;
     const costInOriginalCurrency = shares * avgCost;
     const converted = convertToUSD(costInOriginalCurrency, s.currency);
     return sum + (isNaN(converted) ? 0 : converted);
@@ -90,25 +90,25 @@ export default function Dashboard() {
   const stocksGainPercent = stocksCost > 0 ? ((stocksGain / stocksCost) * 100).toFixed(1) : '0.0';
 
   const bondsValue = bonds.reduce((sum, b) => {
-    const realTimeValue = Number(b.current_value) || Number(bondPrices[b.name]) || Number(b.purchase_price) || 0;
+    const realTimeValue = Number(b.currentValue) || Number(bondPrices[b.name]) || Number(b.purchasePrice) || 0;
     const converted = convertToUSD(realTimeValue, b.currency);
     return sum + (isNaN(converted) ? 0 : converted);
   }, 0);
   const bondsCost = bonds.reduce((sum, b) => {
-    const converted = convertToUSD(Number(b.purchase_price) || 0, b.currency);
+    const converted = convertToUSD(Number(b.purchasePrice) || 0, b.currency);
     return sum + (isNaN(converted) ? 0 : converted);
   }, 0);
 
   const peFundsValue = peFunds.reduce((sum, f) => sum + (Number(f.nav) || 0) + (Number(f.distributions) || 0), 0);
-  const peFundsCalled = peFunds.reduce((sum, f) => sum + (Number(f.called_capital) || 0), 0);
+  const peFundsCalled = peFunds.reduce((sum, f) => sum + (Number(f.calledCapital) || 0), 0);
   const peFundsCommitment = peFunds.reduce((sum, f) => sum + (Number(f.commitment) || 0), 0);
   const peFundsUnfunded = peFundsCommitment - peFundsCalled;
 
-  const peDealsValue = peDeals.reduce((sum, d) => sum + (Number(d.current_value) || Number(d.investment_amount) || 0), 0);
-  const peDealsCost = peDeals.reduce((sum, d) => sum + (Number(d.investment_amount) || 0), 0);
+  const peDealsValue = peDeals.reduce((sum, d) => sum + (Number(d.currentValue) || Number(d.investmentAmount) || 0), 0);
+  const peDealsCost = peDeals.reduce((sum, d) => sum + (Number(d.investmentAmount) || 0), 0);
 
-  const liquidFundsValue = liquidFunds.reduce((sum, f) => sum + (Number(f.current_value) || Number(f.investment_amount) || 0), 0);
-  const liquidFundsCost = liquidFunds.reduce((sum, f) => sum + (Number(f.investment_amount) || 0), 0);
+  const liquidFundsValue = liquidFunds.reduce((sum, f) => sum + (Number(f.currentValue) || Number(f.investmentAmount) || 0), 0);
+  const liquidFundsCost = liquidFunds.reduce((sum, f) => sum + (Number(f.investmentAmount) || 0), 0);
 
   const cashValue = cashDeposits.reduce((sum, c) => {
     const converted = convertToUSD(Number(c.amount) || 0, c.currency);
@@ -117,7 +117,7 @@ export default function Dashboard() {
 
   const activeLiabilities = liabilities.filter(l => l.status !== 'Paid Off');
   const totalLiabilities = activeLiabilities.reduce((sum, l) => {
-    const converted = convertToUSD(Number(l.outstanding_balance) || 0, l.currency);
+    const converted = convertToUSD(Number(l.outstandingBalance) || 0, l.currency);
     return sum + (isNaN(converted) ? 0 : converted);
   }, 0);
 
@@ -144,56 +144,56 @@ export default function Dashboard() {
     allocation: allocationData,
     stocks: stocks.map(s => ({
       ticker: s.ticker,
-      company: s.company_name,
+      company: s.companyName,
       sector: s.sector,
       shares: s.shares,
-      averageCost: s.average_cost,
-      currentPrice: stockPrices[s.ticker]?.price || s.current_price || s.average_cost || 0,
+      averageCost: s.averageCost,
+      currentPrice: stockPrices[s.ticker]?.price || s.currentPrice || s.averageCost || 0,
       currency: s.currency
     })),
     bonds: bonds.map(b => ({
       name: b.name,
-      type: b.bond_type,
-      faceValue: b.face_value,
-      couponRate: b.coupon_rate,
-      maturityDate: b.maturity_date,
+      type: b.bondType,
+      faceValue: b.faceValue,
+      couponRate: b.couponRate,
+      maturityDate: b.maturityDate,
       rating: b.rating,
       currency: b.currency
     })),
     liquidFunds: liquidFunds.map(f => ({
-      name: f.fund_name,
-      type: f.fund_type,
+      name: f.fundName,
+      type: f.fundType,
       strategy: f.strategy,
-      invested: f.investment_amount,
-      currentValue: f.current_value,
-      ytdReturn: f.ytd_return
+      invested: f.investmentAmount,
+      currentValue: f.currentValue,
+      ytdReturn: f.ytdReturn
     })),
     peFunds: peFunds.map(f => ({
-      name: f.fund_name,
-      type: f.fund_type,
-      vintage: f.vintage_year,
+      name: f.fundName,
+      type: f.fundType,
+      vintage: f.vintageYear,
       commitment: f.commitment,
-      called: f.called_capital,
+      called: f.calledCapital,
       nav: f.nav,
       distributions: f.distributions
     })),
     peDeals: peDeals.map(d => ({
-      company: d.company_name,
+      company: d.companyName,
       sector: d.sector,
-      type: d.deal_type,
-      invested: d.investment_amount,
-      currentValue: d.current_value,
+      type: d.dealType,
+      invested: d.investmentAmount,
+      currentValue: d.currentValue,
       status: d.status
     }))
   }), [totalValue, totalCost, totalGainPercent, allocationData, stocks, bonds, liquidFunds, peFunds, peDeals, stockPrices]);
 
   // Recent activity
   const allAssets = [
-    ...stocks.map(s => ({ ...s, type: 'Stock', date: s.purchase_date })),
-    ...bonds.map(b => ({ ...b, type: 'Bond', date: b.purchase_date })),
-    ...liquidFunds.map(f => ({ ...f, type: 'Liquid Fund', date: f.investment_date })),
-    ...peFunds.map(f => ({ ...f, type: 'PE Fund', date: f.commitment_date })),
-    ...peDeals.map(d => ({ ...d, type: 'PE Deal', date: d.investment_date }))
+    ...stocks.map(s => ({ ...s, type: 'Stock', date: s.purchaseDate })),
+    ...bonds.map(b => ({ ...b, type: 'Bond', date: b.purchaseDate })),
+    ...liquidFunds.map(f => ({ ...f, type: 'Liquid Fund', date: f.investmentDate })),
+    ...peFunds.map(f => ({ ...f, type: 'PE Fund', date: f.commitmentDate })),
+    ...peDeals.map(d => ({ ...d, type: 'PE Deal', date: d.investmentDate }))
   ].filter(a => a.date).sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
 
   const isEmpty =
@@ -325,7 +325,7 @@ export default function Dashboard() {
                       </div>
                       <div>
                         <p className="font-medium text-slate-900">
-                          {asset.ticker || asset.name || asset.fund_name || asset.company_name}
+                          {asset.ticker || asset.name || asset.fundName || asset.companyName}
                         </p>
                         <p className="text-sm text-slate-500">{asset.type}</p>
                       </div>

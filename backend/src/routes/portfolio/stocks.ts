@@ -8,17 +8,6 @@ import { serializeDecimals } from '../../types/index.js';
 
 const router = express.Router();
 
-const serializeStockWithAliases = (stock: any) => {
-  const s = serializeDecimals(stock);
-  return {
-    ...s,
-    company_name: s.companyName,
-    average_cost: s.averageCost,
-    current_price: s.currentPrice,
-    purchase_date: s.purchaseDate
-  };
-};
-
 // GET /stocks - List all stocks
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
@@ -28,7 +17,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
     });
 
     // Convert Prisma Decimal fields to numbers for JSON response
-    const serializedStocks = stocks.map(stock => serializeStockWithAliases(stock));
+    const serializedStocks = stocks.map(stock => serializeDecimals(stock));
     res.json(serializedStocks);
   } catch (error) {
     logger.error('Error fetching stocks:', { error: (error as Error).message, userId: req.userId });
@@ -53,41 +42,35 @@ router.post('/', requireAuth, [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const {
-      ticker,
-      company_name,
-      sector,
-      shares,
-      average_cost,
-      current_price,
-      currency,
-      account,
-      purchase_date,
-      notes
-    } = req.body as CreateStockRequest & {
-      company_name?: string;
-      average_cost: number;
-      current_price?: number;
-      purchase_date?: string;
-    };
+    const body = req.body as any;
+    const ticker = body.ticker;
+    const companyName = body.companyName ?? body.company_name;
+    const sector = body.sector;
+    const shares = body.shares;
+    const averageCost = body.averageCost ?? body.average_cost;
+    const currentPrice = body.currentPrice ?? body.current_price;
+    const currency = body.currency;
+    const account = body.account;
+    const purchaseDate = body.purchaseDate ?? body.purchase_date;
+    const notes = body.notes;
 
     const stock = await prisma.stock.create({
       data: {
         userId: req.userId!,
         ticker,
-        companyName: company_name,
+        companyName,
         sector,
         shares,
-        averageCost: average_cost,
-        currentPrice: current_price,
+        averageCost,
+        currentPrice,
         currency: currency || 'USD',
         account,
-        purchaseDate: purchase_date ? new Date(purchase_date) : null,
+        purchaseDate: purchaseDate ? new Date(purchaseDate) : null,
         notes
       }
     });
 
-    const serializedStock = serializeStockWithAliases(stock);
+    const serializedStock = serializeDecimals(stock);
     res.status(201).json(serializedStock);
   } catch (error) {
     logger.error('Error creating stock:', { error: (error as Error).message, userId: req.userId });
@@ -114,23 +97,17 @@ router.put('/:id', requireAuth, [
     }
 
     const { id } = req.params;
-    const {
-      ticker,
-      company_name,
-      sector,
-      shares,
-      average_cost,
-      current_price,
-      currency,
-      account,
-      purchase_date,
-      notes
-    } = req.body as UpdateStockRequest & {
-      company_name?: string;
-      average_cost?: number;
-      current_price?: number;
-      purchase_date?: string;
-    };
+    const body = req.body as any;
+    const ticker = body.ticker;
+    const companyName = body.companyName ?? body.company_name;
+    const sector = body.sector;
+    const shares = body.shares;
+    const averageCost = body.averageCost ?? body.average_cost;
+    const currentPrice = body.currentPrice ?? body.current_price;
+    const currency = body.currency;
+    const account = body.account;
+    const purchaseDate = body.purchaseDate ?? body.purchase_date;
+    const notes = body.notes;
 
     // Check if stock exists and belongs to user
     const existingStock = await prisma.stock.findFirst({
@@ -148,19 +125,19 @@ router.put('/:id', requireAuth, [
       where: { id: parseInt(id, 10) },
       data: {
         ticker,
-        companyName: company_name,
+        companyName,
         sector,
         shares,
-        averageCost: average_cost,
-        currentPrice: current_price,
+        averageCost,
+        currentPrice,
         currency,
         account,
-        purchaseDate: purchase_date ? new Date(purchase_date) : undefined,
+        purchaseDate: purchaseDate ? new Date(purchaseDate) : undefined,
         notes
       }
     });
 
-    const serializedStock = serializeStockWithAliases(stock);
+    const serializedStock = serializeDecimals(stock);
     res.json(serializedStock);
   } catch (error) {
     logger.error('Error updating stock:', { error: (error as Error).message, userId: req.userId, stockId: req.params.id });

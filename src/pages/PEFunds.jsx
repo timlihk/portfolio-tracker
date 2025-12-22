@@ -21,15 +21,15 @@ const FUND_TYPES = ['Buyout', 'Growth Equity', 'Venture Capital', 'Real Estate',
 const STATUSES = ['Active', 'Fully Invested', 'Harvesting', 'Liquidated'];
 
 const fundFields = [
-  { name: 'fund_name', label: 'Fund Name', required: true, placeholder: 'Sequoia Capital XV' },
+  { name: 'fundName', label: 'Fund Name', required: true, placeholder: 'Sequoia Capital XV' },
   { name: 'manager', label: 'Fund Manager / GP', placeholder: 'Sequoia Capital' },
-  { name: 'fund_type', label: 'Fund Type', type: 'select', options: FUND_TYPES },
-  { name: 'vintage_year', label: 'Vintage Year', type: 'number', placeholder: '2023' },
+  { name: 'fundType', label: 'Fund Type', type: 'select', options: FUND_TYPES },
+  { name: 'vintageYear', label: 'Vintage Year', type: 'number', placeholder: '2023' },
   { name: 'commitment', label: 'Total Commitment', type: 'number', required: true, placeholder: '500000' },
-  { name: 'called_capital', label: 'Called Capital', type: 'number', placeholder: '250000' },
+  { name: 'calledCapital', label: 'Called Capital', type: 'number', placeholder: '250000' },
   { name: 'distributions', label: 'Distributions', type: 'number', placeholder: '100000' },
   { name: 'nav', label: 'Current NAV', type: 'number', placeholder: '300000' },
-  { name: 'commitment_date', label: 'Commitment Date', type: 'date' },
+  { name: 'commitmentDate', label: 'Commitment Date', type: 'date' },
   { name: 'status', label: 'Status', type: 'select', options: STATUSES },
   { name: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Additional notes...' }
 ];
@@ -99,7 +99,7 @@ export default function PEFunds() {
 
   const columns = [
     { 
-      key: 'fund_name', 
+      key: 'fundName', 
       label: 'Fund',
       render: (val, row) => (
         <div>
@@ -111,12 +111,12 @@ export default function PEFunds() {
       )
     },
     { 
-      key: 'fund_type', 
+      key: 'fundType', 
       label: 'Type',
       render: (val) => val || '-'
     },
     { 
-      key: 'vintage_year', 
+      key: 'vintageYear', 
       label: 'Vintage',
       render: (val) => val || '-'
     },
@@ -130,7 +130,7 @@ export default function PEFunds() {
       key: 'called',
       label: 'Called / Unfunded',
       render: (_, row) => {
-        const called = Number(row.called_capital) || 0;
+        const called = Number(row.calledCapital) || 0;
         const commitment = Number(row.commitment) || 0;
         const unfunded = commitment - called;
         const pct = commitment > 0 ? (called / commitment) * 100 : 0;
@@ -164,7 +164,7 @@ export default function PEFunds() {
       label: 'TVPI',
       align: 'right',
       render: (_, row) => {
-        const called = Number(row.called_capital) || 0;
+        const called = Number(row.calledCapital) || 0;
         if (called === 0) return '-';
         const tvpi = ((Number(row.nav) || 0) + (Number(row.distributions) || 0)) / called;
         return (
@@ -225,7 +225,7 @@ export default function PEFunds() {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete PE Fund</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete {deleteTarget?.fund_name}? This action cannot be undone.
+              Are you sure you want to delete {deleteTarget?.fundName}? This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

@@ -22,18 +22,18 @@ const REDEMPTION_FREQ = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Semi-Annual
 const STATUSES = ['Active', 'In Redemption', 'Fully Redeemed'];
 
 const fundFields = [
-  { name: 'fund_name', label: 'Fund Name', required: true, placeholder: 'Bridgewater Pure Alpha' },
+  { name: 'fundName', label: 'Fund Name', required: true, placeholder: 'Bridgewater Pure Alpha' },
   { name: 'manager', label: 'Fund Manager', placeholder: 'Bridgewater Associates' },
-  { name: 'fund_type', label: 'Fund Type', type: 'select', options: FUND_TYPES },
+  { name: 'fundType', label: 'Fund Type', type: 'select', options: FUND_TYPES },
   { name: 'strategy', label: 'Strategy', type: 'select', options: STRATEGIES },
-  { name: 'investment_amount', label: 'Investment Amount', type: 'number', required: true, placeholder: '250000' },
-  { name: 'current_value', label: 'Current Value', type: 'number', placeholder: '275000' },
-  { name: 'investment_date', label: 'Investment Date', type: 'date' },
-  { name: 'lockup_end_date', label: 'Lock-up End Date', type: 'date' },
-  { name: 'redemption_frequency', label: 'Redemption Frequency', type: 'select', options: REDEMPTION_FREQ },
-  { name: 'management_fee', label: 'Management Fee (%)', type: 'number', placeholder: '2.0' },
-  { name: 'performance_fee', label: 'Performance Fee (%)', type: 'number', placeholder: '20' },
-  { name: 'ytd_return', label: 'YTD Return (%)', type: 'number', placeholder: '8.5' },
+  { name: 'investmentAmount', label: 'Investment Amount', type: 'number', required: true, placeholder: '250000' },
+  { name: 'currentValue', label: 'Current Value', type: 'number', placeholder: '275000' },
+  { name: 'investmentDate', label: 'Investment Date', type: 'date' },
+  { name: 'lockupEndDate', label: 'Lock-up End Date', type: 'date' },
+  { name: 'redemptionFrequency', label: 'Redemption Frequency', type: 'select', options: REDEMPTION_FREQ },
+  { name: 'managementFee', label: 'Management Fee (%)', type: 'number', placeholder: '2.0' },
+  { name: 'performanceFee', label: 'Performance Fee (%)', type: 'number', placeholder: '20' },
+  { name: 'ytdReturn', label: 'YTD Return (%)', type: 'number', placeholder: '8.5' },
   { name: 'status', label: 'Status', type: 'select', options: STATUSES },
   { name: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Additional notes...' }
 ];
@@ -112,7 +112,7 @@ export default function LiquidFunds() {
 
   const columns = [
     { 
-      key: 'fund_name', 
+      key: 'fundName', 
       label: 'Fund',
       render: (val, row) => (
         <div>
@@ -124,7 +124,7 @@ export default function LiquidFunds() {
       )
     },
     { 
-      key: 'fund_type', 
+      key: 'fundType', 
       label: 'Type',
       render: (val) => val && (
         <Badge className={`${getTypeColor(val)} font-normal`}>
@@ -138,28 +138,28 @@ export default function LiquidFunds() {
       render: (val) => val || '-'
     },
     {
-      key: 'investment_amount',
+      key: 'investmentAmount',
       label: 'Invested',
       align: 'right',
       render: (val) => `$${(Number(val) || 0).toLocaleString()}`
     },
     {
-      key: 'current_value',
+      key: 'currentValue',
       label: 'Current Value',
       align: 'right',
       render: (val, row) => (
         <span className="font-medium">
-          ${(Number(val) || Number(row.investment_amount) || 0).toLocaleString()}
+          ${(Number(val) || Number(row.investmentAmount) || 0).toLocaleString()}
         </span>
       )
     },
     {
-      key: 'gain_loss',
+      key: 'gainLoss',
       label: 'Gain/Loss',
       align: 'right',
       render: (_, row) => {
-        const invested = Number(row.investment_amount) || 0;
-        const current = Number(row.current_value) || invested;
+        const invested = Number(row.investmentAmount) || 0;
+        const current = Number(row.currentValue) || invested;
         const gain = current - invested;
         const gainPct = invested > 0 ? ((gain / invested) * 100).toFixed(1) : 0;
         const isPositive = gain >= 0;
@@ -172,7 +172,7 @@ export default function LiquidFunds() {
       }
     },
     { 
-      key: 'ytd_return', 
+      key: 'ytdReturn', 
       label: 'YTD',
       align: 'right',
       render: (val) => {
@@ -186,7 +186,7 @@ export default function LiquidFunds() {
       }
     },
     { 
-      key: 'redemption_frequency', 
+      key: 'redemptionFrequency', 
       label: 'Redemption',
       render: (val) => val || '-'
     },
@@ -201,8 +201,8 @@ export default function LiquidFunds() {
     }
   ];
 
-  const totalInvested = funds.reduce((sum, f) => sum + (Number(f.investment_amount) || 0), 0);
-  const totalValue = funds.reduce((sum, f) => sum + (Number(f.current_value) || Number(f.investment_amount) || 0), 0);
+  const totalInvested = funds.reduce((sum, f) => sum + (Number(f.investmentAmount) || 0), 0);
+  const totalValue = funds.reduce((sum, f) => sum + (Number(f.currentValue) || Number(f.investmentAmount) || 0), 0);
 
   return (
     <div className="min-h-screen bg-slate-50/50">
@@ -241,7 +241,7 @@ export default function LiquidFunds() {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Liquid Fund</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete {deleteTarget?.fund_name}? This action cannot be undone.
+                Are you sure you want to delete {deleteTarget?.fundName}? This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

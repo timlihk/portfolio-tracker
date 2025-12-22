@@ -22,13 +22,13 @@ const SECTORS = ['Technology', 'Healthcare', 'Finance', 'Energy', 'Consumer', 'I
 const STATUSES = ['Active', 'Partially Exited', 'Fully Exited', 'Written Off'];
 
 const dealFields = [
-  { name: 'company_name', label: 'Company Name', required: true, placeholder: 'Acme Corp' },
-  { name: 'deal_type', label: 'Deal Type', type: 'select', options: DEAL_TYPES },
+  { name: 'companyName', label: 'Company Name', required: true, placeholder: 'Acme Corp' },
+  { name: 'dealType', label: 'Deal Type', type: 'select', options: DEAL_TYPES },
   { name: 'sector', label: 'Sector', type: 'select', options: SECTORS },
-  { name: 'investment_amount', label: 'Investment Amount', type: 'number', required: true, placeholder: '250000' },
-  { name: 'current_value', label: 'Current Value', type: 'number', placeholder: '350000' },
-  { name: 'ownership_percentage', label: 'Ownership %', type: 'number', placeholder: '2.5' },
-  { name: 'investment_date', label: 'Investment Date', type: 'date' },
+  { name: 'investmentAmount', label: 'Investment Amount', type: 'number', required: true, placeholder: '250000' },
+  { name: 'currentValue', label: 'Current Value', type: 'number', placeholder: '350000' },
+  { name: 'ownershipPercentage', label: 'Ownership %', type: 'number', placeholder: '2.5' },
+  { name: 'investmentDate', label: 'Investment Date', type: 'date' },
   { name: 'sponsor', label: 'Lead Sponsor / GP', placeholder: 'Andreessen Horowitz' },
   { name: 'status', label: 'Status', type: 'select', options: STATUSES },
   { name: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Additional notes...' }
@@ -99,7 +99,7 @@ export default function PEDeals() {
 
   const columns = [
     { 
-      key: 'company_name', 
+      key: 'companyName', 
       label: 'Company',
       render: (val, row) => (
         <div>
@@ -111,7 +111,7 @@ export default function PEDeals() {
       )
     },
     { 
-      key: 'deal_type', 
+      key: 'dealType', 
       label: 'Type',
       render: (val) => val || '-'
     },
@@ -125,18 +125,18 @@ export default function PEDeals() {
       )
     },
     {
-      key: 'investment_amount',
+      key: 'investmentAmount',
       label: 'Invested',
       align: 'right',
       render: (val) => `$${(Number(val) || 0).toLocaleString()}`
     },
     {
-      key: 'current_value',
+      key: 'currentValue',
       label: 'Current Value',
       align: 'right',
       render: (val, row) => (
         <span className="font-medium">
-          ${(Number(val) || Number(row.investment_amount) || 0).toLocaleString()}
+          ${(Number(val) || Number(row.investmentAmount) || 0).toLocaleString()}
         </span>
       )
     },
@@ -145,8 +145,8 @@ export default function PEDeals() {
       label: 'MOIC',
       align: 'right',
       render: (_, row) => {
-        const invested = Number(row.investment_amount) || 0;
-        const current = Number(row.current_value) || invested;
+        const invested = Number(row.investmentAmount) || 0;
+        const current = Number(row.currentValue) || invested;
         const moic = invested > 0 ? current / invested : 0;
         return (
           <span className={moic >= 1 ? 'text-emerald-600' : 'text-rose-600'}>
@@ -156,13 +156,13 @@ export default function PEDeals() {
       }
     },
     { 
-      key: 'ownership_percentage', 
+      key: 'ownershipPercentage', 
       label: 'Ownership',
       align: 'right',
       render: (val) => val ? `${val}%` : '-'
     },
     { 
-      key: 'investment_date', 
+      key: 'investmentDate', 
       label: 'Date',
       render: (val) => val ? format(new Date(val), 'MMM yyyy') : '-'
     },
@@ -177,8 +177,8 @@ export default function PEDeals() {
     }
   ];
 
-  const totalInvested = deals.reduce((sum, d) => sum + (Number(d.investment_amount) || 0), 0);
-  const totalValue = deals.reduce((sum, d) => sum + (Number(d.current_value) || Number(d.investment_amount) || 0), 0);
+  const totalInvested = deals.reduce((sum, d) => sum + (Number(d.investmentAmount) || 0), 0);
+  const totalValue = deals.reduce((sum, d) => sum + (Number(d.currentValue) || Number(d.investmentAmount) || 0), 0);
 
   return (
     <div className="min-h-screen bg-slate-50/50">
@@ -217,7 +217,7 @@ export default function PEDeals() {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete PE Deal</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete {deleteTarget?.company_name}? This action cannot be undone.
+              Are you sure you want to delete {deleteTarget?.companyName}? This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

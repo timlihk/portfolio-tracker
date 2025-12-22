@@ -6,6 +6,12 @@ import logger from '../../services/logger.js';
 import type { AuthRequest, Account, CreateAccountRequest, UpdateAccountRequest } from '../../types/index.js';
 
 const router = express.Router();
+const normalizeAccountBody = (body: any) => ({
+  name: body.name,
+  institution: body.institution,
+  accountType: body.accountType ?? body.account_type,
+  accountNumber: body.accountNumber ?? body.account_number
+});
 
 // GET /accounts - List all accounts
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
@@ -36,18 +42,15 @@ router.post('/', requireAuth, [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { name, institution, account_type, account_number } = req.body as CreateAccountRequest & {
-      account_type?: string;
-      account_number?: string;
-    };
+    const { name, institution, accountType, accountNumber } = normalizeAccountBody(req.body);
 
     const account = await prisma.account.create({
       data: {
         userId: req.userId!,
         name,
         institution,
-        accountType: account_type,
-        accountNumber: account_number
+        accountType,
+        accountNumber
       }
     });
 
@@ -74,10 +77,7 @@ router.put('/:id', requireAuth, [
     }
 
     const { id } = req.params;
-    const { name, institution, account_type, account_number } = req.body as UpdateAccountRequest & {
-      account_type?: string;
-      account_number?: string;
-    };
+    const { name, institution, accountType, accountNumber } = normalizeAccountBody(req.body);
 
     // Check if account exists and belongs to user
     const existingAccount = await prisma.account.findFirst({
@@ -96,8 +96,8 @@ router.put('/:id', requireAuth, [
       data: {
         name,
         institution,
-        accountType: account_type,
-        accountNumber: account_number
+        accountType,
+        accountNumber
       }
     });
 

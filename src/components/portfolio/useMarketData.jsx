@@ -149,13 +149,11 @@ export function useBondPrices(bonds) {
   useEffect(() => {
     if (!bonds || bonds.length === 0) return;
 
-    // For bonds, we use face value as the default price
-    // Real bond pricing would require a specialized API
+    // For bonds, use currentValue/faceValue/purchasePrice as the default value
     const bondPrices = {};
     for (const bond of bonds) {
-      // Use face_value or purchase_price as the current value
-      // In a real implementation, you'd want to fetch from a bond pricing service
-      bondPrices[bond.name] = bond.current_value || bond.face_value || bond.purchase_price || 0;
+      const { currentValue, faceValue, purchasePrice } = bond;
+      bondPrices[bond.name] = currentValue || faceValue || purchasePrice || 0;
     }
 
     setPrices(bondPrices);

@@ -26,11 +26,11 @@ const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS'];
 
 const getCashFields = (accounts) => [
   { name: 'name', label: 'Name', required: true, placeholder: 'Emergency Fund' },
-  { name: 'deposit_type', label: 'Type', type: 'select', options: DEPOSIT_TYPES },
+  { name: 'depositType', label: 'Type', type: 'select', options: DEPOSIT_TYPES },
   { name: 'amount', label: 'Amount', type: 'number', required: true, placeholder: '50000' },
   { name: 'currency', label: 'Currency', type: 'select', options: CURRENCIES, required: true },
-  { name: 'interest_rate', label: 'Interest Rate (%)', type: 'number', placeholder: '4.5' },
-  { name: 'maturity_date', label: 'Maturity Date', type: 'date' },
+  { name: 'interestRate', label: 'Interest Rate (%)', type: 'number', placeholder: '4.5' },
+  { name: 'maturityDate', label: 'Maturity Date', type: 'date' },
   { name: 'account', label: 'Institution', type: 'select', options: accounts.map(a => a.name), allowCustom: true, required: true },
   { name: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Additional notes...' }
 ];
@@ -59,7 +59,7 @@ export default function CashDeposits() {
   const createMutation = useMutation({
     mutationFn: (data) => entities.CashDeposit.create(data),
     onSuccess: (_, data) => {
-      cashLogger.logCreate(data.name, `${data.deposit_type || 'Cash'} - ${data.amount}`);
+      cashLogger.logCreate(data.name, `${data.depositType || 'Cash'} - ${data.amount}`);
       queryClient.invalidateQueries({ queryKey: ['cashDeposits'] });
       setDialogOpen(false);
       setFormData({});
@@ -152,7 +152,7 @@ export default function CashDeposits() {
       )
     },
     { 
-      key: 'deposit_type', 
+      key: 'depositType', 
       label: 'Type',
       render: (val) => val && (
         <Badge className={`${getTypeColor(val)} font-medium`}>
@@ -170,7 +170,7 @@ export default function CashDeposits() {
       }
     },
     { 
-      key: 'interest_rate', 
+      key: 'interestRate', 
       label: 'Interest',
       align: 'right',
       render: (val) => val ? (
@@ -178,7 +178,7 @@ export default function CashDeposits() {
       ) : '-'
     },
     { 
-      key: 'maturity_date', 
+      key: 'maturityDate', 
       label: 'Maturity',
       render: (val) => val ? format(new Date(val), 'MMM d, yyyy') : '-'
     },

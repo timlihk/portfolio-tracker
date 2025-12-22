@@ -80,7 +80,7 @@ export default function Accounts() {
 
   // Helper to get current price (real-time or manual)
   // Note: PostgreSQL returns DECIMAL as strings, so we need to convert to numbers
-  const getCurrentPrice = (stock) => Number(stockPrices[stock.ticker]?.price) || Number(stock.current_price) || Number(stock.average_cost) || 0;
+  const getCurrentPrice = (stock) => Number(stockPrices[stock.ticker]?.price) || Number(stock.currentPrice) || Number(stock.averageCost) || 0;
 
   // Columns for stocks table (matching Stocks page)
   const stockColumns = useMemo(() => [
@@ -90,7 +90,7 @@ export default function Accounts() {
       render: (val, row) => {
         // Use Yahoo Finance data if available, otherwise use stored data
         const yahooData = stockPrices[row.ticker];
-        const companyName = row.company_name || yahooData?.name || yahooData?.shortName;
+        const companyName = row.companyName || yahooData?.name || yahooData?.shortName;
         const sector = row.sector || yahooData?.sector;
         return (
           <div>
@@ -112,7 +112,7 @@ export default function Accounts() {
       render: (val) => (val || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
     },
     {
-      key: 'average_cost',
+      key: 'averageCost',
       label: 'Avg Cost',
       align: 'right',
       render: (val, row) => {
@@ -121,13 +121,13 @@ export default function Accounts() {
       }
     },
     {
-      key: 'current_price',
+      key: 'currentPrice',
       label: 'Current',
       align: 'right',
       render: (val, row) => {
         const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
         const price = getCurrentPrice(row);
-        const isLive = stockPrices[row.ticker]?.price && !row.current_price;
+        const isLive = stockPrices[row.ticker]?.price && !row.currentPrice;
         return (
           <div className="flex items-center justify-end gap-1">
             <span>{symbol}{(price || 0).toFixed(2)}</span>
@@ -154,7 +154,7 @@ export default function Accounts() {
       render: (_, row) => {
         const price = getCurrentPrice(row);
         const shares = Number(row.shares) || 0;
-        const avgCost = Number(row.average_cost) || 0;
+        const avgCost = Number(row.averageCost) || 0;
         const cost = shares * avgCost;
         const value = shares * price;
         const gain = value - cost;
@@ -240,16 +240,16 @@ export default function Accounts() {
     const accountCash = cashDeposits.filter(c => c.account === accountName);
     
     const stocksValue = accountStocks.reduce((sum, s) => {
-      const price = Number(stockPrices[s.ticker]?.price) || Number(s.current_price) || Number(s.average_cost) || 0;
+      const price = Number(stockPrices[s.ticker]?.price) || Number(s.currentPrice) || Number(s.averageCost) || 0;
       const value = Number(s.shares) * price;
       return sum + convertToUSD(value, s.currency);
     }, 0);
     const bondsValue = accountBonds.reduce((sum, b) => {
-      const value = Number(b.current_value) || Number(b.purchase_price) || 0;
+      const value = Number(b.currentValue) || Number(b.purchasePrice) || 0;
       return sum + convertToUSD(value, b.currency);
     }, 0);
     const liabilitiesValue = accountLiabilities.reduce((sum, l) => {
-      return sum + convertToUSD(Number(l.outstanding_balance) || 0, l.currency);
+      return sum + convertToUSD(Number(l.outstandingBalance) || 0, l.currency);
     }, 0);
     const cashValue = accountCash.reduce((sum, c) => {
       return sum + convertToUSD(Number(c.amount) || 0, c.currency);
@@ -273,10 +273,10 @@ export default function Accounts() {
   const unassignedBonds = bonds.filter(b => !b.account);
   const unassignedValue =
     unassignedStocks.reduce((sum, s) => {
-      const price = Number(stockPrices[s.ticker]?.price) || Number(s.current_price) || Number(s.average_cost) || 0;
+      const price = Number(stockPrices[s.ticker]?.price) || Number(s.currentPrice) || Number(s.averageCost) || 0;
       return sum + convertToUSD(Number(s.shares) * price, s.currency);
     }, 0) +
-    unassignedBonds.reduce((sum, b) => sum + convertToUSD(Number(b.current_value) || Number(b.purchase_price) || 0, b.currency), 0);
+    unassignedBonds.reduce((sum, b) => sum + convertToUSD(Number(b.currentValue) || Number(b.purchasePrice) || 0, b.currency), 0);
 
   return (
     <div className="min-h-screen bg-slate-50/50">
@@ -316,11 +316,11 @@ export default function Accounts() {
                               {account.institution && (
                                 <span className="text-sm text-slate-500">{account.institution}</span>
                               )}
-                              {account.account_type && (
-                                <Badge variant="secondary" className="text-xs">{account.account_type}</Badge>
+                              {account.accountType && (
+                                <Badge variant="secondary" className="text-xs">{account.accountType}</Badge>
                               )}
-                              {account.account_number && (
-                                <span className="text-xs text-slate-400">••••{account.account_number}</span>
+                              {account.accountNumber && (
+                                <span className="text-xs text-slate-400">••••{account.accountNumber}</span>
                               )}
                             </div>
                           </div>
@@ -401,16 +401,16 @@ export default function Accounts() {
                                   <div key={bond.id} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
                                     <div>
                                       <span className="font-medium text-slate-900">{bond.name}</span>
-                                      {bond.bond_type && (
-                                        <Badge variant="secondary" className="ml-2 text-xs">{bond.bond_type}</Badge>
+                                      {bond.bondType && (
+                                        <Badge variant="secondary" className="ml-2 text-xs">{bond.bondType}</Badge>
                                       )}
                                     </div>
                                     <div className="text-right">
                                       <p className="font-medium">
-                                        ${convertToUSD(Number(bond.current_value) || Number(bond.purchase_price) || 0, bond.currency).toLocaleString()}
+                                        ${convertToUSD(Number(bond.currentValue) || Number(bond.purchasePrice) || 0, bond.currency).toLocaleString()}
                                       </p>
-                                      {bond.coupon_rate && (
-                                        <p className="text-xs text-slate-500">{Number(bond.coupon_rate)}% coupon {bond.currency && bond.currency !== 'USD' ? `(${bond.currency})` : ''}</p>
+                                      {bond.couponRate && (
+                                        <p className="text-xs text-slate-500">{Number(bond.couponRate)}% coupon {bond.currency && bond.currency !== 'USD' ? `(${bond.currency})` : ''}</p>
                                       )}
                                     </div>
                                   </div>
@@ -433,16 +433,16 @@ export default function Accounts() {
                                   <div key={deposit.id} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
                                     <div>
                                       <span className="font-medium text-slate-900">{deposit.name}</span>
-                                      {deposit.deposit_type && (
-                                        <Badge variant="secondary" className="ml-2 text-xs">{deposit.deposit_type}</Badge>
+                                      {deposit.depositType && (
+                                        <Badge variant="secondary" className="ml-2 text-xs">{deposit.depositType}</Badge>
                                       )}
                                     </div>
                                     <div className="text-right">
                                       <p className="font-medium">
                                         ${convertToUSD(Number(deposit.amount) || 0, deposit.currency).toLocaleString()}
                                       </p>
-                                      {deposit.interest_rate && (
-                                        <p className="text-xs text-slate-500">{Number(deposit.interest_rate)}% interest {deposit.currency && deposit.currency !== 'USD' ? `(${deposit.currency})` : ''}</p>
+                                      {deposit.interestRate && (
+                                        <p className="text-xs text-slate-500">{Number(deposit.interestRate)}% interest {deposit.currency && deposit.currency !== 'USD' ? `(${deposit.currency})` : ''}</p>
                                       )}
                                     </div>
                                   </div>
@@ -465,16 +465,16 @@ export default function Accounts() {
                                   <div key={liability.id} className="flex items-center justify-between py-2 px-3 bg-rose-50 rounded-lg">
                                     <div>
                                       <span className="font-medium text-slate-900">{liability.name}</span>
-                                      {liability.liability_type && (
-                                        <Badge variant="secondary" className="ml-2 text-xs">{liability.liability_type}</Badge>
+                                      {liability.liabilityType && (
+                                        <Badge variant="secondary" className="ml-2 text-xs">{liability.liabilityType}</Badge>
                                       )}
                                     </div>
                                     <div className="text-right">
                                       <p className="font-medium text-rose-600">
-                                        -${convertToUSD(Number(liability.outstanding_balance) || 0, liability.currency).toLocaleString()}
+                                        -${convertToUSD(Number(liability.outstandingBalance) || 0, liability.currency).toLocaleString()}
                                       </p>
-                                      {liability.interest_rate && (
-                                        <p className="text-xs text-slate-500">{Number(liability.interest_rate)}% interest {liability.currency && liability.currency !== 'USD' ? `(${liability.currency})` : ''}</p>
+                                      {liability.interestRate && (
+                                        <p className="text-xs text-slate-500">{Number(liability.interestRate)}% interest {liability.currency && liability.currency !== 'USD' ? `(${liability.currency})` : ''}</p>
                                       )}
                                     </div>
                                   </div>
@@ -556,7 +556,7 @@ export default function Accounts() {
                               <div key={bond.id} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
                                 <span className="font-medium text-slate-900">{bond.name}</span>
                                 <p className="font-medium">
-                                  ${convertToUSD(Number(bond.current_value) || Number(bond.purchase_price) || 0, bond.currency).toLocaleString()}
+                                  ${convertToUSD(Number(bond.currentValue) || Number(bond.purchasePrice) || 0, bond.currency).toLocaleString()}
                                 </p>
                               </div>
                             ))}
@@ -598,8 +598,8 @@ export default function Accounts() {
               <div className="space-y-2">
                 <Label>Account Type</Label>
                 <Select
-                  value={formData.account_type || undefined}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, account_type: value }))}
+                  value={formData.accountType || undefined}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, accountType: value }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select type" />
@@ -614,8 +614,8 @@ export default function Accounts() {
               <div className="space-y-2">
                 <Label>Last 4 Digits</Label>
                 <Input
-                  value={formData.account_number || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, account_number: e.target.value }))}
+                  value={formData.accountNumber || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, accountNumber: e.target.value }))}
                   placeholder="1234"
                   maxLength={4}
                 />

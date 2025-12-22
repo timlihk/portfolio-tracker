@@ -11,16 +11,16 @@ const serializeLiquidFundWithAliases = (fund: any) => {
   const s = serializeDecimals(fund);
   return {
     ...s,
-    fund_name: s.fundName,
-    fund_type: s.fundType,
-    investment_amount: s.investmentAmount,
-    current_value: s.currentValue,
-    ytd_return: s.ytdReturn,
-    management_fee: s.managementFee,
-    performance_fee: s.performanceFee,
-    redemption_frequency: s.redemptionFrequency,
-    lockup_end_date: s.lockupEndDate,
-    investment_date: s.investmentDate
+    fundName: s.fundName,
+    fundType: s.fundType,
+    investmentAmount: s.investmentAmount,
+    currentValue: s.currentValue,
+    ytdReturn: s.ytdReturn,
+    managementFee: s.managementFee,
+    performanceFee: s.performanceFee,
+    redemptionFrequency: s.redemptionFrequency,
+    lockupEndDate: s.lockupEndDate,
+    investmentDate: s.investmentDate
   };
 };
 
@@ -32,7 +32,6 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    // Convert Prisma Decimal fields to numbers for JSON response and add legacy snake_case keys
     const serializedLiquidFunds = liquidFunds.map(fund => serializeLiquidFundWithAliases(fund));
     res.json(serializedLiquidFunds);
   } catch (error) {
@@ -44,53 +43,37 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
 // POST /liquid-funds - Create a liquid fund
 router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const {
-      fund_name,
-      manager,
-      fund_type,
-      strategy,
-      investment_amount,
-      current_value,
-      ytd_return,
-      management_fee,
-      performance_fee,
-      redemption_frequency,
-      lockup_end_date,
-      investment_date,
-      status,
-      notes
-    } = req.body as {
-      fund_name: string;
-      manager?: string;
-      fund_type?: string;
-      strategy?: string;
-      investment_amount?: number;
-      current_value?: number;
-      ytd_return?: number;
-      management_fee?: number;
-      performance_fee?: number;
-      redemption_frequency?: string;
-      lockup_end_date?: string;
-      investment_date?: string;
-      status?: string;
-      notes?: string;
-    };
+    const body = req.body as any;
+    const fundName = body.fundName ?? body.fund_name;
+    const manager = body.manager;
+    const fundType = body.fundType ?? body.fund_type;
+    const strategy = body.strategy;
+    const investmentAmount = body.investmentAmount ?? body.investment_amount;
+    const currentValue = body.currentValue ?? body.current_value;
+    const ytdReturn = body.ytdReturn ?? body.ytd_return;
+    const managementFee = body.managementFee ?? body.management_fee;
+    const performanceFee = body.performanceFee ?? body.performance_fee;
+    const redemptionFrequency = body.redemptionFrequency ?? body.redemption_frequency;
+    const lockupEndDate = body.lockupEndDate ?? body.lockup_end_date;
+    const investmentDate = body.investmentDate ?? body.investment_date;
+    const status = body.status;
+    const notes = body.notes;
 
     const liquidFund = await prisma.liquidFund.create({
       data: {
         userId: req.userId!,
-        fundName: fund_name,
+        fundName,
         manager,
-        fundType: fund_type,
+        fundType,
         strategy,
-        investmentAmount: investment_amount,
-        currentValue: current_value,
-        ytdReturn: ytd_return,
-        managementFee: management_fee,
-        performanceFee: performance_fee,
-        redemptionFrequency: redemption_frequency,
-        lockupEndDate: lockup_end_date ? new Date(lockup_end_date) : null,
-        investmentDate: investment_date ? new Date(investment_date) : null,
+        investmentAmount,
+        currentValue,
+        ytdReturn,
+        managementFee,
+        performanceFee,
+        redemptionFrequency,
+        lockupEndDate: lockupEndDate ? new Date(lockupEndDate) : null,
+        investmentDate: investmentDate ? new Date(investmentDate) : null,
         status: status || 'Active',
         notes
       }
@@ -108,37 +91,21 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
 router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const {
-      fund_name,
-      manager,
-      fund_type,
-      strategy,
-      investment_amount,
-      current_value,
-      ytd_return,
-      management_fee,
-      performance_fee,
-      redemption_frequency,
-      lockup_end_date,
-      investment_date,
-      status,
-      notes
-    } = req.body as {
-      fund_name?: string;
-      manager?: string;
-      fund_type?: string;
-      strategy?: string;
-      investment_amount?: number;
-      current_value?: number;
-      ytd_return?: number;
-      management_fee?: number;
-      performance_fee?: number;
-      redemption_frequency?: string;
-      lockup_end_date?: string;
-      investment_date?: string;
-      status?: string;
-      notes?: string;
-    };
+    const body = req.body as any;
+    const fundName = body.fundName ?? body.fund_name;
+    const manager = body.manager;
+    const fundType = body.fundType ?? body.fund_type;
+    const strategy = body.strategy;
+    const investmentAmount = body.investmentAmount ?? body.investment_amount;
+    const currentValue = body.currentValue ?? body.current_value;
+    const ytdReturn = body.ytdReturn ?? body.ytd_return;
+    const managementFee = body.managementFee ?? body.management_fee;
+    const performanceFee = body.performanceFee ?? body.performance_fee;
+    const redemptionFrequency = body.redemptionFrequency ?? body.redemption_frequency;
+    const lockupEndDate = body.lockupEndDate ?? body.lockup_end_date;
+    const investmentDate = body.investmentDate ?? body.investment_date;
+    const status = body.status;
+    const notes = body.notes;
 
     // Check if liquid fund exists and belongs to user
     const existingLiquidFund = await prisma.liquidFund.findFirst({
@@ -155,18 +122,18 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     const liquidFund = await prisma.liquidFund.update({
       where: { id: parseInt(id, 10) },
       data: {
-        fundName: fund_name,
+        fundName,
         manager,
-        fundType: fund_type,
+        fundType,
         strategy,
-        investmentAmount: investment_amount,
-        currentValue: current_value,
-        ytdReturn: ytd_return,
-        managementFee: management_fee,
-        performanceFee: performance_fee,
-        redemptionFrequency: redemption_frequency,
-        lockupEndDate: lockup_end_date ? new Date(lockup_end_date) : undefined,
-        investmentDate: investment_date ? new Date(investment_date) : undefined,
+        investmentAmount,
+        currentValue,
+        ytdReturn,
+        managementFee,
+        performanceFee,
+        redemptionFrequency,
+        lockupEndDate: lockupEndDate ? new Date(lockupEndDate) : undefined,
+        investmentDate: investmentDate ? new Date(investmentDate) : undefined,
         status,
         notes
       }

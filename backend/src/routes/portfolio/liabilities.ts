@@ -10,12 +10,12 @@ const serializeLiabilityWithAliases = (liability: any) => {
   const s = serializeDecimals(liability);
   return {
     ...s,
-    liability_type: s.liabilityType,
-    outstanding_balance: s.outstandingBalance,
-    interest_rate: s.interestRate,
-    rate_type: s.rateType,
-    start_date: s.startDate,
-    maturity_date: s.maturityDate
+    liabilityType: s.liabilityType,
+    outstandingBalance: s.outstandingBalance,
+    interestRate: s.interestRate,
+    rateType: s.rateType,
+    startDate: s.startDate,
+    maturityDate: s.maturityDate
   };
 };
 

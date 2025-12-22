@@ -38,12 +38,12 @@ const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS'];
 
 const transactionFields = (accounts) => [
   { name: 'date', label: 'Date', type: 'date', required: true },
-  { name: 'asset_type', label: 'Asset Type', type: 'select', options: ASSET_TYPES, required: true },
-  { name: 'asset_name', label: 'Asset Name', type: 'text', required: true, placeholder: 'e.g., AAPL or Bond Name' },
-  { name: 'transaction_type', label: 'Transaction Type', type: 'select', options: TRANSACTION_TYPES, required: true },
+  { name: 'assetType', label: 'Asset Type', type: 'select', options: ASSET_TYPES, required: true },
+  { name: 'assetName', label: 'Asset Name', type: 'text', required: true, placeholder: 'e.g., AAPL or Bond Name' },
+  { name: 'transactionType', label: 'Transaction Type', type: 'select', options: TRANSACTION_TYPES, required: true },
   { name: 'quantity', label: 'Quantity', type: 'number', placeholder: 'Number of shares/units' },
   { name: 'price', label: 'Price per Unit', type: 'number', placeholder: '0.00' },
-  { name: 'total_amount', label: 'Total Amount', type: 'number', required: true, placeholder: '0.00' },
+  { name: 'totalAmount', label: 'Total Amount', type: 'number', required: true, placeholder: '0.00' },
   { name: 'fees', label: 'Fees', type: 'number', placeholder: '0.00' },
   { name: 'currency', label: 'Currency', type: 'select', options: CURRENCIES },
   { name: 'account', label: 'Account', type: 'select', options: accounts.map(a => a.name), allowCustom: true },
@@ -94,19 +94,34 @@ export default function Transactions() {
     queryFn: () => base44.entities.Account.list(),
   });
 
+  const normalizeTransaction = (t) => ({
+    ...t,
+    assetType: t.assetType ?? t.asset_type,
+    assetName: t.assetName ?? t.asset_name,
+    transactionType: t.transactionType ?? t.transaction_type,
+    totalAmount: t.totalAmount ?? t.total_amount,
+  });
+
+  const normalizedTransactions = useMemo(
+    () => transactions.map(normalizeTransaction),
+    [transactions]
+  );
+
   const createMutation = useMutation({
     mutationFn: (data) => base44.entities.Transaction.create(data),
     onSuccess: (_, data) => {
+      const normalized = normalizeTransaction(data);
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      logger.logCreate(`${data.transaction_type} ${data.asset_name}`, `${data.total_amount} ${data.currency || 'USD'}`);
+      logger.logCreate(`${normalized.transactionType} ${normalized.assetName}`, `${normalized.totalAmount} ${normalized.currency || 'USD'}`);
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.Transaction.update(id, data),
     onSuccess: (_, { data }) => {
+      const normalized = normalizeTransaction(data);
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      logger.logUpdate(`${data.transaction_type} ${data.asset_name}`);
+      logger.logUpdate(`${normalized.transactionType} ${normalized.assetName}`);
     },
   });
 
@@ -115,7 +130,7 @@ export default function Transactions() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       if (deleteItem) {
-        logger.logDelete(`${deleteItem.transaction_type} ${deleteItem.asset_name}`);
+        logger.logDelete(`${deleteItem.transactionType} ${deleteItem.assetName}`);
       }
     },
   });
@@ -150,17 +165,17 @@ export default function Transactions() {
   };
 
   const filteredTransactions = useMemo(() => {
-    return transactions.filter(t => {
+    return normalizedTransactions.filter(t => {
       if (filters.startDate && t.date < filters.startDate) return false;
       if (filters.endDate && t.date > filters.endDate) return false;
-      if (filters.assetType !== 'All' && t.asset_type !== filters.assetType) return false;
-      if (filters.transactionType !== 'All' && t.transaction_type !== filters.transactionType) return false;
+      if (filters.assetType !== 'All' && t.assetType !== filters.assetType) return false;
+      if (filters.transactionType !== 'All' && t.transactionType !== filters.transactionType) return false;
       if (filters.account !== 'All' && t.account !== filters.account) return false;
       return true;
     });
-  }, [transactions, filters]);
+  }, [normalizedTransactions, filters]);
 
-  const totalVolume = filteredTransactions.reduce((sum, t) => sum + (t.total_amount || 0), 0);
+  const totalVolume = filteredTransactions.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
   const totalFees = filteredTransactions.reduce((sum, t) => sum + (t.fees || 0), 0);
 
   return (
@@ -208,9 +223,9 @@ export default function Transactions() {
             </TableHeader>
             <TableBody>
               {filteredTransactions.map((t) => {
-                const config = typeConfig[t.transaction_type] || typeConfig['Buy'];
+                const config = typeConfig[t.transactionType] || typeConfig['Buy'];
                 const TypeIcon = config.icon;
-                const AssetIcon = assetIcons[t.asset_type] || TrendingUp;
+                const AssetIcon = assetIcons[t.assetType] || TrendingUp;
                 
                 return (
                   <TableRow key={t.id} className="hover:bg-slate-50/50">
@@ -223,8 +238,8 @@ export default function Transactions() {
                           <AssetIcon className="w-3.5 h-3.5 text-slate-500" />
                         </div>
                         <div>
-                          <div className="font-medium text-slate-900">{t.asset_name}</div>
-                          <div className="text-xs text-slate-500">{t.asset_type}</div>
+                          <div className="font-medium text-slate-900">{t.assetName}</div>
+                          <div className="text-xs text-slate-500">{t.assetType}</div>
                         </div>
                       </div>
                     </TableCell>
@@ -241,7 +256,7 @@ export default function Transactions() {
                       {t.price ? `$${t.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '-'}
                     </TableCell>
                     <TableCell className="text-right font-semibold text-slate-900">
-                      ${(t.total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      ${(t.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="text-right text-slate-500">
                       {t.fees ? `$${t.fees.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '-'}
@@ -293,7 +308,7 @@ export default function Transactions() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Transaction</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this {deleteItem?.transaction_type} transaction for {deleteItem?.asset_name}? This action cannot be undone.
+              Are you sure you want to delete this {deleteItem?.transactionType} transaction for {deleteItem?.assetName}? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

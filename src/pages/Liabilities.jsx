@@ -28,16 +28,16 @@ const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS', 'HKD
 
 const getLiabilityFields = (accounts) => [
   { name: 'name', label: 'Loan Name', required: true, placeholder: 'Margin Loan - Schwab' },
-  { name: 'liability_type', label: 'Type', type: 'select', options: LIABILITY_TYPES },
+  { name: 'liabilityType', label: 'Type', type: 'select', options: LIABILITY_TYPES },
   { name: 'account', label: 'Account', type: 'select', options: accounts.map(a => a.name), allowCustom: true },
   { name: 'currency', label: 'Currency', type: 'select', options: CURRENCIES },
   { name: 'principal', label: 'Original Principal', type: 'number', placeholder: '100000' },
-  { name: 'outstanding_balance', label: 'Outstanding Balance', type: 'number', required: true, placeholder: '85000' },
-  { name: 'interest_rate', label: 'Interest Rate (%)', type: 'number', placeholder: '6.5' },
-  { name: 'rate_type', label: 'Rate Type', type: 'select', options: RATE_TYPES },
+  { name: 'outstandingBalance', label: 'Outstanding Balance', type: 'number', required: true, placeholder: '85000' },
+  { name: 'interestRate', label: 'Interest Rate (%)', type: 'number', placeholder: '6.5' },
+  { name: 'rateType', label: 'Rate Type', type: 'select', options: RATE_TYPES },
   { name: 'collateral', label: 'Collateral', placeholder: 'Stock portfolio' },
-  { name: 'start_date', label: 'Start Date', type: 'date' },
-  { name: 'maturity_date', label: 'Maturity Date', type: 'date' },
+  { name: 'startDate', label: 'Start Date', type: 'date' },
+  { name: 'maturityDate', label: 'Maturity Date', type: 'date' },
   { name: 'status', label: 'Status', type: 'select', options: STATUSES },
   { name: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Additional notes...' }
 ];
@@ -65,7 +65,7 @@ export default function Liabilities() {
   const createMutation = useMutation({
     mutationFn: (data) => entities.Liability.create(data),
     onSuccess: (_, data) => {
-      liabilityLogger.logCreate(data.name, `${data.outstanding_balance} ${data.currency || 'USD'}`);
+      liabilityLogger.logCreate(data.name, `${data.outstandingBalance} ${data.currency || 'USD'}`);
       queryClient.invalidateQueries({ queryKey: ['liabilities'] });
       setDialogOpen(false);
       setFormData({});
@@ -122,8 +122,8 @@ export default function Liabilities() {
       render: (val, row) => (
         <div>
           <span className="font-semibold text-slate-900">{val}</span>
-          {row.liability_type && (
-            <p className="text-sm text-slate-500">{row.liability_type}</p>
+          {row.liabilityType && (
+            <p className="text-sm text-slate-500">{row.liabilityType}</p>
           )}
         </div>
       )
@@ -136,7 +136,7 @@ export default function Liabilities() {
       ) : '-'
     },
     {
-      key: 'outstanding_balance',
+      key: 'outstandingBalance',
       label: 'Outstanding',
       align: 'right',
       render: (val, row) => {
@@ -145,18 +145,18 @@ export default function Liabilities() {
       }
     },
     { 
-      key: 'interest_rate', 
+      key: 'interestRate', 
       label: 'Rate',
       align: 'right',
       render: (val, row) => val ? (
         <div>
           <span className="font-medium">{val}%</span>
-          {row.rate_type && <p className="text-xs text-slate-500">{row.rate_type}</p>}
+          {row.rateType && <p className="text-xs text-slate-500">{row.rateType}</p>}
         </div>
       ) : '-'
     },
     { 
-      key: 'maturity_date', 
+      key: 'maturityDate', 
       label: 'Maturity',
       render: (val) => val ? format(new Date(val), 'MMM d, yyyy') : '-'
     },
@@ -178,7 +178,7 @@ export default function Liabilities() {
 
   const activeLiabilities = liabilities.filter(l => l.status !== 'Paid Off');
   const totalOutstandingUSD = activeLiabilities.reduce((sum, l) => {
-    return sum + convertToUSD(Number(l.outstanding_balance) || 0, l.currency);
+    return sum + convertToUSD(Number(l.outstandingBalance) || 0, l.currency);
   }, 0);
 
   return (
