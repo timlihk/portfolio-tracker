@@ -54,6 +54,13 @@ if (process.env.NODE_ENV === 'production') {
   baseLogger.add(new winston.transports.Console({
     format: combine(timestamp(), jsonFormat)
   }));
+  baseLogger.add(new winston.transports.File({
+    filename: 'logs/app.log',
+    maxsize: 5 * 1024 * 1024,
+    maxFiles: 3,
+    tailable: true,
+    format: combine(timestamp(), jsonFormat)
+  }));
 } else {
   // Colorized, readable format for development
   baseLogger.add(new winston.transports.Console({

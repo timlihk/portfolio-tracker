@@ -27,7 +27,6 @@ async function apiCall(endpoint, options = {}) {
   const headers = {
     'Content-Type': 'application/json',
     ...options.headers,
-    credentials: 'include',
   };
 
   if (token) {
@@ -38,6 +37,7 @@ async function apiCall(endpoint, options = {}) {
   const config = {
     headers,
     ...options,
+    credentials: 'include',
   };
 
   if (config.body && typeof config.body === 'object') {
@@ -53,13 +53,18 @@ async function apiCall(endpoint, options = {}) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('❌ API Error:', errorData);
       throw new Error(errorData.error || errorData.message || `HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
+    // Retry once on network/timeout errors
+    if (options.__retry) throw error;
+    const retryable = error?.name === 'AbortError' || (error?.message && /Network|fetch/i.test(error.message));
+    if (retryable) {
+      return apiCall(endpoint, { ...options, __retry: true });
+    }
     throw error;
   }
 }

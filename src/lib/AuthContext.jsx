@@ -30,9 +30,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = (shouldRedirect = true) => {
+  const logout = async (shouldRedirect = true) => {
     setUser(null);
     setIsAuthenticated(false);
+    try {
+      await backend.auth.clearSharedSecret();
+    } catch (err) {
+      // ignore errors on logout
+    }
     // Clear any stored tokens from both localStorage and sessionStorage
     localStorage.removeItem('token');
     sessionStorage.removeItem('base44_access_token');

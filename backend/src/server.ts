@@ -80,8 +80,17 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // CORS configuration
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 
@@ -134,6 +143,17 @@ app.get('/api/healthz', (req: Request, res: Response) => {
     environment: process.env.NODE_ENV || 'development',
     database: dbInitialized ? 'connected' : 'initializing'
   });
+});
+
+// Readiness probe that checks DB connectivity
+app.get('/api/ready', async (_req: Request, res: Response) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return res.json({ status: 'READY', timestamp: new Date().toISOString() });
+  } catch (error) {
+    logger.error('Readiness probe failed', { error: (error as Error).message });
+    return res.status(503).json({ status: 'UNAVAILABLE' });
+  }
 });
 
 // Readiness check - only returns OK when DB is ready
