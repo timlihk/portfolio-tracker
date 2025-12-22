@@ -174,7 +174,7 @@ class CurrencyService {
     // Check circuit breaker
     if (this.isCircuitOpen()) {
       logger.warn(`Currency API circuit breaker open, using fallback rates`);
-      return this.fallbackRates;
+      return this.buildFallbackRates(upperCurrency);
     }
 
     try {

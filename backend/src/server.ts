@@ -26,8 +26,13 @@ process.on('uncaughtException', (error: Error) => {
 });
 
 // Validate required environment variables
-const requiredEnvVars = ['DATABASE_URL', 'JWT_SECRET'] as const;
-const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+const requiredEnvVars = ['DATABASE_URL'] as const;
+const missingEnvVars: string[] = requiredEnvVars.filter(varName => !process.env[varName]);
+
+const jwtRequired = !(process.env.SHARED_SECRET || process.env.SECRET_PHRASE);
+if (jwtRequired && !process.env.JWT_SECRET) {
+  missingEnvVars.push('JWT_SECRET');
+}
 
 if (missingEnvVars.length > 0) {
   logger.error('Missing required environment variables:', { missing: missingEnvVars });
