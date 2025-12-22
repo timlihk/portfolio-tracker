@@ -8,6 +8,17 @@ import { serializeDecimals } from '../../types/index.js';
 
 const router = express.Router();
 
+const serializeStockWithAliases = (stock: any) => {
+  const s = serializeDecimals(stock);
+  return {
+    ...s,
+    company_name: s.companyName,
+    average_cost: s.averageCost,
+    current_price: s.currentPrice,
+    purchase_date: s.purchaseDate
+  };
+};
+
 // GET /stocks - List all stocks
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
@@ -17,7 +28,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
     });
 
     // Convert Prisma Decimal fields to numbers for JSON response
-    const serializedStocks = stocks.map(stock => serializeDecimals(stock));
+    const serializedStocks = stocks.map(stock => serializeStockWithAliases(stock));
     res.json(serializedStocks);
   } catch (error) {
     logger.error('Error fetching stocks:', { error: (error as Error).message, userId: req.userId });
@@ -76,7 +87,7 @@ router.post('/', requireAuth, [
       }
     });
 
-    const serializedStock = serializeDecimals(stock);
+    const serializedStock = serializeStockWithAliases(stock);
     res.status(201).json(serializedStock);
   } catch (error) {
     logger.error('Error creating stock:', { error: (error as Error).message, userId: req.userId });
@@ -149,7 +160,7 @@ router.put('/:id', requireAuth, [
       }
     });
 
-    const serializedStock = serializeDecimals(stock);
+    const serializedStock = serializeStockWithAliases(stock);
     res.json(serializedStock);
   } catch (error) {
     logger.error('Error updating stock:', { error: (error as Error).message, userId: req.userId, stockId: req.params.id });

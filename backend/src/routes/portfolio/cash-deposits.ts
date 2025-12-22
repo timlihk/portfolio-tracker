@@ -5,6 +5,15 @@ import logger from '../../services/logger.js';
 import { AuthRequest, serializeDecimals, CashDeposit, CreateCashDepositRequest, UpdateCashDepositRequest } from '../../types/index.js';
 
 const router = Router();
+const serializeCashDepositWithAliases = (deposit: any) => {
+  const s = serializeDecimals(deposit);
+  return {
+    ...s,
+    deposit_type: s.depositType,
+    interest_rate: s.interestRate,
+    maturity_date: s.maturityDate
+  };
+};
 
 const toNumberOrNull = (val: unknown): number | null => {
   if (val === null || val === undefined || val === '') return null;
@@ -29,7 +38,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
       where: { userId: req.userId }
     });
 
-    const serializedDeposits = cashDeposits.map(deposit => serializeDecimals(deposit));
+    const serializedDeposits = cashDeposits.map(deposit => serializeCashDepositWithAliases(deposit));
     res.json(serializedDeposits);
   } catch (error) {
     const err = error as Error;
@@ -82,7 +91,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
     }
   });
 
-    res.status(201).json(serializeDecimals(cashDeposit));
+    res.status(201).json(serializeCashDepositWithAliases(cashDeposit));
   } catch (error) {
     const err = error as Error;
     logger.error('Error creating cash deposit:', { error: err.message, userId: req.userId });
@@ -152,7 +161,7 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Cash Deposit not found' });
     }
 
-    res.json(serializeDecimals(updatedDeposit));
+    res.json(serializeCashDepositWithAliases(updatedDeposit));
   } catch (error) {
     const { id } = req.params;
     const err = error as Error;

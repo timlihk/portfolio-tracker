@@ -6,6 +6,19 @@ import { AuthRequest, serializeDecimals, Liability, CreateLiabilityRequest, Upda
 
 const router = Router();
 
+const serializeLiabilityWithAliases = (liability: any) => {
+  const s = serializeDecimals(liability);
+  return {
+    ...s,
+    liability_type: s.liabilityType,
+    outstanding_balance: s.outstandingBalance,
+    interest_rate: s.interestRate,
+    rate_type: s.rateType,
+    start_date: s.startDate,
+    maturity_date: s.maturityDate
+  };
+};
+
 const toNumberOrNull = (val: unknown): number | null => {
   if (val === null || val === undefined || val === '') return null;
   const num = Number(val);
@@ -29,7 +42,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
       where: { userId: req.userId }
     });
 
-    const serializedLiabilities = liabilities.map(liability => serializeDecimals(liability));
+    const serializedLiabilities = liabilities.map(liability => serializeLiabilityWithAliases(liability));
     res.json(serializedLiabilities);
   } catch (error) {
     const err = error as Error;
@@ -174,7 +187,7 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Liability not found' });
     }
 
-    res.json(serializeDecimals(updatedLiability));
+    res.json(serializeLiabilityWithAliases(updatedLiability));
   } catch (error) {
     const { id } = req.params;
     const err = error as Error;

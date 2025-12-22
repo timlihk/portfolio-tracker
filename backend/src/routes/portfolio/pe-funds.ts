@@ -7,6 +7,18 @@ import { serializeDecimals } from '../../types/index.js';
 
 const router = express.Router();
 
+const serializePeFundWithAliases = (fund: any) => {
+  const s = serializeDecimals(fund);
+  return {
+    ...s,
+    fund_name: s.fundName,
+    fund_type: s.fundType,
+    vintage_year: s.vintageYear,
+    called_capital: s.calledCapital,
+    commitment_date: s.commitmentDate
+  };
+};
+
 // GET /pe-funds - List all PE funds
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
@@ -15,8 +27,8 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    // Convert Prisma Decimal fields to numbers for JSON response
-    const serializedPeFunds = peFunds.map(fund => serializeDecimals(fund));
+    // Convert Prisma Decimal fields to numbers for JSON response and add legacy snake_case keys
+    const serializedPeFunds = peFunds.map(fund => serializePeFundWithAliases(fund));
     res.json(serializedPeFunds);
   } catch (error) {
     logger.error('Error fetching PE funds:', { error: (error as Error).message, userId: req.userId });
@@ -70,7 +82,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
       }
     });
 
-    const serializedPeFund = serializeDecimals(peFund);
+    const serializedPeFund = serializePeFundWithAliases(peFund);
     res.status(201).json(serializedPeFund);
   } catch (error) {
     logger.error('Error creating PE fund:', { error: (error as Error).message, userId: req.userId });
@@ -137,7 +149,7 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
       }
     });
 
-    const serializedPeFund = serializeDecimals(peFund);
+    const serializedPeFund = serializePeFundWithAliases(peFund);
     res.json(serializedPeFund);
   } catch (error) {
     logger.error('Error updating PE fund:', { error: (error as Error).message, userId: req.userId, peFundId: req.params.id });

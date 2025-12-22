@@ -7,6 +7,19 @@ import { serializeDecimals } from '../../types/index.js';
 
 const router = express.Router();
 
+const serializePeDealWithAliases = (deal: any) => {
+  const s = serializeDecimals(deal);
+  return {
+    ...s,
+    company_name: s.companyName,
+    deal_type: s.dealType,
+    investment_amount: s.investmentAmount,
+    current_value: s.currentValue,
+    ownership_percentage: s.ownershipPercentage,
+    investment_date: s.investmentDate
+  };
+};
+
 // GET /pe-deals - List all PE deals
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
@@ -15,8 +28,8 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    // Convert Prisma Decimal fields to numbers for JSON response
-    const serializedPeDeals = peDeals.map(deal => serializeDecimals(deal));
+    // Convert Prisma Decimal fields to numbers for JSON response and add legacy snake_case keys
+    const serializedPeDeals = peDeals.map(deal => serializePeDealWithAliases(deal));
     res.json(serializedPeDeals);
   } catch (error) {
     logger.error('Error fetching PE deals:', { error: (error as Error).message, userId: req.userId });
@@ -67,7 +80,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
       }
     });
 
-    const serializedPeDeal = serializeDecimals(peDeal);
+    const serializedPeDeal = serializePeDealWithAliases(peDeal);
     res.status(201).json(serializedPeDeal);
   } catch (error) {
     logger.error('Error creating PE deal:', { error: (error as Error).message, userId: req.userId });
@@ -131,7 +144,7 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
       }
     });
 
-    const serializedPeDeal = serializeDecimals(peDeal);
+    const serializedPeDeal = serializePeDealWithAliases(peDeal);
     res.json(serializedPeDeal);
   } catch (error) {
     logger.error('Error updating PE deal:', { error: (error as Error).message, userId: req.userId, peDealId: req.params.id });

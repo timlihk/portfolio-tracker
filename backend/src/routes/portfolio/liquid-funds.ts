@@ -7,6 +7,23 @@ import { serializeDecimals } from '../../types/index.js';
 
 const router = express.Router();
 
+const serializeLiquidFundWithAliases = (fund: any) => {
+  const s = serializeDecimals(fund);
+  return {
+    ...s,
+    fund_name: s.fundName,
+    fund_type: s.fundType,
+    investment_amount: s.investmentAmount,
+    current_value: s.currentValue,
+    ytd_return: s.ytdReturn,
+    management_fee: s.managementFee,
+    performance_fee: s.performanceFee,
+    redemption_frequency: s.redemptionFrequency,
+    lockup_end_date: s.lockupEndDate,
+    investment_date: s.investmentDate
+  };
+};
+
 // GET /liquid-funds - List all liquid funds
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
@@ -15,8 +32,8 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    // Convert Prisma Decimal fields to numbers for JSON response
-    const serializedLiquidFunds = liquidFunds.map(fund => serializeDecimals(fund));
+    // Convert Prisma Decimal fields to numbers for JSON response and add legacy snake_case keys
+    const serializedLiquidFunds = liquidFunds.map(fund => serializeLiquidFundWithAliases(fund));
     res.json(serializedLiquidFunds);
   } catch (error) {
     logger.error('Error fetching liquid funds:', { error: (error as Error).message, userId: req.userId });
@@ -79,7 +96,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
       }
     });
 
-    const serializedLiquidFund = serializeDecimals(liquidFund);
+    const serializedLiquidFund = serializeLiquidFundWithAliases(liquidFund);
     res.status(201).json(serializedLiquidFund);
   } catch (error) {
     logger.error('Error creating liquid fund:', { error: (error as Error).message, userId: req.userId });
@@ -155,7 +172,7 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
       }
     });
 
-    const serializedLiquidFund = serializeDecimals(liquidFund);
+    const serializedLiquidFund = serializeLiquidFundWithAliases(liquidFund);
     res.json(serializedLiquidFund);
   } catch (error) {
     logger.error('Error updating liquid fund:', { error: (error as Error).message, userId: req.userId, liquidFundId: req.params.id });

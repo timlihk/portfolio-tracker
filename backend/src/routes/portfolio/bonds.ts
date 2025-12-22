@@ -8,6 +8,20 @@ import { serializeDecimals } from '../../types/index.js';
 
 const router = express.Router();
 
+const serializeBondWithAliases = (bond: any) => {
+  const s = serializeDecimals(bond);
+  return {
+    ...s,
+    bond_type: s.bondType,
+    face_value: s.faceValue,
+    coupon_rate: s.couponRate,
+    maturity_date: s.maturityDate,
+    purchase_price: s.purchasePrice,
+    current_value: s.currentValue,
+    purchase_date: s.purchaseDate
+  };
+};
+
 // GET /bonds - List all bonds
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
@@ -17,7 +31,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
     });
 
     // Convert Prisma Decimal fields to numbers for JSON response
-    const serializedBonds = bonds.map(bond => serializeDecimals(bond));
+    const serializedBonds = bonds.map(bond => serializeBondWithAliases(bond));
     res.json(serializedBonds);
   } catch (error) {
     logger.error('Error fetching bonds:', { error: (error as Error).message, userId: req.userId });
@@ -91,7 +105,7 @@ router.post('/', requireAuth, [
       }
     });
 
-    const serializedBond = serializeDecimals(bond);
+    const serializedBond = serializeBondWithAliases(bond);
     res.status(201).json(serializedBond);
   } catch (error) {
     logger.error('Error creating bond:', { error: (error as Error).message, userId: req.userId });
@@ -179,7 +193,7 @@ router.put('/:id', requireAuth, [
       }
     });
 
-    const serializedBond = serializeDecimals(bond);
+    const serializedBond = serializeBondWithAliases(bond);
     res.json(serializedBond);
   } catch (error) {
     logger.error('Error updating bond:', { error: (error as Error).message, userId: req.userId, bondId: req.params.id });
