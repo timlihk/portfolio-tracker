@@ -7,18 +7,6 @@ import { serializeDecimals } from '../../types/index.js';
 
 const router = express.Router();
 
-const serializePeFundWithAliases = (fund: any) => {
-  const s = serializeDecimals(fund);
-  return {
-    ...s,
-    fund_name: s.fundName,
-    fund_type: s.fundType,
-    vintage_year: s.vintageYear,
-    called_capital: s.calledCapital,
-    commitment_date: s.commitmentDate
-  };
-};
-
 // GET /pe-funds - List all PE funds
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
@@ -28,7 +16,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
     });
 
     // Convert Prisma Decimal fields to numbers for JSON response and add legacy snake_case keys
-    const serializedPeFunds = peFunds.map(fund => serializePeFundWithAliases(fund));
+    const serializedPeFunds = peFunds.map(fund => serializeDecimals(fund));
     res.json(serializedPeFunds);
   } catch (error) {
     logger.error('Error fetching PE funds:', { error: (error as Error).message, userId: req.userId });
@@ -40,15 +28,15 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
 router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const body = req.body as any;
-    const fundName = body.fundName ?? body.fund_name;
+    const fundName = body.fundName;
     const manager = body.manager;
-    const fundType = body.fundType ?? body.fund_type;
-    const vintageYear = body.vintageYear ?? body.vintage_year;
+    const fundType = body.fundType;
+    const vintageYear = body.vintageYear;
     const commitment = body.commitment;
-    const calledCapital = body.calledCapital ?? body.called_capital;
+    const calledCapital = body.calledCapital;
     const nav = body.nav;
     const distributions = body.distributions;
-    const commitmentDate = body.commitmentDate ?? body.commitment_date;
+    const commitmentDate = body.commitmentDate;
     const status = body.status;
     const notes = body.notes;
 
@@ -69,7 +57,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
       }
     });
 
-    const serializedPeFund = serializePeFundWithAliases(peFund);
+    const serializedPeFund = serializeDecimals(peFund);
     res.status(201).json(serializedPeFund);
   } catch (error) {
     logger.error('Error creating PE fund:', { error: (error as Error).message, userId: req.userId });
@@ -82,15 +70,15 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const body = req.body as any;
-    const fundName = body.fundName ?? body.fund_name;
+    const fundName = body.fundName;
     const manager = body.manager;
-    const fundType = body.fundType ?? body.fund_type;
-    const vintageYear = body.vintageYear ?? body.vintage_year;
+    const fundType = body.fundType;
+    const vintageYear = body.vintageYear;
     const commitment = body.commitment;
-    const calledCapital = body.calledCapital ?? body.called_capital;
+    const calledCapital = body.calledCapital;
     const nav = body.nav;
     const distributions = body.distributions;
-    const commitmentDate = body.commitmentDate ?? body.commitment_date;
+    const commitmentDate = body.commitmentDate;
     const status = body.status;
     const notes = body.notes;
 
@@ -123,7 +111,7 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
       }
     });
 
-    const serializedPeFund = serializePeFundWithAliases(peFund);
+    const serializedPeFund = serializeDecimals(peFund);
     res.json(serializedPeFund);
   } catch (error) {
     logger.error('Error updating PE fund:', { error: (error as Error).message, userId: req.userId, peFundId: req.params.id });

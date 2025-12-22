@@ -42,18 +42,11 @@ const ASSET_COLORS = {
 export default function Changelog() {
   const { data: logs = [], isLoading } = useQuery({
     queryKey: ['changelog'],
-    queryFn: () => base44.entities.Changelog.list('-created_date', 100)
+    queryFn: () => base44.entities.Changelog.list('-createdDate', 100)
   });
 
-  const normalizedLogs = logs.map((log) => ({
-    ...log,
-    createdDate: log.createdDate ?? log.created_date,
-    assetType: log.assetType ?? log.asset_type,
-    assetName: log.assetName ?? log.asset_name
-  }));
-
   // Group logs by date
-  const groupedLogs = normalizedLogs.reduce((groups, log) => {
+  const groupedLogs = logs.reduce((groups, log) => {
     const date = format(new Date(log.createdDate), 'yyyy-MM-dd');
     if (!groups[date]) groups[date] = [];
     groups[date].push(log);
@@ -70,7 +63,7 @@ export default function Changelog() {
 
         {isLoading ? (
           <div className="text-center py-12 text-slate-400">Loading...</div>
-        ) : normalizedLogs.length === 0 ? (
+        ) : logs.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">
             <History className="w-12 h-12 text-slate-300 mx-auto mb-4" />
             <p className="text-slate-500">No changes recorded yet</p>

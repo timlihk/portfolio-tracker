@@ -93,14 +93,14 @@ Provide:
 6. 2-3 opportunities based on current market trends
 
 Be specific and actionable. Consider asset allocation, sector exposure, geographic diversification, and current market conditions.`,
-        add_context_from_internet: true,
+        addContextFromInternet: true,
         response_json_schema: {
           type: "object",
           properties: {
-            health_score: { type: "number", description: "Overall portfolio health score 0-100" },
-            diversification_score: { type: "number", description: "Diversification score 0-100" },
-            risk_score: { type: "number", description: "Risk management score 0-100 (higher is safer)" },
-            performance_score: { type: "number", description: "Performance score 0-100" },
+            healthScore: { type: "number", description: "Overall portfolio health score 0-100" },
+            diversificationScore: { type: "number", description: "Diversification score 0-100" },
+            riskScore: { type: "number", description: "Risk management score 0-100 (higher is safer)" },
+            performanceScore: { type: "number", description: "Performance score 0-100" },
             insights: { 
               type: "array", 
               items: { 
@@ -204,7 +204,7 @@ Be specific and actionable. Consider asset allocation, sector exposure, geograph
     );
   }
 
-  const overallCategory = getScoreCategory(analysis.health_score);
+  const overallCategory = getScoreCategory(analysis.healthScore);
   const overallColors = SCORE_COLORS[overallCategory];
 
   return (
@@ -239,13 +239,13 @@ Be specific and actionable. Consider asset allocation, sector exposure, geograph
                   stroke="currentColor"
                   strokeWidth="8"
                   fill="none"
-                  strokeDasharray={`${analysis.health_score * 3.02} 302`}
+                  strokeDasharray={`${analysis.healthScore * 3.02} 302`}
                   className={overallColors.text}
                   strokeLinecap="round"
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-bold text-slate-900">{analysis.health_score}</span>
+                <span className="text-3xl font-bold text-slate-900">{analysis.healthScore}</span>
                 <span className="text-xs text-slate-500">/ 100</span>
               </div>
             </div>
@@ -255,9 +255,9 @@ Be specific and actionable. Consider asset allocation, sector exposure, geograph
           </div>
 
           <div className="flex-1 grid grid-cols-3 gap-4">
-            <HealthScore score={analysis.diversification_score} label="Diversification" />
-            <HealthScore score={analysis.risk_score} label="Risk Mgmt" />
-            <HealthScore score={analysis.performance_score} label="Performance" />
+            <HealthScore score={analysis.diversificationScore} label="Diversification" />
+            <HealthScore score={analysis.riskScore} label="Risk Mgmt" />
+            <HealthScore score={analysis.performanceScore} label="Performance" />
           </div>
         </div>
 

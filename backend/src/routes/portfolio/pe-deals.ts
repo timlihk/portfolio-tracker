@@ -7,19 +7,6 @@ import { serializeDecimals } from '../../types/index.js';
 
 const router = express.Router();
 
-const serializePeDealWithAliases = (deal: any) => {
-  const s = serializeDecimals(deal);
-  return {
-    ...s,
-    company_name: s.companyName,
-    deal_type: s.dealType,
-    investment_amount: s.investmentAmount,
-    current_value: s.currentValue,
-    ownership_percentage: s.ownershipPercentage,
-    investment_date: s.investmentDate
-  };
-};
-
 // GET /pe-deals - List all PE deals
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
@@ -29,7 +16,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
     });
 
     // Convert Prisma Decimal fields to numbers for JSON response and add legacy snake_case keys
-    const serializedPeDeals = peDeals.map(deal => serializePeDealWithAliases(deal));
+    const serializedPeDeals = peDeals.map(deal => serializeDecimals(deal));
     res.json(serializedPeDeals);
   } catch (error) {
     logger.error('Error fetching PE deals:', { error: (error as Error).message, userId: req.userId });
@@ -41,15 +28,15 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
 router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const body = req.body as any;
-    const companyName = body.companyName ?? body.company_name;
+    const companyName = body.companyName;
     const sector = body.sector;
-    const dealType = body.dealType ?? body.deal_type;
-    const investmentAmount = body.investmentAmount ?? body.investment_amount;
-    const currentValue = body.currentValue ?? body.current_value;
-    const ownershipPercentage = body.ownershipPercentage ?? body.ownership_percentage;
+    const dealType = body.dealType;
+    const investmentAmount = body.investmentAmount;
+    const currentValue = body.currentValue;
+    const ownershipPercentage = body.ownershipPercentage;
     const sponsor = body.sponsor;
     const status = body.status;
-    const investmentDate = body.investmentDate ?? body.investment_date;
+    const investmentDate = body.investmentDate;
     const notes = body.notes;
 
     const peDeal = await prisma.peDeal.create({
@@ -68,7 +55,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
       }
     });
 
-    const serializedPeDeal = serializePeDealWithAliases(peDeal);
+    const serializedPeDeal = serializeDecimals(peDeal);
     res.status(201).json(serializedPeDeal);
   } catch (error) {
     logger.error('Error creating PE deal:', { error: (error as Error).message, userId: req.userId });
@@ -81,15 +68,15 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const body = req.body as any;
-    const companyName = body.companyName ?? body.company_name;
+    const companyName = body.companyName;
     const sector = body.sector;
-    const dealType = body.dealType ?? body.deal_type;
-    const investmentAmount = body.investmentAmount ?? body.investment_amount;
-    const currentValue = body.currentValue ?? body.current_value;
-    const ownershipPercentage = body.ownershipPercentage ?? body.ownership_percentage;
+    const dealType = body.dealType;
+    const investmentAmount = body.investmentAmount;
+    const currentValue = body.currentValue;
+    const ownershipPercentage = body.ownershipPercentage;
     const sponsor = body.sponsor;
     const status = body.status;
-    const investmentDate = body.investmentDate ?? body.investment_date;
+    const investmentDate = body.investmentDate;
     const notes = body.notes;
 
     // Check if PE deal exists and belongs to user
@@ -120,7 +107,7 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
       }
     });
 
-    const serializedPeDeal = serializePeDealWithAliases(peDeal);
+    const serializedPeDeal = serializeDecimals(peDeal);
     res.json(serializedPeDeal);
   } catch (error) {
     logger.error('Error updating PE deal:', { error: (error as Error).message, userId: req.userId, peDealId: req.params.id });

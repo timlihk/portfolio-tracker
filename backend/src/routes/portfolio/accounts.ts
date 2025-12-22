@@ -9,8 +9,8 @@ const router = express.Router();
 const normalizeAccountBody = (body: any) => ({
   name: body.name,
   institution: body.institution,
-  accountType: body.accountType ?? body.account_type,
-  accountNumber: body.accountNumber ?? body.account_number
+  accountType: body.accountType,
+  accountNumber: body.accountNumber
 });
 
 // GET /accounts - List all accounts
@@ -32,8 +32,8 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
 router.post('/', requireAuth, [
   body('name').notEmpty().trim().isLength({ max: 255 }),
   body('institution').optional().isLength({ max: 255 }),
-  body('account_type').optional().isLength({ max: 100 }),
-  body('account_number').optional().isLength({ max: 20 }),
+  body('accountType').optional().isLength({ max: 100 }),
+  body('accountNumber').optional().isLength({ max: 20 }),
 ], async (req: AuthRequest, res: Response) => {
   try {
     // Check for validation errors
@@ -66,8 +66,8 @@ router.put('/:id', requireAuth, [
   param('id').isInt({ gt: 0 }),
   body('name').optional().notEmpty().trim().isLength({ max: 255 }),
   body('institution').optional().isLength({ max: 255 }),
-  body('account_type').optional().isLength({ max: 100 }),
-  body('account_number').optional().isLength({ max: 20 }),
+  body('accountType').optional().isLength({ max: 100 }),
+  body('accountNumber').optional().isLength({ max: 20 }),
 ], async (req: AuthRequest, res: Response) => {
   try {
     // Check for validation errors

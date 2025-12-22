@@ -29,10 +29,10 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
 router.post('/', requireAuth, [
   body('ticker').notEmpty().trim().isLength({ max: 20 }),
   body('shares').isFloat({ gt: 0 }),
-  body('average_cost').isFloat({ gt: 0 }),
+  body('averageCost').isFloat({ gt: 0 }),
   body('currency').optional().isLength({ max: 10 }),
   body('account').optional().isLength({ max: 255 }),
-  body('purchase_date').optional().isISO8601(),
+  body('purchaseDate').optional().isISO8601(),
   body('notes').optional().isLength({ max: 1000 }),
 ], async (req: AuthRequest, res: Response) => {
   try {
@@ -44,14 +44,14 @@ router.post('/', requireAuth, [
 
     const body = req.body as any;
     const ticker = body.ticker;
-    const companyName = body.companyName ?? body.company_name;
+    const companyName = body.companyName;
     const sector = body.sector;
     const shares = body.shares;
-    const averageCost = body.averageCost ?? body.average_cost;
-    const currentPrice = body.currentPrice ?? body.current_price;
+    const averageCost = body.averageCost;
+    const currentPrice = body.currentPrice;
     const currency = body.currency;
     const account = body.account;
-    const purchaseDate = body.purchaseDate ?? body.purchase_date;
+    const purchaseDate = body.purchaseDate;
     const notes = body.notes;
 
     const stock = await prisma.stock.create({
@@ -83,10 +83,10 @@ router.put('/:id', requireAuth, [
   param('id').isInt({ gt: 0 }),
   body('ticker').optional().notEmpty().trim().isLength({ max: 20 }),
   body('shares').optional().isFloat({ gt: 0 }),
-  body('average_cost').optional().isFloat({ gt: 0 }),
+  body('averageCost').optional().isFloat({ gt: 0 }),
   body('currency').optional().isLength({ max: 10 }),
   body('account').optional().isLength({ max: 255 }),
-  body('purchase_date').optional().isISO8601(),
+  body('purchaseDate').optional().isISO8601(),
   body('notes').optional().isLength({ max: 1000 }),
 ], async (req: AuthRequest, res: Response) => {
   try {
@@ -99,14 +99,14 @@ router.put('/:id', requireAuth, [
     const { id } = req.params;
     const body = req.body as any;
     const ticker = body.ticker;
-    const companyName = body.companyName ?? body.company_name;
+    const companyName = body.companyName;
     const sector = body.sector;
     const shares = body.shares;
-    const averageCost = body.averageCost ?? body.average_cost;
-    const currentPrice = body.currentPrice ?? body.current_price;
+    const averageCost = body.averageCost;
+    const currentPrice = body.currentPrice;
     const currency = body.currency;
     const account = body.account;
-    const purchaseDate = body.purchaseDate ?? body.purchase_date;
+    const purchaseDate = body.purchaseDate;
     const notes = body.notes;
 
     // Check if stock exists and belongs to user

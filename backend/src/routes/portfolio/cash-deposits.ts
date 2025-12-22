@@ -52,11 +52,11 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const body = req.body as any;
     const name = body.name;
-    const depositType = body.depositType ?? body.deposit_type;
+    const depositType = body.depositType;
     const amount = body.amount;
     const currency = body.currency;
-    const interestRate = body.interestRate ?? body.interest_rate;
-    const maturityDate = body.maturityDate ?? body.maturity_date;
+    const interestRate = body.interestRate;
+    const maturityDate = body.maturityDate;
     const account = body.account;
     const notes = body.notes;
 
@@ -100,11 +100,11 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const body = req.body as any;
     const name = body.name;
-    const depositType = body.depositType ?? body.deposit_type;
+    const depositType = body.depositType;
     const amount = body.amount;
     const currency = body.currency;
-    const interestRate = body.interestRate ?? body.interest_rate;
-    const maturityDate = body.maturityDate ?? body.maturity_date;
+    const interestRate = body.interestRate;
+    const maturityDate = body.maturityDate;
     const account = body.account;
     const notes = body.notes;
 

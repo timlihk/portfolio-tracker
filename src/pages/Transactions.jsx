@@ -96,10 +96,10 @@ export default function Transactions() {
 
   const normalizeTransaction = (t) => ({
     ...t,
-    assetType: t.assetType ?? t.asset_type,
-    assetName: t.assetName ?? t.asset_name,
-    transactionType: t.transactionType ?? t.transaction_type,
-    totalAmount: t.totalAmount ?? t.total_amount,
+    assetType: t.assetType,
+    assetName: t.assetName,
+    transactionType: t.transactionType,
+    totalAmount: t.totalAmount,
   });
 
   const normalizedTransactions = useMemo(

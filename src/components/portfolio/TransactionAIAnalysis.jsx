@@ -20,7 +20,7 @@ export default function TransactionAIAnalysis({ transactions }) {
         date: t.date,
         type: t.transactionType,
         asset: t.assetName,
-        asset_type: t.assetType,
+        assetType: t.assetType,
         amount: t.totalAmount,
         fees: t.fees || 0
       }));
@@ -37,8 +37,8 @@ Provide:
 4. Investment behavior insights
 5. Suggestions for optimization`,
         response_json_schema: {
-          type: "object",
-          properties: {
+            type: "object",
+            properties: {
             summary: { type: "string", description: "Brief overview of transaction activity" },
             patterns: {
               type: "array",
@@ -51,7 +51,7 @@ Provide:
                 }
               }
             },
-            significant_events: {
+            significantEvents: {
               type: "array",
               items: {
                 type: "object",
@@ -62,8 +62,8 @@ Provide:
                 }
               }
             },
-            total_fees: { type: "number" },
-            fee_insights: { type: "string" },
+            totalFees: { type: "number" },
+            feeInsights: { type: "string" },
             suggestions: {
               type: "array",
               items: { type: "string" }
@@ -182,11 +182,11 @@ Provide:
       )}
 
       {/* Significant Events */}
-      {analysis.significant_events && analysis.significant_events.length > 0 && (
+      {analysis.significantEvents && analysis.significantEvents.length > 0 && (
         <div className="mb-6">
           <h4 className="text-sm font-semibold text-slate-600 uppercase tracking-wide mb-3">Significant Events</h4>
           <div className="space-y-2">
-            {analysis.significant_events.map((event, idx) => (
+            {analysis.significantEvents.map((event, idx) => (
               <div key={idx} className="flex items-start gap-3 bg-amber-50 border border-amber-100 rounded-xl p-3">
                 <Calendar className="w-4 h-4 text-amber-600 mt-0.5" />
                 <div>
@@ -203,17 +203,17 @@ Provide:
       )}
 
       {/* Fee Insights */}
-      {analysis.fee_insights && (
+      {analysis.feeInsights && (
         <div className="mb-6">
           <h4 className="text-sm font-semibold text-slate-600 uppercase tracking-wide mb-3">Fee Analysis</h4>
           <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
             <div className="flex items-center gap-2 mb-2">
               <DollarSign className="w-4 h-4 text-blue-600" />
               <span className="font-medium text-slate-800">
-                Total Fees: ${(analysis.total_fees || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                Total Fees: ${(analysis.totalFees || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </span>
             </div>
-            <p className="text-sm text-slate-600">{analysis.fee_insights}</p>
+            <p className="text-sm text-slate-600">{analysis.feeInsights}</p>
           </div>
         </div>
       )}

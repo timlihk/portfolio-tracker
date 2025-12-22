@@ -29,16 +29,16 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
 router.post('/', requireAuth, [
   body('name').notEmpty().trim().isLength({ max: 255 }),
   body('isin').optional().isLength({ max: 12 }),
-  body('bond_type').optional().isLength({ max: 100 }),
-  body('face_value').optional().isFloat({ gt: 0 }),
-  body('coupon_rate').optional().isFloat({ min: 0 }),
-  body('maturity_date').optional().isISO8601(),
+  body('bondType').optional().isLength({ max: 100 }),
+  body('faceValue').optional().isFloat({ gt: 0 }),
+  body('couponRate').optional().isFloat({ min: 0 }),
+  body('maturityDate').optional().isISO8601(),
   body('rating').optional().isLength({ max: 10 }),
-  body('purchase_price').optional().isFloat({ gt: 0 }),
-  body('current_value').optional().isFloat({ gt: 0 }),
+  body('purchasePrice').optional().isFloat({ gt: 0 }),
+  body('currentValue').optional().isFloat({ gt: 0 }),
   body('currency').optional().isLength({ max: 10 }),
   body('account').optional().isLength({ max: 255 }),
-  body('purchase_date').optional().isISO8601(),
+  body('purchaseDate').optional().isISO8601(),
   body('notes').optional().isLength({ max: 1000 }),
 ], async (req: AuthRequest, res: Response) => {
   try {
@@ -51,16 +51,16 @@ router.post('/', requireAuth, [
     const body = req.body as any;
     const name = body.name;
     const isin = body.isin;
-    const bondType = body.bondType ?? body.bond_type;
-    const faceValue = body.faceValue ?? body.face_value;
-    const couponRate = body.couponRate ?? body.coupon_rate;
-    const maturityDate = body.maturityDate ?? body.maturity_date;
+    const bondType = body.bondType;
+    const faceValue = body.faceValue;
+    const couponRate = body.couponRate;
+    const maturityDate = body.maturityDate;
     const rating = body.rating;
-    const purchasePrice = body.purchasePrice ?? body.purchase_price;
-    const currentValue = body.currentValue ?? body.current_value;
+    const purchasePrice = body.purchasePrice;
+    const currentValue = body.currentValue;
     const currency = body.currency;
     const account = body.account;
-    const purchaseDate = body.purchaseDate ?? body.purchase_date;
+    const purchaseDate = body.purchaseDate;
     const notes = body.notes;
 
     const bond = await prisma.bond.create({
@@ -95,16 +95,16 @@ router.put('/:id', requireAuth, [
   param('id').isInt({ gt: 0 }),
   body('name').optional().notEmpty().trim().isLength({ max: 255 }),
   body('isin').optional().isLength({ max: 12 }),
-  body('bond_type').optional().isLength({ max: 100 }),
-  body('face_value').optional().isFloat({ gt: 0 }),
-  body('coupon_rate').optional().isFloat({ min: 0 }),
-  body('maturity_date').optional().isISO8601(),
+  body('bondType').optional().isLength({ max: 100 }),
+  body('faceValue').optional().isFloat({ gt: 0 }),
+  body('couponRate').optional().isFloat({ min: 0 }),
+  body('maturityDate').optional().isISO8601(),
   body('rating').optional().isLength({ max: 10 }),
-  body('purchase_price').optional().isFloat({ gt: 0 }),
-  body('current_value').optional().isFloat({ gt: 0 }),
+  body('purchasePrice').optional().isFloat({ gt: 0 }),
+  body('currentValue').optional().isFloat({ gt: 0 }),
   body('currency').optional().isLength({ max: 10 }),
   body('account').optional().isLength({ max: 255 }),
-  body('purchase_date').optional().isISO8601(),
+  body('purchaseDate').optional().isISO8601(),
   body('notes').optional().isLength({ max: 1000 }),
 ], async (req: AuthRequest, res: Response) => {
   try {
@@ -118,16 +118,16 @@ router.put('/:id', requireAuth, [
     const body = req.body as any;
     const name = body.name;
     const isin = body.isin;
-    const bondType = body.bondType ?? body.bond_type;
-    const faceValue = body.faceValue ?? body.face_value;
-    const couponRate = body.couponRate ?? body.coupon_rate;
-    const maturityDate = body.maturityDate ?? body.maturity_date;
+    const bondType = body.bondType;
+    const faceValue = body.faceValue;
+    const couponRate = body.couponRate;
+    const maturityDate = body.maturityDate;
     const rating = body.rating;
-    const purchasePrice = body.purchasePrice ?? body.purchase_price;
-    const currentValue = body.currentValue ?? body.current_value;
+    const purchasePrice = body.purchasePrice;
+    const currentValue = body.currentValue;
     const currency = body.currency;
     const account = body.account;
-    const purchaseDate = body.purchaseDate ?? body.purchase_date;
+    const purchaseDate = body.purchaseDate;
     const notes = body.notes;
 
     // Check if bond exists and belongs to user

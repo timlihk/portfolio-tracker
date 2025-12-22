@@ -137,7 +137,7 @@ export default function Accounts() {
       }
     },
     {
-      key: 'market_value',
+      key: 'marketValue',
       label: 'Market Value',
       align: 'right',
       render: (_, row) => {
@@ -148,7 +148,7 @@ export default function Accounts() {
       }
     },
     {
-      key: 'gain_loss',
+      key: 'gainLoss',
       label: 'Gain/Loss',
       align: 'right',
       render: (_, row) => {

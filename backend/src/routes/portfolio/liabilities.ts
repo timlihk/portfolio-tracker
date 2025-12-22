@@ -6,19 +6,6 @@ import { AuthRequest, serializeDecimals, Liability, CreateLiabilityRequest, Upda
 
 const router = Router();
 
-const serializeLiabilityWithAliases = (liability: any) => {
-  const s = serializeDecimals(liability);
-  return {
-    ...s,
-    liabilityType: s.liabilityType,
-    outstandingBalance: s.outstandingBalance,
-    interestRate: s.interestRate,
-    rateType: s.rateType,
-    startDate: s.startDate,
-    maturityDate: s.maturityDate
-  };
-};
-
 const toNumberOrNull = (val: unknown): number | null => {
   if (val === null || val === undefined || val === '') return null;
   const num = Number(val);
@@ -42,7 +29,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
       where: { userId: req.userId }
     });
 
-    const serializedLiabilities = liabilities.map(liability => serializeLiabilityWithAliases(liability));
+    const serializedLiabilities = liabilities.map(liability => serializeDecimals(liability));
     res.json(serializedLiabilities);
   } catch (error) {
     const err = error as Error;
@@ -56,47 +43,40 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const {
       name,
-      liability_type,
+      liabilityType,
       account,
       principal,
-      outstanding_balance,
-      interest_rate,
-      rate_type,
+      outstandingBalance,
+      interestRate,
+      rateType,
       collateral,
-      start_date,
-      maturity_date,
+      startDate,
+      maturityDate,
       currency,
       status,
       notes
-    } = req.body as CreateLiabilityRequest & {
-      liability_type?: string;
-      outstanding_balance?: number;
-      interest_rate?: number;
-      rate_type?: string;
-      start_date?: string;
-      maturity_date?: string;
-    };
+    } = req.body as CreateLiabilityRequest;
 
     if (!req.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
     const principalNum = toNumberOrNull(principal);
-    const outstandingNum = toNumberOrNull(outstanding_balance);
-    const interestNum = toNumberOrNull(interest_rate);
-    const startDateVal = toDateOrNull(start_date);
-    const maturityDateVal = toDateOrNull(maturity_date);
+    const outstandingNum = toNumberOrNull(outstandingBalance);
+    const interestNum = toNumberOrNull(interestRate);
+    const startDateVal = toDateOrNull(startDate);
+    const maturityDateVal = toDateOrNull(maturityDate);
 
     const liability = await prisma.liability.create({
       data: {
         userId: req.userId,
         name,
-        liabilityType: liability_type || null,
+        liabilityType: liabilityType || null,
         account: account || null,
         principal: principalNum,
         outstandingBalance: outstandingNum,
         interestRate: interestNum,
-        rateType: rate_type || null,
+        rateType: rateType || null,
         collateral: collateral || null,
         startDate: startDateVal,
         maturityDate: maturityDateVal,
@@ -120,36 +100,29 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const {
       name,
-      liability_type,
+      liabilityType,
       account,
       principal,
-      outstanding_balance,
-      interest_rate,
-      rate_type,
+      outstandingBalance,
+      interestRate,
+      rateType,
       collateral,
-      start_date,
-      maturity_date,
+      startDate,
+      maturityDate,
       currency,
       status,
       notes
-    } = req.body as UpdateLiabilityRequest & {
-      liability_type?: string;
-      outstanding_balance?: number;
-      interest_rate?: number;
-      rate_type?: string;
-      start_date?: string;
-      maturity_date?: string;
-    };
+    } = req.body as UpdateLiabilityRequest;
 
     if (!req.userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
     const principalNum = toNumberOrNull(principal);
-    const outstandingNum = toNumberOrNull(outstanding_balance);
-    const interestNum = toNumberOrNull(interest_rate);
-    const startDateVal = toDateOrNull(start_date);
-    const maturityDateVal = toDateOrNull(maturity_date);
+    const outstandingNum = toNumberOrNull(outstandingBalance);
+    const interestNum = toNumberOrNull(interestRate);
+    const startDateVal = toDateOrNull(startDate);
+    const maturityDateVal = toDateOrNull(maturityDate);
 
     const liability = await prisma.liability.updateMany({
       where: {
@@ -158,12 +131,12 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
       },
       data: {
         name,
-        liabilityType: liability_type || null,
+        liabilityType: liabilityType || null,
         account: account || null,
         principal: principalNum,
         outstandingBalance: outstandingNum,
         interestRate: interestNum,
-        rateType: rate_type || null,
+        rateType: rateType || null,
         collateral: collateral || null,
         startDate: startDateVal,
         maturityDate: maturityDateVal,
@@ -187,7 +160,7 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: 'Liability not found' });
     }
 
-    res.json(serializeLiabilityWithAliases(updatedLiability));
+    res.json(serializeDecimals(updatedLiability));
   } catch (error) {
     const { id } = req.params;
     const err = error as Error;
