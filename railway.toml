@@ -3,7 +3,7 @@ builder = "NIXPACKS"
 buildCommand = "npm install --prefix backend && npx --prefix backend prisma generate && npm run build:all"
 
 [deploy]
-startCommand = "npx --prefix backend prisma db push --skip-generate --accept-data-loss || echo 'DB push completed or skipped' && npm --prefix backend run start:prod"
+startCommand = "cd backend && npx prisma db push --skip-generate --accept-data-loss || echo 'DB push completed or skipped' && node dist/main.js"
 
 [[services]]
 name = "portfolio-tracker"
