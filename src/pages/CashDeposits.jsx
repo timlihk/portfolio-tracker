@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { useExchangeRates, CURRENCY_SYMBOLS } from '@/components/portfolio/useMarketData';
 import { createChangeLogger } from '@/components/portfolio/useChangelog';
+import PaginationControls from '@/components/portfolio/PaginationControls';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,13 +41,18 @@ export default function CashDeposits() {
   const [formData, setFormData] = useState({});
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [submitError, setSubmitError] = useState('');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   
   const queryClient = useQueryClient();
 
-  const { data: deposits = [] } = useQuery({
-    queryKey: ['cashDeposits'],
-    queryFn: () => entities.CashDeposit.list()
+  const { data: depositsResponse = [], isFetching: depositsLoading } = useQuery({
+    queryKey: ['cashDeposits', page, limit],
+    queryFn: () => entities.CashDeposit.listWithPagination({ page, limit }),
+    keepPreviousData: true
   });
+  const deposits = depositsResponse?.data || depositsResponse || [];
+  const pagination = depositsResponse?.pagination || { total: deposits.length, page, limit };
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
@@ -196,13 +202,14 @@ export default function CashDeposits() {
   const totalValueUSD = deposits.reduce((sum, d) => {
     return sum + convertToUSD(Number(d.amount) || 0, d.currency);
   }, 0);
+  const totalCount = pagination?.total ?? deposits.length;
 
   return (
     <div className="min-h-screen bg-slate-50/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <PageHeader
           title="Cash & Deposits"
-          subtitle={`${deposits.length} positions • $${totalValueUSD.toLocaleString()} USD`}
+          subtitle={`${totalCount} positions • $${totalValueUSD.toLocaleString()} USD`}
           onAdd={() => {
             setFormData({});
             setDialogOpen(true);
@@ -216,6 +223,16 @@ export default function CashDeposits() {
           onEdit={handleEdit}
           onDelete={setDeleteTarget}
           emptyMessage="No cash or deposits in your portfolio yet"
+        />
+
+        <PaginationControls
+          page={page}
+          limit={limit}
+          total={pagination?.total}
+          count={deposits.length}
+          loading={depositsLoading}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
         />
 
         <AddAssetDialog

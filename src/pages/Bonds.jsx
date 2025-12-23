@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { useExchangeRates, useBondPrices, CURRENCY_SYMBOLS } from '@/components/portfolio/useMarketData';
 import { createChangeLogger } from '@/components/portfolio/useChangelog';
 import { RefreshCw } from 'lucide-react';
+import PaginationControls from '@/components/portfolio/PaginationControls';
 
 const bondLogger = createChangeLogger('Bond');
 import {
@@ -46,13 +47,18 @@ export default function Bonds() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({});
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   
   const queryClient = useQueryClient();
 
-  const { data: bonds = [] } = useQuery({
-    queryKey: ['bonds'],
-    queryFn: () => entities.Bond.list()
+  const { data: bondResponse, isFetching: bondsLoading } = useQuery({
+    queryKey: ['bonds', page, limit],
+    queryFn: () => entities.Bond.listWithPagination({ page, limit }),
+    keepPreviousData: true
   });
+  const bonds = bondResponse?.data || [];
+  const pagination = bondResponse?.pagination || { total: bonds.length, page, limit };
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
@@ -208,6 +214,7 @@ export default function Bonds() {
     const value = getCurrentValue(b);
     return sum + convertToUSD(value, b.currency);
   }, 0);
+  const totalPositions = pagination?.total ?? bonds.length;
 
   return (
     <div className="min-h-screen bg-slate-50/50">
@@ -216,7 +223,7 @@ export default function Bonds() {
           title="Bonds"
           subtitle={
             <div className="flex items-center gap-2">
-              <span>{bonds.length} bonds • ${totalValueUSD.toLocaleString()} USD</span>
+              <span>{totalPositions} bonds • ${totalValueUSD.toLocaleString()} USD</span>
               {isLoadingPrices && <RefreshCw className="w-3 h-3 animate-spin text-slate-400" />}
             </div>
           }
@@ -233,6 +240,16 @@ export default function Bonds() {
           onEdit={handleEdit}
           onDelete={setDeleteTarget}
           emptyMessage="No bonds in your portfolio yet"
+        />
+
+        <PaginationControls
+          page={page}
+          limit={limit}
+          total={pagination?.total}
+          count={bonds.length}
+          loading={bondsLoading}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
         />
 
         <AddAssetDialog

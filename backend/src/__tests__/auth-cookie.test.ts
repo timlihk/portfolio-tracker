@@ -2,6 +2,11 @@ import request from 'supertest';
 import { app } from '../server.js';
 
 describe('Shared secret cookie flow', () => {
+  if (process.env.PORT_BINDING_BLOCKED === 'true') {
+    it.skip('skipped: environment blocks port binding', () => {});
+    return;
+  }
+
   const secret = process.env.SHARED_SECRET || process.env.SECRET_PHRASE;
 
   it('rejects invalid shared secret', async () => {

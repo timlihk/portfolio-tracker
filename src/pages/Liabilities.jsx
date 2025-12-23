@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { useExchangeRates, CURRENCY_SYMBOLS } from '@/components/portfolio/useMarketData';
 import { createChangeLogger } from '@/components/portfolio/useChangelog';
 import { format } from 'date-fns';
+import PaginationControls from '@/components/portfolio/PaginationControls';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,13 +47,18 @@ export default function Liabilities() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({});
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   
   const queryClient = useQueryClient();
 
-  const { data: liabilities = [] } = useQuery({
-    queryKey: ['liabilities'],
-    queryFn: () => entities.Liability.list()
+  const { data: liabilitiesResponse = [], isFetching: liabilitiesLoading } = useQuery({
+    queryKey: ['liabilities', page, limit],
+    queryFn: () => entities.Liability.listWithPagination({ page, limit }),
+    keepPreviousData: true
   });
+  const liabilities = liabilitiesResponse?.data || liabilitiesResponse || [];
+  const pagination = liabilitiesResponse?.pagination || { total: liabilities.length, page, limit };
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts'],
@@ -180,13 +186,14 @@ export default function Liabilities() {
   const totalOutstandingUSD = activeLiabilities.reduce((sum, l) => {
     return sum + convertToUSD(Number(l.outstandingBalance) || 0, l.currency);
   }, 0);
+  const totalCount = pagination?.total ?? liabilities.length;
 
   return (
     <div className="min-h-screen bg-slate-50/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <PageHeader
           title="Liabilities"
-          subtitle={`${activeLiabilities.length} active loans • $${totalOutstandingUSD.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USD outstanding`}
+          subtitle={`${activeLiabilities.length} active loans • $${totalOutstandingUSD.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USD outstanding • ${totalCount} total`}
           onAdd={() => {
             setFormData({});
             setDialogOpen(true);
@@ -200,6 +207,16 @@ export default function Liabilities() {
           onEdit={handleEdit}
           onDelete={setDeleteTarget}
           emptyMessage="No liabilities recorded"
+        />
+
+        <PaginationControls
+          page={page}
+          limit={limit}
+          total={pagination?.total}
+          count={liabilities.length}
+          loading={liabilitiesLoading}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
         />
 
         <AddAssetDialog

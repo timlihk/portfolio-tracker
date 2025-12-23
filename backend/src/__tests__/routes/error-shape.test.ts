@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
+import { app } from '../../server.js';
+
+const portBlocked = process.env.PORT_BINDING_BLOCKED === 'true';
 
 vi.mock('../../lib/prisma.js', () => {
   const mockPrisma = {
@@ -22,11 +25,11 @@ vi.mock('../../lib/prisma.js', () => {
   };
 });
 
-import { app } from '../../server.js';
-
 const sharedSecret = process.env.SHARED_SECRET || process.env.SECRET_PHRASE || 'test-shared-secret';
 
-describe('Error response shapes', () => {
+const describeOrSkip = portBlocked ? describe.skip : describe;
+
+describeOrSkip('Error response shapes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

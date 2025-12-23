@@ -5,6 +5,7 @@ import PageHeader from '@/components/portfolio/PageHeader';
 import AssetTable from '@/components/portfolio/AssetTable';
 import AddAssetDialog from '@/components/portfolio/AddAssetDialog';
 import { Badge } from '@/components/ui/badge';
+import PaginationControls from '@/components/portfolio/PaginationControls';
 import { format } from 'date-fns';
 import {
   AlertDialog,
@@ -38,13 +39,18 @@ export default function PEDeals() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({});
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   
   const queryClient = useQueryClient();
 
-  const { data: deals = [], isLoading } = useQuery({
-    queryKey: ['peDeals'],
-    queryFn: () => entities.PEDeal.list()
+  const { data: dealsResponse = [], isFetching: isLoading } = useQuery({
+    queryKey: ['peDeals', page, limit],
+    queryFn: () => entities.PEDeal.listWithPagination({ page, limit }),
+    keepPreviousData: true
   });
+  const deals = dealsResponse?.data || dealsResponse || [];
+  const pagination = dealsResponse?.pagination || { total: deals.length, page, limit };
 
   const createMutation = useMutation({
     mutationFn: (data) => entities.PEDeal.create(data),
@@ -185,7 +191,7 @@ export default function PEDeals() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <PageHeader
           title="Private Equity Deals"
-          subtitle={`${deals.length} deals • $${totalInvested.toLocaleString()} invested • $${totalValue.toLocaleString()} current value`}
+          subtitle={`${(pagination?.total ?? deals.length)} deals • $${totalInvested.toLocaleString()} invested • $${totalValue.toLocaleString()} current value`}
           onAdd={() => {
             setFormData({});
             setDialogOpen(true);
@@ -199,6 +205,16 @@ export default function PEDeals() {
           onEdit={handleEdit}
           onDelete={setDeleteTarget}
           emptyMessage="No PE deals in your portfolio yet"
+        />
+
+        <PaginationControls
+          page={page}
+          limit={limit}
+          total={pagination?.total}
+          count={deals.length}
+          loading={isLoading}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
         />
 
         <AddAssetDialog

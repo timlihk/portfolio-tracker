@@ -118,6 +118,7 @@ export const portfolioAPI = {
 
   // Accounts
   getAccounts: (params) => apiCall('/portfolio/accounts', { params }),
+  getAccountsWithPagination: (params) => apiCall('/portfolio/accounts', { params, includePagination: true }),
   createAccount: (accountData) => apiCall('/portfolio/accounts', {
     method: 'POST',
     body: accountData,
@@ -147,6 +148,7 @@ export const portfolioAPI = {
 
   // Bonds
   getBonds: (params) => apiCall('/portfolio/bonds', { params }),
+  getBondsWithPagination: (params) => apiCall('/portfolio/bonds', { params, includePagination: true }),
   createBond: (bondData) => apiCall('/portfolio/bonds', {
     method: 'POST',
     body: bondData,
@@ -161,6 +163,7 @@ export const portfolioAPI = {
 
   // PE Funds
   getPEFunds: (params) => apiCall('/portfolio/pe-funds', { params }),
+  getPEFundsWithPagination: (params) => apiCall('/portfolio/pe-funds', { params, includePagination: true }),
   createPEFund: (fundData) => apiCall('/portfolio/pe-funds', {
     method: 'POST',
     body: fundData,
@@ -175,6 +178,7 @@ export const portfolioAPI = {
 
   // PE Deals
   getPEDeals: (params) => apiCall('/portfolio/pe-deals', { params }),
+  getPEDealsWithPagination: (params) => apiCall('/portfolio/pe-deals', { params, includePagination: true }),
   createPEDeal: (dealData) => apiCall('/portfolio/pe-deals', {
     method: 'POST',
     body: dealData,
@@ -189,6 +193,7 @@ export const portfolioAPI = {
 
   // Liquid Funds
   getLiquidFunds: (params) => apiCall('/portfolio/liquid-funds', { params }),
+  getLiquidFundsWithPagination: (params) => apiCall('/portfolio/liquid-funds', { params, includePagination: true }),
   createLiquidFund: (fundData) => apiCall('/portfolio/liquid-funds', {
     method: 'POST',
     body: fundData,
@@ -203,6 +208,7 @@ export const portfolioAPI = {
 
   // Cash Deposits
   getCashDeposits: (params) => apiCall('/portfolio/cash-deposits', { params }),
+  getCashDepositsWithPagination: (params) => apiCall('/portfolio/cash-deposits', { params, includePagination: true }),
   createCashDeposit: (depositData) => apiCall('/portfolio/cash-deposits', {
     method: 'POST',
     body: depositData,
@@ -217,6 +223,7 @@ export const portfolioAPI = {
 
   // Liabilities
   getLiabilities: (params) => apiCall('/portfolio/liabilities', { params }),
+  getLiabilitiesWithPagination: (params) => apiCall('/portfolio/liabilities', { params, includePagination: true }),
   createLiability: (liabilityData) => apiCall('/portfolio/liabilities', {
     method: 'POST',
     body: liabilityData,
@@ -270,6 +277,7 @@ export const pricingAPI = {
 export const entities = {
   Account: {
     list: (params) => portfolioAPI.getAccounts(params),
+    listWithPagination: (params) => portfolioAPI.getAccountsWithPagination(params),
     create: (data) => portfolioAPI.createAccount(data),
     update: (id, data) => portfolioAPI.updateAccount(id, data),
     delete: (id) => portfolioAPI.deleteAccount(id),
@@ -283,36 +291,42 @@ export const entities = {
   },
   Bond: {
     list: (params) => portfolioAPI.getBonds(params),
+    listWithPagination: (params) => portfolioAPI.getBondsWithPagination(params),
     create: (data) => portfolioAPI.createBond(data),
     update: (id, data) => portfolioAPI.updateBond(id, data),
     delete: (id) => portfolioAPI.deleteBond(id),
   },
   PEFund: {
     list: (params) => portfolioAPI.getPEFunds(params),
+    listWithPagination: (params) => portfolioAPI.getPEFundsWithPagination(params),
     create: (data) => portfolioAPI.createPEFund(data),
     update: (id, data) => portfolioAPI.updatePEFund(id, data),
     delete: (id) => portfolioAPI.deletePEFund(id),
   },
   PEDeal: {
     list: (params) => portfolioAPI.getPEDeals(params),
+    listWithPagination: (params) => portfolioAPI.getPEDealsWithPagination(params),
     create: (data) => portfolioAPI.createPEDeal(data),
     update: (id, data) => portfolioAPI.updatePEDeal(id, data),
     delete: (id) => portfolioAPI.deletePEDeal(id),
   },
   LiquidFund: {
     list: (params) => portfolioAPI.getLiquidFunds(params),
+    listWithPagination: (params) => portfolioAPI.getLiquidFundsWithPagination(params),
     create: (data) => portfolioAPI.createLiquidFund(data),
     update: (id, data) => portfolioAPI.updateLiquidFund(id, data),
     delete: (id) => portfolioAPI.deleteLiquidFund(id),
   },
   CashDeposit: {
     list: (params) => portfolioAPI.getCashDeposits(params),
+    listWithPagination: (params) => portfolioAPI.getCashDepositsWithPagination(params),
     create: (data) => portfolioAPI.createCashDeposit(data),
     update: (id, data) => portfolioAPI.updateCashDeposit(id, data),
     delete: (id) => portfolioAPI.deleteCashDeposit(id),
   },
   Liability: {
     list: (params) => portfolioAPI.getLiabilities(params),
+    listWithPagination: (params) => portfolioAPI.getLiabilitiesWithPagination(params),
     create: (data) => portfolioAPI.createLiability(data),
     update: (id, data) => portfolioAPI.updateLiability(id, data),
     delete: (id) => portfolioAPI.deleteLiability(id),

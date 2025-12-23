@@ -6,6 +6,7 @@ import AssetTable from '@/components/portfolio/AssetTable';
 import AddAssetDialog from '@/components/portfolio/AddAssetDialog';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import PaginationControls from '@/components/portfolio/PaginationControls';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,13 +39,18 @@ export default function PEFunds() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({});
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   
   const queryClient = useQueryClient();
 
-  const { data: funds = [], isLoading } = useQuery({
-    queryKey: ['peFunds'],
-    queryFn: () => entities.PEFund.list()
+  const { data: fundsResponse = [], isFetching: isLoading } = useQuery({
+    queryKey: ['peFunds', page, limit],
+    queryFn: () => entities.PEFund.listWithPagination({ page, limit }),
+    keepPreviousData: true
   });
+  const funds = fundsResponse?.data || fundsResponse || [];
+  const pagination = fundsResponse?.pagination || { total: funds.length, page, limit };
 
   const createMutation = useMutation({
     mutationFn: (data) => entities.PEFund.create(data),
@@ -187,13 +193,14 @@ export default function PEFunds() {
 
   const totalCommitment = funds.reduce((sum, f) => sum + (Number(f.commitment) || 0), 0);
   const totalNAV = funds.reduce((sum, f) => sum + (Number(f.nav) || 0), 0);
+  const totalCount = pagination?.total ?? funds.length;
 
   return (
     <div className="min-h-screen bg-slate-50/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <PageHeader
           title="Private Equity Funds"
-          subtitle={`${funds.length} funds • $${totalCommitment.toLocaleString()} committed • $${totalNAV.toLocaleString()} NAV`}
+          subtitle={`${totalCount} funds • $${totalCommitment.toLocaleString()} committed • $${totalNAV.toLocaleString()} NAV`}
           onAdd={() => {
             setFormData({});
             setDialogOpen(true);
@@ -207,6 +214,16 @@ export default function PEFunds() {
           onEdit={handleEdit}
           onDelete={setDeleteTarget}
           emptyMessage="No PE funds in your portfolio yet"
+        />
+
+        <PaginationControls
+          page={page}
+          limit={limit}
+          total={pagination?.total}
+          count={funds.length}
+          loading={isLoading}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
         />
 
         <AddAssetDialog

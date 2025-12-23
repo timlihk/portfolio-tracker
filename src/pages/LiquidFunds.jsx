@@ -5,6 +5,7 @@ import PageHeader from '@/components/portfolio/PageHeader';
 import AssetTable from '@/components/portfolio/AssetTable';
 import AddAssetDialog from '@/components/portfolio/AddAssetDialog';
 import { Badge } from '@/components/ui/badge';
+import PaginationControls from '@/components/portfolio/PaginationControls';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,13 +43,18 @@ export default function LiquidFunds() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({});
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   
   const queryClient = useQueryClient();
 
-  const { data: funds = [], isLoading } = useQuery({
-    queryKey: ['liquidFunds'],
-    queryFn: () => entities.LiquidFund.list()
+  const { data: fundsResponse = [], isFetching: isLoading } = useQuery({
+    queryKey: ['liquidFunds', page, limit],
+    queryFn: () => entities.LiquidFund.listWithPagination({ page, limit }),
+    keepPreviousData: true
   });
+  const funds = fundsResponse?.data || fundsResponse || [];
+  const pagination = fundsResponse?.pagination || { total: funds.length, page, limit };
 
   const createMutation = useMutation({
     mutationFn: (data) => entities.LiquidFund.create(data),
@@ -203,13 +209,14 @@ export default function LiquidFunds() {
 
   const totalInvested = funds.reduce((sum, f) => sum + (Number(f.investmentAmount) || 0), 0);
   const totalValue = funds.reduce((sum, f) => sum + (Number(f.currentValue) || Number(f.investmentAmount) || 0), 0);
+  const totalCount = pagination?.total ?? funds.length;
 
   return (
     <div className="min-h-screen bg-slate-50/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <PageHeader
           title="Liquid Funds"
-          subtitle={`${funds.length} funds • $${totalInvested.toLocaleString()} invested • $${totalValue.toLocaleString()} current value`}
+          subtitle={`${totalCount} funds • $${totalInvested.toLocaleString()} invested • $${totalValue.toLocaleString()} current value`}
           onAdd={() => {
             setFormData({});
             setDialogOpen(true);
@@ -223,6 +230,16 @@ export default function LiquidFunds() {
           onEdit={handleEdit}
           onDelete={setDeleteTarget}
           emptyMessage="No liquid funds in your portfolio yet"
+        />
+
+        <PaginationControls
+          page={page}
+          limit={limit}
+          total={pagination?.total}
+          count={funds.length}
+          loading={isLoading}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
         />
 
         <AddAssetDialog

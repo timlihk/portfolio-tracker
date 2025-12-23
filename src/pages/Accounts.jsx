@@ -37,6 +37,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useExchangeRates, useStockPrices, CURRENCY_SYMBOLS } from '@/components/portfolio/useMarketData';
+import PaginationControls from '@/components/portfolio/PaginationControls';
 
 const ACCOUNT_TYPES = ['Brokerage', 'IRA', '401k', 'Roth IRA', 'Bank', 'Other'];
 
@@ -45,13 +46,18 @@ export default function Accounts() {
   const [formData, setFormData] = useState({});
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [expandedAccounts, setExpandedAccounts] = useState({});
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
   const queryClient = useQueryClient();
 
-  const { data: accounts = [] } = useQuery({
-    queryKey: ['accounts'],
-    queryFn: () => entities.Account.list()
+  const { data: accountsResponse = [] , isFetching: accountsLoading } = useQuery({
+    queryKey: ['accounts', page, limit],
+    queryFn: () => entities.Account.listWithPagination({ page, limit }),
+    keepPreviousData: true
   });
+  const accounts = accountsResponse?.data || accountsResponse || [];
+  const pagination = accountsResponse?.pagination || { total: accounts.length, page, limit };
 
   const { data: stocks = [] } = useQuery({
     queryKey: ['stocks'],
@@ -284,7 +290,7 @@ export default function Accounts() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Accounts</h1>
-            <p className="text-slate-500 mt-1">{accounts.length} accounts</p>
+            <p className="text-slate-500 mt-1">{(pagination?.total ?? accounts.length)} accounts</p>
           </div>
           <Button 
             onClick={() => { setFormData({}); setDialogOpen(true); }}
@@ -570,6 +576,16 @@ export default function Accounts() {
             </Card>
           )}
         </div>
+
+        <PaginationControls
+          page={page}
+          limit={limit}
+          total={pagination?.total}
+          count={accounts.length}
+          loading={accountsLoading}
+          onPageChange={setPage}
+          onLimitChange={setLimit}
+        />
 
         {/* Add/Edit Account Dialog */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
