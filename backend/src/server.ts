@@ -84,15 +84,24 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // CORS configuration
-const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
-  .split(',')
-  .map(o => o.trim())
-  .filter(Boolean);
+const allowedOrigins = [
+  ...(process.env.FRONTEND_URL || 'http://localhost:5173')
+    .split(',')
+    .map(o => o.trim())
+    .filter(Boolean),
+  // Railway production URLs
+  'https://portfolio-tracker-production.up.railway.app',
+  'https://mangrove-portfolio.up.railway.app'
+];
 
 app.use(cors({
   origin: (origin, callback) => {
+    // Allow requests with no origin (same-origin, Postman, curl, etc.)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
+    // Allow if origin is in whitelist
+    if (allowedOrigins.some(allowed => origin === allowed || origin.endsWith('.railway.app'))) {
+      return callback(null, true);
+    }
     return callback(new Error('Not allowed by CORS'));
   },
   credentials: true
