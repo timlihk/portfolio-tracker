@@ -91,7 +91,8 @@
       "Bash(npx tsc:*)",
       "Bash(npm run:*)",
       "Bash(git tag:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(npm test)"
     ],
     "deny": [],
     "ask": []
