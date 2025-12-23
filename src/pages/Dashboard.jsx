@@ -155,6 +155,7 @@ export default function Dashboard() {
     liquidFundsValue,
     cashValue,
     totalLiabilities,
+    totalAssets,
     totalValue,
     totalCost,
     totalGainPercent
