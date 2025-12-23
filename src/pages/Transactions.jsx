@@ -7,6 +7,7 @@ import TransactionFilters from '@/components/portfolio/TransactionFilters';
 import TransactionAIAnalysis from '@/components/portfolio/TransactionAIAnalysis';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import PaginationControls from '@/components/portfolio/PaginationControls';
 import {
   Table,
   TableBody,
@@ -81,6 +82,8 @@ export default function Transactions() {
     transactionType: 'All',
     account: 'All'
   });
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
   const queryClient = useQueryClient();
 
@@ -175,6 +178,11 @@ export default function Transactions() {
     });
   }, [normalizedTransactions, filters]);
 
+  const paginatedTransactions = useMemo(() => {
+    const start = (page - 1) * limit;
+    return filteredTransactions.slice(start, start + limit);
+  }, [filteredTransactions, page, limit]);
+
   const totalVolume = filteredTransactions.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
   const totalFees = filteredTransactions.reduce((sum, t) => sum + (t.fees || 0), 0);
 
@@ -222,7 +230,21 @@ export default function Transactions() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTransactions.map((t) => {
+              {isLoading && (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-6 text-slate-400">
+                    Loading transactions...
+                  </TableCell>
+                </TableRow>
+              )}
+              {!isLoading && filteredTransactions.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center py-8 text-slate-400">
+                    No transactions found
+                  </TableCell>
+                </TableRow>
+              )}
+              {!isLoading && filteredTransactions.length > 0 && paginatedTransactions.map((t) => {
                 const config = typeConfig[t.transactionType] || typeConfig['Buy'];
                 const TypeIcon = config.icon;
                 const AssetIcon = assetIcons[t.assetType] || TrendingUp;
@@ -291,6 +313,16 @@ export default function Transactions() {
           </Table>
         )}
       </div>
+
+      <PaginationControls
+        page={page}
+        limit={limit}
+        total={filteredTransactions.length}
+        count={paginatedTransactions.length}
+        loading={isLoading}
+        onPageChange={setPage}
+        onLimitChange={setLimit}
+      />
 
       <AddAssetDialog
         open={dialogOpen}
