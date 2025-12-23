@@ -217,8 +217,12 @@ router.get('/profile', async (req: Request, res: Response) => {
       (authHeader?.startsWith('Shared ') && authHeader.replace('Shared ', '')) ||
       req.headers['x-shared-secret'];
 
+    // Also check httpOnly cookie
+    const cookieSecret = (req as Request & { cookies?: Record<string, string> }).cookies?.shared_secret;
+    const providedSecret = sharedHeader || cookieSecret;
+
     // Shared-secret path (family/demo) — single tenant only
-    if (sharedSecret && sharedHeader && sharedHeader === sharedSecret) {
+    if (sharedSecret && providedSecret && providedSecret === sharedSecret) {
       const sharedUser = await prisma.user.findUnique({
         where: { id: singleUserId },
         select: {
