@@ -11,7 +11,7 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
-    // In production you may want to route this to a logging service
+    console.error('ErrorBoundary caught:', error, info);
   }
 
   render() {
