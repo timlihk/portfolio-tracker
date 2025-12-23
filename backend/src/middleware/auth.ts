@@ -82,12 +82,17 @@ export const requireAuth = async (
       return next();
     }
 
-    // Secondary: Shared secret (family/demo). Accept header Authorization: Shared <secret> or x-shared-secret.
+    // Secondary: Shared secret (family/demo). Accept header, x-shared-secret, or httpOnly cookie.
     const sharedHeader =
       (authHeader?.startsWith('Shared ') && authHeader.replace('Shared ', '')) ||
       (req.headers['x-shared-secret'] as string | undefined);
 
-    if (sharedSecret && sharedHeader && sharedHeader === sharedSecret) {
+    // Also check httpOnly cookie set by /auth/shared-secret endpoint
+    const cookieSecret = (req as AuthRequest & { cookies?: Record<string, string> }).cookies?.shared_secret;
+
+    const providedSecret = sharedHeader || cookieSecret;
+
+    if (sharedSecret && providedSecret && providedSecret === sharedSecret) {
       req.userId = singleUserId;
       return next();
     }
