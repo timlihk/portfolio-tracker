@@ -26,7 +26,8 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       setIsLoadingAuth(false);
       setIsAuthenticated(false);
-      // Don't set auth error - allow app to work without authentication
+      // Set auth error to trigger redirect to login
+      setAuthError({ type: 'auth_required', message: 'Authentication required' });
     }
   };
 
