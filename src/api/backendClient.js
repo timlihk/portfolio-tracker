@@ -1,6 +1,6 @@
 // Backend API client to replace Base44 SDK
 // In production, use relative URL since frontend and backend are on same server
-const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3001/api');
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api/v1' : 'http://localhost:3001/api/v1');
 
 // Helper function to get authentication token
 function getAuthToken() {
