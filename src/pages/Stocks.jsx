@@ -44,6 +44,8 @@ export default function Stocks() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [tickerLookupLoading, setTickerLookupLoading] = useState(false);
   const [tickerError, setTickerError] = useState('');
+  const [sortKey, setSortKey] = useState('ticker');
+  const [sortDir, setSortDir] = useState('asc');
   const tickerLookupRef = useRef(null);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -143,7 +145,7 @@ export default function Stocks() {
         setFormData(prev => ({
           ...prev,
           ticker,
-          companyName: data.name || data.shortName || prev.companyName || '',
+         companyName: data.name || data.shortName || prev.companyName || '',
           sector: data.sector || prev.sector || '',
           currency: data.currency || prev.currency || 'USD',
           currentPrice: data.price ?? prev.currentPrice
@@ -183,6 +185,35 @@ export default function Stocks() {
       }
     }
   }, [lookupTicker, tickerLookupRef]);
+
+  const sortedStocks = useMemo(() => {
+    const copy = [...stocks];
+    copy.sort((a, b) => {
+      const dir = sortDir === 'asc' ? 1 : -1;
+      if (sortKey === 'marketValue') {
+        const va = (Number(a.shares) || 0) * getCurrentPrice(a);
+        const vb = (Number(b.shares) || 0) * getCurrentPrice(b);
+        return (va - vb) * dir;
+      }
+      if (sortKey === 'gainLoss') {
+        const pa = getCurrentPrice(a);
+        const pb = getCurrentPrice(b);
+        const ca = Number(a.averageCost) || 0;
+        const cb = Number(b.averageCost) || 0;
+        const sa = Number(a.shares) || 0;
+        const sb = Number(b.shares) || 0;
+        const ga = sa * (pa - ca);
+        const gb = sb * (pb - cb);
+        return (ga - gb) * dir;
+      }
+      const av = (a[sortKey] || '').toString().toUpperCase();
+      const bv = (b[sortKey] || '').toString().toUpperCase();
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      return 0;
+    });
+    return copy;
+  }, [stocks, sortKey, sortDir]);
 
   const columns = [
     {
@@ -318,7 +349,7 @@ export default function Stocks() {
 
         <AssetTable
           columns={columns}
-          data={stocks}
+          data={sortedStocks}
           onEdit={handleEdit}
           onDelete={setDeleteTarget}
           emptyMessage="No stocks in your portfolio yet"
@@ -329,6 +360,27 @@ export default function Stocks() {
             Showing {stocks.length === 0 ? 0 : showingStart} - {stocks.length === 0 ? 0 : showingEnd} of {total || '...'}
           </div>
           <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              <label className="text-sm text-slate-500">Sort by</label>
+              <select
+                className="border rounded-md px-2 py-1 text-sm text-slate-700"
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value)}
+              >
+                <option value="ticker">Ticker</option>
+                <option value="companyName">Company</option>
+                <option value="marketValue">Market Value</option>
+                <option value="gainLoss">Gain/Loss</option>
+              </select>
+              <select
+                className="border rounded-md px-2 py-1 text-sm text-slate-700"
+                value={sortDir}
+                onChange={(e) => setSortDir(e.target.value)}
+              >
+                <option value="asc">Asc</option>
+                <option value="desc">Desc</option>
+              </select>
+            </div>
             <select
               className="border rounded-md px-3 py-2 text-sm text-slate-700"
               value={limit}

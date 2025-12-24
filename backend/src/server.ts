@@ -76,10 +76,10 @@ app.use(helmet());
 app.use(compression());
 app.use(cookieParser());
 
-// Rate limiting
+// Rate limiting (loosened: 100x the original max)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 10000 // limit each IP to 10k requests per windowMs
 });
 app.use(limiter);
 
