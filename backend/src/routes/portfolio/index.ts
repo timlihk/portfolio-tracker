@@ -8,6 +8,7 @@ import liquidFundsRouter from './liquid-funds.js';
 import cashDepositsRouter from './cash-deposits.js';
 import liabilitiesRouter from './liabilities.js';
 import dashboardRouter from './dashboard.js';
+import insightsRouter from './insights.js';
 
 const router = express.Router();
 
@@ -21,5 +22,6 @@ router.use('/liquid-funds', liquidFundsRouter);
 router.use('/cash-deposits', cashDepositsRouter);
 router.use('/liabilities', liabilitiesRouter);
 router.use('/dashboard', dashboardRouter);
+router.use('/insights', insightsRouter);
 
 export default router;
