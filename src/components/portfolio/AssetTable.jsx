@@ -15,6 +15,9 @@ export default function AssetTable({
   data,
   onEdit = undefined,
   onDelete = undefined,
+  onSort = undefined,
+  sortKey,
+  sortDir,
   emptyMessage = "No data available"
 }) {
   if (!data || data.length === 0) {
@@ -29,7 +32,7 @@ export default function AssetTable({
     <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
+            <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
             {columns.map((col) => (
               <TableHead 
                 key={col.key} 
@@ -38,7 +41,23 @@ export default function AssetTable({
                   col.align === 'right' && "text-right"
                 )}
               >
-                {col.label}
+                <div className="flex items-center gap-1">
+                  <span>{col.label}</span>
+                  {onSort && col.sortable && (
+                    <button
+                      type="button"
+                      className="text-slate-400 hover:text-slate-700"
+                      aria-label={`Sort by ${col.label}`}
+                      onClick={() => {
+                        const targetKey = col.sortKey ?? col.key;
+                        const nextDir = sortKey === targetKey && sortDir === 'asc' ? 'desc' : 'asc';
+                        onSort(targetKey, nextDir);
+                      }}
+                    >
+                      {sortKey === (col.sortKey ?? col.key) ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
+                    </button>
+                  )}
+                </div>
               </TableHead>
             ))}
             {(onEdit || onDelete) && <TableHead className="w-24" />}

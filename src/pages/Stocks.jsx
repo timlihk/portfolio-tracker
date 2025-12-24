@@ -25,7 +25,7 @@ import {
 const SECTORS = ['Technology', 'Healthcare', 'Finance', 'Energy', 'Consumer', 'Industrial', 'Real Estate', 'Utilities', 'Materials', 'Communications', 'Other'];
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS', 'HKD'];
 
-const getStockFields = (accounts) => [
+const getStockFields = (accounts, sectorOptions) => [
   { name: 'ticker', label: 'Ticker Symbol', required: true, placeholder: 'AAPL' },
   { name: 'companyName', label: 'Company Name', placeholder: 'Apple Inc.' },
   { name: 'currency', label: 'Currency', type: 'select', options: CURRENCIES },
@@ -34,7 +34,7 @@ const getStockFields = (accounts) => [
   { name: 'averageCost', label: 'Average Cost per Share', type: 'number', required: true, placeholder: '150.00' },
   { name: 'currentPrice', label: 'Current Price (leave empty for live)', type: 'number', placeholder: 'Auto-fetched' },
   { name: 'purchaseDate', label: 'Purchase Date', type: 'date' },
-  { name: 'sector', label: 'Sector', type: 'select', options: SECTORS },
+  { name: 'sector', label: 'Sector', type: 'select', options: sectorOptions, allowCustom: true },
   { name: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Additional notes...' }
 ];
 
@@ -65,7 +65,23 @@ export default function Stocks() {
     queryFn: () => entities.Account.list()
   });
 
-  const stockFields = getStockFields(accounts);
+  const sectorOptions = useMemo(() => {
+    const opts = new Set(SECTORS);
+    stocks.forEach((s) => {
+      if (s.sector) {
+        opts.add(s.sector);
+      }
+    });
+    if (formData.sector) {
+      opts.add(formData.sector);
+    }
+    return Array.from(opts);
+  }, [formData.sector, stocks]);
+
+  const stockFields = useMemo(
+    () => getStockFields(accounts, sectorOptions),
+    [accounts, sectorOptions]
+  );
 
   // Get real-time prices and exchange rates
   const stockTickers = useMemo(() => stocks.map(s => s.ticker).filter(Boolean), [stocks]);
@@ -131,8 +147,9 @@ export default function Stocks() {
   // Lookup ticker info from Yahoo Finance
   const lookupRequestId = useRef(0);
   const lookupTicker = useCallback(async (tickerInput) => {
-    if (!tickerInput || tickerInput.length < 1) return;
-    const ticker = tickerInput.toUpperCase();
+    const trimmed = tickerInput?.trim();
+    if (!trimmed || trimmed.length < 3) return;
+    const ticker = trimmed.toUpperCase();
     const requestId = ++lookupRequestId.current;
 
     setTickerLookupLoading(true);
@@ -145,7 +162,7 @@ export default function Stocks() {
         setFormData(prev => ({
           ...prev,
           ticker,
-         companyName: data.name || data.shortName || prev.companyName || '',
+          companyName: data.name || data.shortName || prev.companyName || '',
           sector: data.sector || prev.sector || '',
           currency: data.currency || prev.currency || 'USD',
           currentPrice: data.price ?? prev.currentPrice
@@ -162,9 +179,10 @@ export default function Stocks() {
   const handleFieldChange = useCallback((name, value) => {
     setFormData(prev => {
       if (name === 'ticker') {
+        setTickerError('');
         return {
           ...prev,
-          ticker: value,
+          ticker: value?.toUpperCase(),
           companyName: '',
           sector: '',
           currentPrice: null
@@ -173,21 +191,25 @@ export default function Stocks() {
       return { ...prev, [name]: value };
     });
 
-    // Auto-lookup when ticker changes; debounce and require at least 2 chars
+    // Auto-lookup when ticker changes; debounce and require at least 3 chars
     if (name === 'ticker') {
       if (tickerLookupRef.current) {
         clearTimeout(tickerLookupRef.current);
       }
-      if (value && value.trim().length >= 2) {
+      if (value && value.trim().length >= 3) {
         tickerLookupRef.current = setTimeout(() => {
           lookupTicker(value.trim());
-        }, 800); // allow user to finish typing before lookup
+        }, 1000); // allow user to finish typing before lookup
       }
     }
   }, [lookupTicker, tickerLookupRef]);
 
   const sortedStocks = useMemo(() => {
     const copy = [...stocks];
+    const getCompanyName = (stock) => {
+      const yahooData = stockPrices[stock.ticker] || {};
+      return (stock.companyName || yahooData.name || yahooData.shortName || stock.ticker || '').toString().toUpperCase();
+    };
     copy.sort((a, b) => {
       const dir = sortDir === 'asc' ? 1 : -1;
       if (sortKey === 'marketValue') {
@@ -206,6 +228,16 @@ export default function Stocks() {
         const gb = sb * (pb - cb);
         return (ga - gb) * dir;
       }
+      if (sortKey === 'companyName') {
+        return getCompanyName(a).localeCompare(getCompanyName(b)) * dir;
+      }
+      if (sortKey === 'account') {
+        const av = (a.account || '').toString().toUpperCase();
+        const bv = (b.account || '').toString().toUpperCase();
+        if (av < bv) return -1 * dir;
+        if (av > bv) return 1 * dir;
+        return 0;
+      }
       const av = (a[sortKey] || '').toString().toUpperCase();
       const bv = (b[sortKey] || '').toString().toUpperCase();
       if (av < bv) return -1 * dir;
@@ -213,23 +245,28 @@ export default function Stocks() {
       return 0;
     });
     return copy;
-  }, [stocks, sortKey, sortDir]);
+  }, [stocks, sortKey, sortDir, stockPrices, getCurrentPrice]);
 
   const columns = [
     {
       key: 'ticker',
       label: 'Ticker',
-      render: (val, row) => {
-        // Use Yahoo Finance data if available, otherwise use stored data
+      sortable: true,
+      render: (val) => (
+        <span className="font-semibold text-slate-900">{val}</span>
+      )
+    },
+    {
+      key: 'companyName',
+      label: 'Company',
+      sortable: true,
+      render: (_, row) => {
         const yahooData = stockPrices[row.ticker];
-        const companyName = row.companyName || yahooData?.name || yahooData?.shortName;
+        const companyName = row.companyName || yahooData?.name || yahooData?.shortName || row.ticker;
         const sector = row.sector || yahooData?.sector;
         return (
           <div>
-            <span className="font-semibold text-slate-900">{val}</span>
-            {companyName && (
-              <p className="text-sm text-slate-500">{companyName}</p>
-            )}
+            <p className="text-sm font-medium text-slate-900">{companyName}</p>
             {sector && (
               <p className="text-xs text-slate-400">{sector}</p>
             )}
@@ -272,6 +309,7 @@ export default function Stocks() {
       key: 'marketValue',
       label: 'Market Value',
       align: 'right',
+      sortable: true,
       render: (_, row) => {
         const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
         const price = getCurrentPrice(row);
@@ -283,6 +321,7 @@ export default function Stocks() {
       key: 'gainLoss',
       label: 'Gain/Loss',
       align: 'right',
+      sortable: true,
       render: (_, row) => {
         const price = getCurrentPrice(row);
         const shares = Number(row.shares) || 0;
@@ -313,6 +352,7 @@ export default function Stocks() {
     { 
       key: 'account', 
       label: 'Account',
+      sortable: true,
       render: (val) => val ? (
         <Badge variant="outline" className="font-normal">
           {val}
@@ -352,6 +392,12 @@ export default function Stocks() {
           data={sortedStocks}
           onEdit={handleEdit}
           onDelete={setDeleteTarget}
+          onSort={(key, dir) => {
+            setSortKey(key);
+            setSortDir(dir);
+          }}
+          sortKey={sortKey}
+          sortDir={sortDir}
           emptyMessage="No stocks in your portfolio yet"
         />
 
@@ -359,28 +405,7 @@ export default function Stocks() {
           <div className="text-sm text-slate-500">
             Showing {stocks.length === 0 ? 0 : showingStart} - {stocks.length === 0 ? 0 : showingEnd} of {total || '...'}
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1">
-              <label className="text-sm text-slate-500">Sort by</label>
-              <select
-                className="border rounded-md px-2 py-1 text-sm text-slate-700"
-                value={sortKey}
-                onChange={(e) => setSortKey(e.target.value)}
-              >
-                <option value="ticker">Ticker</option>
-                <option value="companyName">Company</option>
-                <option value="marketValue">Market Value</option>
-                <option value="gainLoss">Gain/Loss</option>
-              </select>
-              <select
-                className="border rounded-md px-2 py-1 text-sm text-slate-700"
-                value={sortDir}
-                onChange={(e) => setSortDir(e.target.value)}
-              >
-                <option value="asc">Asc</option>
-                <option value="desc">Desc</option>
-              </select>
-            </div>
+          <div className="flex items-center gap-3">
             <select
               className="border rounded-md px-3 py-2 text-sm text-slate-700"
               value={limit}
