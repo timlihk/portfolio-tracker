@@ -115,6 +115,7 @@ export const authAPI = {
 // Portfolio API
 export const portfolioAPI = {
   getDashboard: () => apiCall('/portfolio/dashboard'),
+  getInsights: () => apiCall('/portfolio/insights'),
 
   // Accounts
   getAccounts: (params) => apiCall('/portfolio/accounts', { params }),
@@ -235,6 +236,9 @@ export const portfolioAPI = {
   deleteLiability: (id) => apiCall(`/portfolio/liabilities/${id}`, {
     method: 'DELETE',
   }),
+
+  // Insights
+  getInsights: () => apiCall('/portfolio/insights'),
 };
 
 // Pricing API

@@ -1,4 +1,5 @@
 import Dashboard from './pages/Dashboard';
+import DashboardV2 from './pages/DashboardV2';
 import Stocks from './pages/Stocks';
 import Bonds from './pages/Bonds';
 import PEFunds from './pages/PEFunds';
@@ -14,6 +15,7 @@ import __Layout from './Layout.jsx';
 
 export const PAGES = {
     "Dashboard": Dashboard,
+    "DashboardV2": DashboardV2,
     "Stocks": Stocks,
     "Bonds": Bonds,
     "PEFunds": PEFunds,
