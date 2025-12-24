@@ -11,6 +11,7 @@ import Changelog from './pages/Changelog';
 import Transactions from './pages/Transactions';
 import CashDeposits from './pages/CashDeposits';
 import Liabilities from './pages/Liabilities';
+import Performance from './pages/Performance';
 import __Layout from './Layout.jsx';
 
 
@@ -28,6 +29,7 @@ export const PAGES = {
     "Transactions": Transactions,
     "CashDeposits": CashDeposits,
     "Liabilities": Liabilities,
+    "Performance": Performance,
 }
 
 export const pagesConfig = {
