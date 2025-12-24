@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { entities, pricingAPI } from '@/api/backendClient';
 import PageHeader from '@/components/portfolio/PageHeader';
@@ -44,6 +44,7 @@ export default function Stocks() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [tickerLookupLoading, setTickerLookupLoading] = useState(false);
   const [tickerError, setTickerError] = useState('');
+  const tickerLookupRef = useRef(null);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
 
@@ -126,22 +127,26 @@ export default function Stocks() {
   const showingEnd = showingStart + stocks.length - 1;
 
   // Lookup ticker info from Yahoo Finance
+  const lookupRequestId = useRef(0);
   const lookupTicker = useCallback(async (tickerInput) => {
     if (!tickerInput || tickerInput.length < 1) return;
     const ticker = tickerInput.toUpperCase();
+    const requestId = ++lookupRequestId.current;
 
     setTickerLookupLoading(true);
     setTickerError('');
     try {
       const data = await pricingAPI.getStockPrice(ticker);
-      if (data && data.price) {
+      // Ignore stale responses
+      if (lookupRequestId.current !== requestId) return;
+      if (data) {
         setFormData(prev => ({
           ...prev,
-          // Preserve user-entered ticker; only fill if empty
-          ticker: prev.ticker || ticker,
-          companyName: prev.companyName || data.name || data.shortName || '',
-          sector: prev.sector || data.sector || '',
-          currency: prev.currency || data.currency || 'USD',
+          ticker,
+          companyName: data.name || data.shortName || prev.companyName || '',
+          sector: data.sector || prev.sector || '',
+          currency: data.currency || prev.currency || 'USD',
+          currentPrice: data.price ?? prev.currentPrice
         }));
       }
     } catch (error) {
@@ -153,17 +158,31 @@ export default function Stocks() {
 
   // Handle form field changes with auto-lookup for ticker
   const handleFieldChange = useCallback((name, value) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => {
+      if (name === 'ticker') {
+        return {
+          ...prev,
+          ticker: value,
+          companyName: '',
+          sector: '',
+          currentPrice: null
+        };
+      }
+      return { ...prev, [name]: value };
+    });
 
-    // Auto-lookup when ticker changes and has at least 1 character
-    if (name === 'ticker' && value && value.length >= 1) {
-      // Debounce the lookup - only trigger after user stops typing
-      const timeoutId = setTimeout(() => {
-        lookupTicker(value);
-      }, 500);
-      return () => clearTimeout(timeoutId);
+    // Auto-lookup when ticker changes; debounce and require at least 2 chars
+    if (name === 'ticker') {
+      if (tickerLookupRef.current) {
+        clearTimeout(tickerLookupRef.current);
+      }
+      if (value && value.trim().length >= 2) {
+        tickerLookupRef.current = setTimeout(() => {
+          lookupTicker(value.trim());
+        }, 800); // allow user to finish typing before lookup
+      }
     }
-  }, [lookupTicker]);
+  }, [lookupTicker, tickerLookupRef]);
 
   const columns = [
     {
