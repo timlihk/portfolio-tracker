@@ -126,17 +126,19 @@ export default function Stocks() {
   const showingEnd = showingStart + stocks.length - 1;
 
   // Lookup ticker info from Yahoo Finance
-  const lookupTicker = useCallback(async (ticker) => {
-    if (!ticker || ticker.length < 1) return;
+  const lookupTicker = useCallback(async (tickerInput) => {
+    if (!tickerInput || tickerInput.length < 1) return;
+    const ticker = tickerInput.toUpperCase();
 
     setTickerLookupLoading(true);
     setTickerError('');
     try {
-      const data = await pricingAPI.getStockPrice(ticker.toUpperCase());
+      const data = await pricingAPI.getStockPrice(ticker);
       if (data && data.price) {
         setFormData(prev => ({
           ...prev,
-          ticker: data.ticker || ticker.toUpperCase(),
+          // Preserve user-entered ticker; only fill if empty
+          ticker: prev.ticker || ticker,
           companyName: prev.companyName || data.name || data.shortName || '',
           sector: prev.sector || data.sector || '',
           currency: prev.currency || data.currency || 'USD',
