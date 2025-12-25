@@ -71,8 +71,55 @@ const PORT = process.env.PORT || 3001;
 // Trust proxy for Railway/Heroku/etc
 app.set('trust proxy', 1);
 
-// Security middleware
-app.use(helmet());
+// Allowed origins (API only; static assets are same-origin)
+const allowedOrigins = new Set([
+  ...(process.env.FRONTEND_URL || 'http://localhost:5173')
+    .split(',')
+    .map(o => o.trim())
+    .filter(Boolean),
+  // Railway production URLs
+  'https://portfolio-tracker-production.up.railway.app',
+  'https://mangrove-portfolio.up.railway.app',
+  // Custom domain
+  'https://wealth.mangrove-hk.org'
+]);
+
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.has(origin) || origin.endsWith('.railway.app')) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true
+};
+
+// Security middleware - disable helmet for static assets in production
+app.use((req, res, next) => {
+  // Skip helmet for static assets to avoid CSP issues
+  if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
+    return next();
+  }
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: false,
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https://static.cloudflareinsights.com", "https://*.cloudflare.com"],
+        scriptSrcElem: ["'self'", "'unsafe-inline'", "https://static.cloudflareinsights.com", "https://*.cloudflare.com"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'", "https:", ...Array.from(allowedOrigins)],
+        fontSrc: ["'self'", "data:"],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'self'"]
+      }
+    },
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: false
+  })(req, res, next);
+});
 app.use(compression());
 app.use(cookieParser());
 
@@ -83,29 +130,8 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// CORS configuration
-const allowedOrigins = [
-  ...(process.env.FRONTEND_URL || 'http://localhost:5173')
-    .split(',')
-    .map(o => o.trim())
-    .filter(Boolean),
-  // Railway production URLs
-  'https://portfolio-tracker-production.up.railway.app',
-  'https://mangrove-portfolio.up.railway.app'
-];
-
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (same-origin, Postman, curl, etc.)
-    if (!origin) return callback(null, true);
-    // Allow if origin is in whitelist
-    if (allowedOrigins.some(allowed => origin === allowed || origin.endsWith('.railway.app'))) {
-      return callback(null, true);
-    }
-    return callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true
-}));
+// Apply CORS to API routes only
+app.use('/api', cors(corsOptions));
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -244,18 +270,34 @@ export async function startServer(): Promise<void> {
 
     if (fs.existsSync(frontendDistPath)) {
       const distFiles = fs.readdirSync(frontendDistPath);
-      logger.info('Found dist directory', { fileCount: distFiles.length });
-      // Serve static files for non-API paths only
-      app.use(/^(?!\/api)/, express.static(frontendDistPath));
+      logger.info('Found dist directory', { fileCount: distFiles.length, files: distFiles });
 
+      // Serve static files with proper MIME types
+      app.use(express.static(frontendDistPath, {
+        maxAge: '1d',
+        etag: true,
+        setHeaders: (res, filePath) => {
+          // Set correct MIME types explicitly
+          if (filePath.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+          } else if (filePath.endsWith('.css')) {
+            res.setHeader('Content-Type', 'text/css; charset=utf-8');
+          } else if (filePath.endsWith('.svg')) {
+            res.setHeader('Content-Type', 'image/svg+xml');
+          }
+        }
+      }));
+
+      // SPA fallback - serve index.html for non-API, non-asset routes
       app.get('*', (req: Request, res: Response, next: NextFunction) => {
-        // Skip API routes - let them be handled by API route handlers
-        logger.info('Static file catch-all route', { path: req.path, method: req.method });
+        // Skip API routes
         if (req.path.startsWith('/api')) {
-          logger.info('Skipping API route', { path: req.path });
           return next();
         }
-        logger.info('Serving index.html for', { path: req.path });
+        // Skip if it looks like a static asset request
+        if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map)$/)) {
+          return res.status(404).send('Not found');
+        }
         res.sendFile(path.join(frontendDistPath, 'index.html'));
       });
     } else {

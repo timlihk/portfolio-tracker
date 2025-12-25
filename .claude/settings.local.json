@@ -92,7 +92,8 @@
       "Bash(npm run:*)",
       "Bash(git tag:*)",
       "WebSearch",
-      "Bash(npm test)"
+      "Bash(npm test)",
+      "Bash(nslookup:*)"
     ],
     "deny": [],
     "ask": []
