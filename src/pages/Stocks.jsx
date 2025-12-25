@@ -88,6 +88,9 @@ export default function Stocks() {
   const { prices: stockPrices = {}, loading: pricesLoading } = useStockPrices(stockTickers);
   const { convertToUSD = (v) => v, loading: ratesLoading } = useExchangeRates() || {};
 
+  const [accountFilter, setAccountFilter] = useState('');
+  const [sectorFilter, setSectorFilter] = useState('');
+
   const isLoadingPrices = pricesLoading || ratesLoading;
 
   // Helper to get current price (real-time or manual)
@@ -126,11 +129,15 @@ export default function Stocks() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const tickerUpper = formData.ticker?.toUpperCase();
+    const enrichedSector = formData.sector || stockPrices[tickerUpper]?.sector;
+    const payload = { ...formData, ticker: tickerUpper };
+    if (enrichedSector) payload.sector = enrichedSector;
     if (formData.id) {
-      const { id, ...data } = formData;
+      const { id, ...data } = payload;
       updateMutation.mutate({ id, data });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(payload);
     }
   };
 
@@ -204,8 +211,26 @@ export default function Stocks() {
     }
   }, [lookupTicker, tickerLookupRef]);
 
+  // Auto-enrich sector on edit if missing
+  const editLookupTriggered = useRef(false);
+  if (dialogOpen && formData.ticker && !formData.sector && !editLookupTriggered.current) {
+    editLookupTriggered.current = true;
+    lookupTicker(formData.ticker);
+  }
+  if (!dialogOpen && editLookupTriggered.current) {
+    editLookupTriggered.current = false;
+  }
+
+  const filteredStocks = useMemo(() => {
+    return stocks.filter((s) => {
+      const matchesAccount = accountFilter ? s.account === accountFilter : true;
+      const matchesSector = sectorFilter ? (s.sector || '').toUpperCase() === sectorFilter.toUpperCase() : true;
+      return matchesAccount && matchesSector;
+    });
+  }, [stocks, accountFilter, sectorFilter]);
+
   const sortedStocks = useMemo(() => {
-    const copy = [...stocks];
+    const copy = [...filteredStocks];
     const getCompanyName = (stock) => {
       const yahooData = stockPrices[stock.ticker] || {};
       return (stock.companyName || yahooData.name || yahooData.shortName || stock.ticker || '').toString().toUpperCase();
@@ -307,14 +332,14 @@ export default function Stocks() {
     },
     {
       key: 'marketValue',
-      label: 'Market Value',
+      label: 'Market Value (USD)',
       align: 'right',
       sortable: true,
       render: (_, row) => {
-        const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
         const price = getCurrentPrice(row);
         const value = (Number(row.shares) || 0) * price;
-        return <span className="font-medium">{symbol}{value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
+        const valueUSD = convertToUSD(value, row.currency);
+        return <span className="font-medium">${valueUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
       }
     },
     {
@@ -340,15 +365,7 @@ export default function Stocks() {
         );
       }
     },
-    { 
-      key: 'currency', 
-      label: 'Ccy',
-      render: (val) => (
-        <Badge variant="outline" className="font-normal text-xs">
-          {val || 'USD'}
-        </Badge>
-      )
-    },
+    // Currency removed from table per request
     { 
       key: 'account', 
       label: 'Account',
@@ -386,6 +403,35 @@ export default function Stocks() {
           }}
           addLabel="Add Stock"
         />
+
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+          <select
+            className="border rounded-md px-3 py-2 text-sm text-slate-700 w-full sm:w-52"
+            value={accountFilter}
+            onChange={(e) => {
+              setAccountFilter(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">All Accounts</option>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.name}>{a.name}</option>
+            ))}
+          </select>
+          <select
+            className="border rounded-md px-3 py-2 text-sm text-slate-700 w-full sm:w-52"
+            value={sectorFilter}
+            onChange={(e) => {
+              setSectorFilter(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">All Sectors</option>
+            {sectorOptions.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
 
         <AssetTable
           columns={columns}
