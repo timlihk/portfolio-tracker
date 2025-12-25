@@ -184,11 +184,11 @@ export function useBondPrices(bonds) {
         const priceData = apiPrices.get(bond.isin) || null;
         const manualPrice = toNumber(bond.currentValue);
         const purchasePct = toNumber(bond.purchasePrice);
-        const derivedPrice = priceData?.pricePct ?? manualPrice ?? purchasePct ?? 100;
+        const chosenPrice = manualPrice ?? (priceData?.pricePct ?? null) ?? purchasePct ?? 100;
         const entry = {
-          pricePct: derivedPrice,
-          source: priceData ? priceData.source : manualPrice ? 'manual' : 'fallback',
-          currency: priceData?.currency || bond.currency || 'USD',
+          pricePct: chosenPrice,
+          source: manualPrice != null ? 'manual' : priceData ? priceData.source : 'fallback',
+          currency: manualPrice != null ? (bond.currency || priceData?.currency || 'USD') : (priceData?.currency || bond.currency || 'USD'),
           updatedAt: priceData?.updatedAt || Date.now()
         };
 

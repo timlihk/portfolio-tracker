@@ -81,11 +81,11 @@ export default function Bonds() {
   };
 
   const getPricePct = (bond) => {
-    const priceData = getBondPriceData(bond);
     const manual = Number(bond.currentValue);
+    const priceData = getBondPriceData(bond);
     const purchasePct = Number(bond.purchasePrice);
-    if (Number.isFinite(priceData?.pricePct)) return Number(priceData?.pricePct);
     if (Number.isFinite(manual)) return manual;
+    if (Number.isFinite(priceData?.pricePct)) return Number(priceData?.pricePct);
     if (Number.isFinite(purchasePct)) return purchasePct;
     return 100;
   };

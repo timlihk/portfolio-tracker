@@ -89,10 +89,10 @@ export default function Accounts() {
   // Note: PostgreSQL returns DECIMAL as strings, so we need to convert to numbers
   const getCurrentPrice = (stock) => Number(stockPrices[stock.ticker]?.price) || Number(stock.currentPrice) || Number(stock.averageCost) || 0;
   const getBondPricePct = (bond) => {
+    if (Number.isFinite(Number(bond.currentValue))) return Number(bond.currentValue);
     const entry = bondPrices[bond.id] || bondPrices[bond.isin] || bondPrices[bond.name];
     if (entry && typeof entry === 'object' && Number.isFinite(entry.pricePct)) return Number(entry.pricePct);
     if (entry != null && Number.isFinite(Number(entry))) return Number(entry);
-    if (Number.isFinite(Number(bond.currentValue))) return Number(bond.currentValue);
     if (Number.isFinite(Number(bond.purchasePrice))) return Number(bond.purchasePrice);
     return 100;
   };

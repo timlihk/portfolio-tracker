@@ -71,16 +71,16 @@ export default function Dashboard() {
   const isLoadingPrices = ratesLoading || stockPricesLoading || bondPricesLoading;
 
   const getBondPricePct = (bond) => {
-    const priceEntry = bondPrices[bond.id] || bondPrices[bond.isin] || bondPrices[bond.name];
     const manual = Number(bond.currentValue);
+    const priceEntry = bondPrices[bond.id] || bondPrices[bond.isin] || bondPrices[bond.name];
     const purchasePct = Number(bond.purchasePrice);
+    if (Number.isFinite(manual)) return manual;
     if (priceEntry && typeof priceEntry === 'object' && Number.isFinite(priceEntry.pricePct)) {
       return Number(priceEntry.pricePct);
     }
     if (priceEntry != null && Number.isFinite(Number(priceEntry))) {
       return Number(priceEntry);
     }
-    if (Number.isFinite(manual)) return manual;
     if (Number.isFinite(purchasePct)) return purchasePct;
     return 100;
   };
