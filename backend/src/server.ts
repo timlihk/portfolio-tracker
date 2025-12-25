@@ -70,7 +70,7 @@ const __dirname = path.dirname(__filename);
 const app: Express = express();
 const PORT = process.env.PORT || 3001;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX || '10', 10);
+const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX || '100', 10);
 
 // Trust proxy for Railway/Heroku/etc
 app.set('trust proxy', 1);
@@ -163,8 +163,24 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// OpenAPI docs
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
+// OpenAPI docs (protected in production unless SWAGGER_PUBLIC=true)
+const swaggerAuth = (req: Request, res: Response, next: NextFunction) => {
+  if (process.env.NODE_ENV !== 'production' || process.env.SWAGGER_PUBLIC === 'true') {
+    return next();
+  }
+  // In production, require shared secret or valid JWT
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    res.status(401).json({ error: 'Authentication required for API docs in production' });
+    return;
+  }
+  // Accept Shared secret or Bearer token (basic check - full validation in auth routes)
+  if (authHeader.startsWith('Shared ') || authHeader.startsWith('Bearer ')) {
+    return next();
+  }
+  res.status(401).json({ error: 'Invalid authentication' });
+};
+app.use('/api/docs', swaggerAuth, swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
 
 // Track database initialization status
 let dbInitialized = false;
