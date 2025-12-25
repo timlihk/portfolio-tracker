@@ -47,12 +47,23 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
 router.post('/', requireAuth, [
   body('name').notEmpty().isLength({ max: 255 }),
   body('depositType').optional().isLength({ max: 100 }),
-  body('amount').isFloat({ gt: 0 }),
+  body('amount')
+    .customSanitizer((v) => {
+      if (v === undefined || v === null || v === '') return v;
+      return parseFloat(String(v).replace(/,/g, ''));
+    })
+    .isFloat({ gt: 0 }),
   body('currency').notEmpty().isLength({ max: 10 }),
-  body('interestRate').optional().isFloat(),
-  body('maturityDate').optional().isISO8601(),
+  body('interestRate')
+    .optional({ nullable: true, checkFalsy: true })
+    .customSanitizer((v) => {
+      if (v === undefined || v === null || v === '') return undefined;
+      return parseFloat(String(v).replace(/,/g, ''));
+    })
+    .isFloat(),
+  body('maturityDate').optional({ nullable: true, checkFalsy: true }).isISO8601(),
   body('account').notEmpty().isLength({ max: 255 }),
-  body('notes').optional().isLength({ max: 1000 })
+  body('notes').optional({ nullable: true, checkFalsy: true }).isLength({ max: 1000 })
 ], async (req: AuthRequest, res: Response) => {
   try {
     const errors = validationResult(req);
@@ -104,14 +115,26 @@ router.post('/', requireAuth, [
 // PUT /cash-deposits/:id - Update a cash deposit
 router.put('/:id', requireAuth, [
   param('id').isInt({ gt: 0 }),
-  body('name').optional().notEmpty().isLength({ max: 255 }),
-  body('depositType').optional().isLength({ max: 100 }),
-  body('amount').optional().isFloat({ gt: 0 }),
-  body('currency').optional().isLength({ max: 10 }),
-  body('interestRate').optional().isFloat(),
-  body('maturityDate').optional().isISO8601(),
-  body('account').optional().isLength({ max: 255 }),
-  body('notes').optional().isLength({ max: 1000 })
+  body('name').optional({ nullable: true, checkFalsy: true }).isLength({ max: 255 }),
+  body('depositType').optional({ nullable: true, checkFalsy: true }).isLength({ max: 100 }),
+  body('amount')
+    .optional({ nullable: true, checkFalsy: true })
+    .customSanitizer((v) => {
+      if (v === undefined || v === null || v === '') return undefined;
+      return parseFloat(String(v).replace(/,/g, ''));
+    })
+    .isFloat({ gt: 0 }),
+  body('currency').optional({ nullable: true, checkFalsy: true }).isLength({ max: 10 }),
+  body('interestRate')
+    .optional({ nullable: true, checkFalsy: true })
+    .customSanitizer((v) => {
+      if (v === undefined || v === null || v === '') return undefined;
+      return parseFloat(String(v).replace(/,/g, ''));
+    })
+    .isFloat(),
+  body('maturityDate').optional({ nullable: true, checkFalsy: true }).isISO8601(),
+  body('account').optional({ nullable: true, checkFalsy: true }).isLength({ max: 255 }),
+  body('notes').optional({ nullable: true, checkFalsy: true }).isLength({ max: 1000 })
 ], async (req: AuthRequest, res: Response) => {
   try {
     const errors = validationResult(req);
