@@ -9,6 +9,8 @@ import { fileURLToPath } from 'url';
 import cookieParser from 'cookie-parser';
 import logger from './services/logger.js';
 import { prisma } from './lib/prisma.js';
+import swaggerUi from 'swagger-ui-express';
+import swaggerSpec from './swagger.js';
 
 dotenv.config();
 // Normalize database URL for environments that expose DATABASE_PUBLIC_URL (e.g., Railway)
@@ -68,7 +70,7 @@ const __dirname = path.dirname(__filename);
 const app: Express = express();
 const PORT = process.env.PORT || 3001;
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
-const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX || '100', 10);
+const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX || '10', 10);
 
 // Trust proxy for Railway/Heroku/etc
 app.set('trust proxy', 1);
@@ -160,6 +162,9 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
   res.set('Cache-Control', 'no-store, max-age=0');
   next();
 });
+
+// OpenAPI docs
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
 
 // Track database initialization status
 let dbInitialized = false;
