@@ -113,12 +113,25 @@ export default function CashDeposits() {
       return;
     }
 
-    // Build payload without id field for API
+    // Build payload without id field for API, stripping empty strings and normalizing numbers
     const { id, ...dataWithoutId } = formData;
-    const payload = {
-      ...dataWithoutId,
-      currency: currency || 'USD'
-    };
+    const payload = { ...dataWithoutId };
+
+    // Normalize numeric fields
+    ['amount', 'interestRate'].forEach((key) => {
+      if (payload[key] === '' || payload[key] === undefined || payload[key] === null) {
+        delete payload[key];
+      } else {
+        payload[key] = Number(payload[key]);
+      }
+    });
+
+    // Drop empty dates/strings
+    if (payload.maturityDate === '' || payload.maturityDate === undefined) delete payload.maturityDate;
+    if (payload.notes === '') delete payload.notes;
+    if (payload.depositType === '') delete payload.depositType;
+
+    payload.currency = currency || 'USD';
 
     if (id) {
       updateMutation.mutate({ id, data: payload });
