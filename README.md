@@ -2,12 +2,16 @@
 
 A full-stack portfolio tracking application for managing investments across multiple asset classes including stocks, bonds, private equity funds, liquid funds, and private deals.
 
-> Last updated: December 2025 - v1.6.x
-> - Frontend migrated to TypeScript with route-level code splitting
-> - Prisma ORM for backend routes with shared CRUD factory
-> - Multi-currency support across all asset types with live FX conversion
-> - Bond pricing via Finnhub API (env key required)
-> - Shared-secret single-tenant auth with HTTP-only cookies
+> **v1.7.0** - December 2025
+>
+> ### What's New
+> - **100% TypeScript frontend** - All pages migrated with strict typing, zero `@ts-nocheck`
+> - **CRUD factory pattern** - 8 portfolio routes consolidated, ~1,000 lines eliminated
+> - **Route-level code splitting** - React.lazy() for all pages, faster initial load
+> - **Security hardening** - Timing-safe auth, no hardcoded secrets, rate limiting
+> - **Soft delete support** - `deletedAt` field on all portfolio models
+> - **Performance boost** - Single dashboard endpoint (was 8 calls), parallel bond fetches
+> - **Removed unused deps** - Dropped `three`, `react-leaflet`, `moment` (~800KB saved)
 
 ## Features
 
