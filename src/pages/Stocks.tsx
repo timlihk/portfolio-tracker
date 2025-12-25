@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { entities, pricingAPI } from '@/api/backendClient';
 import PageHeader from '@/components/portfolio/PageHeader';
 import AssetTable from '@/components/portfolio/AssetTable';
@@ -10,7 +10,6 @@ import { useExchangeRates, useStockPrices, CURRENCY_SYMBOLS } from '@/components
 import { createChangeLogger } from '@/components/portfolio/useChangelog';
 import { RefreshCw } from 'lucide-react';
 import type { Stock, Account } from '@/types';
-import type React from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -73,7 +72,7 @@ export default function Stocks() {
       account: accountFilter || undefined,
       sector: sectorFilter || undefined
     }),
-    keepPreviousData: true
+    placeholderData: keepPreviousData
   });
   const stocks = stocksResponse?.data || [];
   const pagination = stocksResponse?.pagination || { total: stocks.length, page, limit };

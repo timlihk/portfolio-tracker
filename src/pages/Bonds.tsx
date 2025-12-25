@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { entities } from '@/api/backendClient';
 import PageHeader from '@/components/portfolio/PageHeader';
 import AssetTable from '@/components/portfolio/AssetTable';
@@ -11,7 +11,6 @@ import { createChangeLogger } from '@/components/portfolio/useChangelog';
 import { RefreshCw } from 'lucide-react';
 import PaginationControls from '@/components/portfolio/PaginationControls';
 import type { Bond, Account } from '@/types';
-import type React from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,7 +65,7 @@ export default function Bonds() {
   const { data: bondResponse, isFetching: bondsLoading } = useQuery<PaginatedResponse<Bond>>({
     queryKey: ['bonds', page, limit],
     queryFn: () => entities.Bond.listWithPagination({ page, limit }),
-    keepPreviousData: true
+    placeholderData: keepPreviousData
   });
   const bonds = bondResponse?.data || [];
   const pagination = bondResponse?.pagination || { total: bonds.length, page, limit };

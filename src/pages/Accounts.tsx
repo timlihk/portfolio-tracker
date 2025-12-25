@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { entities } from '@/api/backendClient';
 import { Button } from "@/components/ui/button";
 import { Badge } from '@/components/ui/badge';
@@ -65,7 +65,7 @@ export default function Accounts() {
   const { data: accountsResponse = [] , isFetching: accountsLoading } = useQuery<PaginatedResponse<Account> | Account[]>({
     queryKey: ['accounts', page, limit],
     queryFn: () => entities.Account.listWithPagination({ page, limit }),
-    keepPreviousData: true
+    placeholderData: keepPreviousData
   });
   const accounts = Array.isArray(accountsResponse)
     ? accountsResponse

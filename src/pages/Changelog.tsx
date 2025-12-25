@@ -14,7 +14,6 @@ import {
   Trash2,
   History
 } from 'lucide-react';
-import type React from 'react';
 
 type ChangelogEntry = {
   id: string | number;

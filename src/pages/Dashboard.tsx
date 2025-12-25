@@ -294,8 +294,12 @@ export default function Dashboard() {
     }).sort((a, b) => b.assetsTotal - a.assetsTotal);
   }, [accounts, stocks, bonds, cashDeposits, liquidFunds, liabilities, convertToUSD, stockPrices, bondPrices]);
 
-  const isLoadingData = profileLoading || dashboardLoading || isLoadingPrices;
-  const loadError = dashboardError ? (dashboardErrorObj?.message || 'Failed to load dashboard data') : '';
+  const isLoadingData = profileLoading || dashboardLoading;
+  const loadError = dashboardError
+    ? (dashboardErrorObj?.message || 'Failed to load dashboard data')
+    : profileError
+      ? (profileError as Error).message || 'Failed to load profile'
+      : '';
 
   if (isLoadingData) {
     return (

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { entities } from '@/api/backendClient';
 import PageHeader from '@/components/portfolio/PageHeader';
 import AssetTable from '@/components/portfolio/AssetTable';
@@ -73,7 +73,7 @@ export default function LiquidFunds() {
   const { data: fundsResponse = [], isFetching: isLoading, isError: fundsError, error: fundsErrorObj } = useQuery<PaginatedResponse<LiquidFund> | LiquidFund[]>({
     queryKey: ['liquidFunds', page, limit],
     queryFn: () => entities.LiquidFund.listWithPagination({ page, limit }),
-    keepPreviousData: true
+    placeholderData: keepPreviousData
   });
   const funds = Array.isArray(fundsResponse)
     ? fundsResponse as LiquidFund[]

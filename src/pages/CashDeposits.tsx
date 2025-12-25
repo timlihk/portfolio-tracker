@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { entities } from '@/api/backendClient';
 import PageHeader from '@/components/portfolio/PageHeader';
 import AssetTable from '@/components/portfolio/AssetTable';
@@ -76,7 +76,7 @@ export default function CashDeposits() {
   const { data: depositsResponse = [], isFetching: depositsLoading, isError: depositsError, error: depositsErrorObj } = useQuery<PaginatedResponse<CashDeposit> | CashDeposit[]>({
     queryKey: ['cashDeposits', page, limit, accountFilter, currencyFilter],
     queryFn: () => entities.CashDeposit.listWithPagination({ page, limit, account: accountFilter || undefined, currency: currencyFilter || undefined }),
-    keepPreviousData: true
+    placeholderData: keepPreviousData
   });
 
   const deposits = Array.isArray(depositsResponse)

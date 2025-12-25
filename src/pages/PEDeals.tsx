@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { entities } from '@/api/backendClient';
 import PageHeader from '@/components/portfolio/PageHeader';
 import AssetTable from '@/components/portfolio/AssetTable';
@@ -65,7 +65,7 @@ export default function PEDeals() {
   const { data: dealsResponse = [], isFetching: isLoading } = useQuery<PaginatedResponse<PeDeal> | PeDeal[]>({
     queryKey: ['peDeals', page, limit],
     queryFn: () => entities.PEDeal.listWithPagination({ page, limit }),
-    keepPreviousData: true
+    placeholderData: keepPreviousData
   });
   const deals = Array.isArray(dealsResponse)
     ? dealsResponse

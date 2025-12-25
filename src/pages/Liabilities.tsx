@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { entities } from '@/api/backendClient';
 import PageHeader from '@/components/portfolio/PageHeader';
 import AssetTable from '@/components/portfolio/AssetTable';
@@ -75,7 +75,7 @@ export default function Liabilities() {
   const { data: liabilitiesResponse = [], isFetching: liabilitiesLoading, isError: liabilitiesError, error: liabilitiesErrorObj } = useQuery<PaginatedResponse<Liability> | Liability[]>({
     queryKey: ['liabilities', page, limit, accountFilter, currencyFilter],
     queryFn: () => entities.Liability.listWithPagination({ page, limit, account: accountFilter || undefined, currency: currencyFilter || undefined }),
-    keepPreviousData: true
+    placeholderData: keepPreviousData
   });
   const liabilities = Array.isArray(liabilitiesResponse)
     ? liabilitiesResponse as Liability[]
