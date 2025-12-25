@@ -11,7 +11,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit --project backend/tsconfig.json",
     "preview": "vite preview",
     "build:frontend": "vite build --outDir dist",
     "build:backend": "npm --prefix backend run build",

@@ -1,0 +1,47 @@
+import type * as React from "react";
+
+declare module "@/components/ui/*" {
+  export const Button: React.ComponentType<any>;
+  export const Input: React.ComponentType<any>;
+  export const Label: React.ComponentType<any>;
+  export const Select: React.ComponentType<any>;
+  export const SelectTrigger: React.ComponentType<any>;
+  export const SelectContent: React.ComponentType<any>;
+  export const SelectItem: React.ComponentType<any>;
+  export const SelectValue: React.ComponentType<any>;
+  export const Textarea: React.ComponentType<any>;
+  export const Dialog: React.ComponentType<any>;
+  export const DialogContent: React.ComponentType<any>;
+  export const DialogHeader: React.ComponentType<any>;
+  export const DialogTitle: React.ComponentType<any>;
+  export const DialogDescription: React.ComponentType<any>;
+  export const DialogFooter: React.ComponentType<any>;
+  export const DialogTrigger: React.ComponentType<any>;
+  export const DialogClose: React.ComponentType<any>;
+  export const Table: React.ComponentType<any>;
+  export const TableHeader: React.ComponentType<any>;
+  export const TableBody: React.ComponentType<any>;
+  export const TableRow: React.ComponentType<any>;
+  export const TableHead: React.ComponentType<any>;
+  export const TableCell: React.ComponentType<any>;
+  export const Badge: React.ComponentType<any>;
+  export const Card: React.ComponentType<any>;
+  export const CardHeader: React.ComponentType<any>;
+  export const CardContent: React.ComponentType<any>;
+  export const CardTitle: React.ComponentType<any>;
+  export const Pagination: React.ComponentType<any>;
+  export const PaginationContent: React.ComponentType<any>;
+  export const PaginationItem: React.ComponentType<any>;
+  export const PaginationLink: React.ComponentType<any>;
+  export const PaginationPrevious: React.ComponentType<any>;
+  export const PaginationNext: React.ComponentType<any>;
+  export const Tabs: React.ComponentType<any>;
+  export const TabsList: React.ComponentType<any>;
+  export const TabsTrigger: React.ComponentType<any>;
+  export const TabsContent: React.ComponentType<any>;
+  export const Checkbox: React.ComponentType<any>;
+  export const Switch: React.ComponentType<any>;
+  export const SelectGroup: React.ComponentType<any>;
+  const DefaultExport: React.ComponentType<any>;
+  export default DefaultExport;
+}
