@@ -1,50 +1,14 @@
-import { Router, Response } from 'express';
+import { Router } from 'express';
 import { body, param } from 'express-validator';
 import { prisma } from '../../lib/prisma.js';
-import { requireAuth } from '../../middleware/auth.js';
 import logger from '../../services/logger.js';
-import { AuthRequest, serializeDecimals, CreateLiabilityRequest, UpdateLiabilityRequest } from '../../types/index.js';
+import { serializeDecimals, CreateLiabilityRequest, UpdateLiabilityRequest } from '../../types/index.js';
 import { handleValidationOrRespond, toDateOrNull, toNumberOrNull } from './utils.js';
-import { getPaginationParams, setPaginationHeaders } from './pagination.js';
-import { sendNotFound, sendServerError, sendUnauthorized } from '../response.js';
+import { createCrudRouter } from './crudFactory.js';
 
-const router = Router();
+const serializeLiability = (liability: any) => serializeDecimals(liability);
 
-// GET /liabilities - List all liabilities
-router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
-  try {
-    const { skip, take, paginated, page, limit } = getPaginationParams(req);
-    const rawAccount = (req.query as { account?: string }).account;
-    const rawCurrency = (req.query as { currency?: string }).currency;
-    const account = rawAccount && rawAccount !== 'undefined' ? rawAccount : undefined;
-    const currency = rawCurrency && rawCurrency !== 'undefined' ? rawCurrency : undefined;
-    const where = {
-      userId: req.userId,
-      ...(account ? { account } : {}),
-      ...(currency ? { currency } : {})
-    };
-    const liabilities = await prisma.liability.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      skip,
-      take
-    });
-    if (paginated && page && limit) {
-      const total = await prisma.liability.count({ where });
-      setPaginationHeaders(res, total, page, limit);
-    }
-
-    const serializedLiabilities = liabilities.map(liability => serializeDecimals(liability));
-    res.json(serializedLiabilities);
-  } catch (error) {
-    const err = error as Error;
-    logger.error('Error fetching liabilities:', { error: err.message, userId: req.userId });
-    sendServerError(res, 'Failed to fetch liabilities');
-  }
-});
-
-// POST /liabilities - Create a liability
-router.post('/', requireAuth, [
+const createValidators = [
   body('name').notEmpty().isLength({ max: 255 }),
   body('liabilityType').optional().isLength({ max: 100 }),
   body('account').optional().isLength({ max: 255 }),
@@ -58,65 +22,9 @@ router.post('/', requireAuth, [
   body('currency').optional().isLength({ max: 10 }),
   body('status').optional().isLength({ max: 50 }),
   body('notes').optional().isLength({ max: 1000 })
-], async (req: AuthRequest, res: Response) => {
-  try {
-    if (!handleValidationOrRespond(req, res)) return;
+];
 
-    if (!req.userId) {
-      return sendUnauthorized(res);
-    }
-
-    const {
-      name,
-      liabilityType,
-      account,
-      principal,
-      outstandingBalance,
-      interestRate,
-      rateType,
-      collateral,
-      startDate,
-      maturityDate,
-      currency,
-      status,
-      notes
-    } = req.body as CreateLiabilityRequest;
-
-    const principalNum = toNumberOrNull(principal);
-    const outstandingNum = toNumberOrNull(outstandingBalance);
-    const interestNum = toNumberOrNull(interestRate);
-    const startDateVal = toDateOrNull(startDate);
-    const maturityDateVal = toDateOrNull(maturityDate);
-
-    const liability = await prisma.liability.create({
-      data: {
-        userId: req.userId,
-        name,
-        liabilityType: liabilityType || null,
-        account: account || null,
-        principal: principalNum,
-        outstandingBalance: outstandingNum,
-        interestRate: interestNum,
-        rateType: rateType || null,
-        collateral: collateral || null,
-        startDate: startDateVal,
-        maturityDate: maturityDateVal,
-        currency: currency || 'USD',
-        status: status || 'Active',
-        notes: notes || null
-      }
-    });
-
-    res.status(201).json(serializeDecimals(liability));
-  } catch (error) {
-    const err = error as Error;
-    logger.error('Error creating liability:', { error: err.message, userId: req.userId });
-    sendServerError(res, 'Failed to create liability');
-  }
-});
-
-// PUT /liabilities/:id - Update a liability
-router.put('/:id', requireAuth, [
+const updateValidators = [
   param('id').isInt({ gt: 0 }),
   body('name').optional().notEmpty().isLength({ max: 255 }),
   body('liabilityType').optional().isLength({ max: 100 }),
@@ -131,104 +39,67 @@ router.put('/:id', requireAuth, [
   body('currency').optional().isLength({ max: 10 }),
   body('status').optional().isLength({ max: 50 }),
   body('notes').optional().isLength({ max: 1000 })
-], async (req: AuthRequest, res: Response) => {
-  try {
-    if (!handleValidationOrRespond(req, res)) return;
+];
 
-    const { id } = req.params;
-    const {
-      name,
-      liabilityType,
-      account,
-      principal,
-      outstandingBalance,
-      interestRate,
-      rateType,
-      collateral,
-      startDate,
-      maturityDate,
-      currency,
-      status,
-      notes
-    } = req.body as UpdateLiabilityRequest;
-
-    if (!req.userId) {
-      return sendUnauthorized(res);
-    }
-
-    const principalNum = toNumberOrNull(principal);
-    const outstandingNum = toNumberOrNull(outstandingBalance);
-    const interestNum = toNumberOrNull(interestRate);
-    const startDateVal = toDateOrNull(startDate);
-    const maturityDateVal = toDateOrNull(maturityDate);
-
-    const existingLiability = await prisma.liability.findFirst({
-      where: { id: parseInt(id, 10), userId: req.userId }
-    });
-
-    if (!existingLiability) {
-      return sendNotFound(res, 'Liability not found');
-    }
-
-    const updatedLiability = await prisma.liability.update({
-      where: { id: parseInt(id, 10) },
-      data: {
-        name,
-        liabilityType: liabilityType || null,
-        account: account || null,
-        principal: principalNum,
-        outstandingBalance: outstandingNum,
-        interestRate: interestNum,
-        rateType: rateType || null,
-        collateral: collateral || null,
-        startDate: startDateVal,
-        maturityDate: maturityDateVal,
-        currency,
-        status,
-        notes: notes || null,
-        updatedAt: new Date()
-      }
-    });
-
-    res.json(serializeDecimals(updatedLiability));
-  } catch (error) {
-    const { id } = req.params;
-    const err = error as Error;
-    logger.error('Error updating liability:', { error: err.message, userId: req.userId, liabilityId: id });
-    sendServerError(res, 'Failed to update liability');
-  }
-});
-
-// DELETE /liabilities/:id - Delete a liability
-router.delete('/:id', requireAuth, [
-  param('id').isInt({ gt: 0 })
-], async (req: AuthRequest, res: Response) => {
-  try {
-    if (!handleValidationOrRespond(req, res)) return;
-
-    const { id } = req.params;
-
-    if (!req.userId) {
-      return sendUnauthorized(res);
-    }
-
-    const liability = await prisma.liability.deleteMany({
-      where: {
-        id: parseInt(id, 10),
-        userId: req.userId
-      }
-    });
-
-    if (liability.count === 0) {
-      return sendNotFound(res, 'Liability not found');
-    }
-
-    res.json({ message: 'Liability deleted successfully' });
-  } catch (error) {
-    const { id } = req.params;
-    const err = error as Error;
-    logger.error('Error deleting liability:', { error: err.message, userId: req.userId, liabilityId: id });
-    sendServerError(res, 'Failed to delete liability');
+const router = createCrudRouter<CreateLiabilityRequest, UpdateLiabilityRequest>({
+  resourceName: 'Liability',
+  prismaModel: prisma.liability,
+  serialize: serializeLiability,
+  createValidators,
+  updateValidators,
+  buildFilters: (req) => {
+    const rawAccount = (req.query as { account?: string }).account;
+    const rawCurrency = (req.query as { currency?: string }).currency;
+    const account = rawAccount && rawAccount !== 'undefined' ? rawAccount : undefined;
+    const currency = rawCurrency && rawCurrency !== 'undefined' ? rawCurrency : undefined;
+    return {
+      ...(account ? { account } : {}),
+      ...(currency ? { currency } : {})
+    };
+  },
+  buildCreateData: (body) => {
+    const principalNum = toNumberOrNull(body.principal);
+    const outstandingNum = toNumberOrNull(body.outstandingBalance);
+    const interestNum = toNumberOrNull(body.interestRate);
+    const startDateVal = toDateOrNull(body.startDate);
+    const maturityDateVal = toDateOrNull(body.maturityDate);
+    return {
+      name: body.name,
+      liabilityType: body.liabilityType || null,
+      account: body.account || null,
+      principal: principalNum,
+      outstandingBalance: outstandingNum,
+      interestRate: interestNum,
+      rateType: body.rateType || null,
+      collateral: body.collateral || null,
+      startDate: startDateVal,
+      maturityDate: maturityDateVal,
+      currency: body.currency || 'USD',
+      status: body.status || 'Active',
+      notes: body.notes || null
+    };
+  },
+  buildUpdateData: (body) => {
+    const principalNum = toNumberOrNull(body.principal);
+    const outstandingNum = toNumberOrNull(body.outstandingBalance);
+    const interestNum = toNumberOrNull(body.interestRate);
+    const startDateVal = toDateOrNull(body.startDate);
+    const maturityDateVal = toDateOrNull(body.maturityDate);
+    return {
+      name: body.name,
+      liabilityType: body.liabilityType || null,
+      account: body.account || null,
+      principal: principalNum,
+      outstandingBalance: outstandingNum,
+      interestRate: interestNum,
+      rateType: body.rateType || null,
+      collateral: body.collateral || null,
+      startDate: startDateVal,
+      maturityDate: maturityDateVal,
+      currency: body.currency,
+      status: body.status,
+      notes: body.notes || null
+    };
   }
 });
 
