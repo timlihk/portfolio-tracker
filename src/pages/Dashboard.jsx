@@ -284,42 +284,75 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50/50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Portfolio Overview</h1>
-            <p className="text-slate-500 mt-1">Net worth, allocation, and account-level view</p>
+            <p className="text-sm uppercase tracking-[0.2em] text-slate-400 font-semibold">Portfolio</p>
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">Overview</h1>
+            <p className="text-slate-500 mt-1">A concise look at your wealth, allocation, and accounts</p>
           </div>
           <div className="flex items-center gap-2">
             {isLoadingPrices && (
-              <Badge variant="outline" className="flex items-center gap-2 py-1.5 px-3">
+              <Badge variant="outline" className="flex items-center gap-2 py-1.5 px-3 bg-white/70 backdrop-blur">
                 <RefreshCw className="w-3 h-3 animate-spin" />
                 Updating prices...
               </Badge>
             )}
-            <Badge variant="secondary" className="py-1.5 px-3">
+            <Badge variant="secondary" className="py-1.5 px-3 bg-slate-900 text-white shadow-sm">
               All values in USD
             </Badge>
           </div>
         </div>
 
-        {/* Top: Net worth + allocation */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-1">
-            <StatCard
-              title="Net Worth"
-              value={formatUsd(totalValue)}
-              icon={Wallet}
-              trend={totalCost > 0 && !isNaN(Number(totalGainPercent)) ? (Number(totalGainPercent) >= 0 ? 'up' : 'down') : null}
-              trendValue={totalCost > 0 && !isNaN(Number(totalGainPercent)) ? `${totalGainPercent}%` : null}
-              subValue={`${formatUsd(totalAssets)} assets • ${formatUsd(totalLiabilities)} liabilities`}
-            />
+        {/* Hero Net Worth */}
+        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 rounded-3xl p-6 md:p-8 text-white shadow-xl border border-white/10">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center">
+            <div className="space-y-2">
+              <p className="text-sm uppercase tracking-[0.2em] text-slate-300">Net Worth</p>
+              <p className="text-4xl md:text-5xl font-semibold">{formatUsd(totalValue)}</p>
+              <p className="text-slate-300 text-sm">
+                {formatUsd(totalAssets)} assets • {formatUsd(totalLiabilities)} liabilities
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-4 lg:col-span-2">
+              <StatCard
+                title="Stocks"
+                value={formatUsd(stocksValue)}
+                icon={Wallet}
+                trend={stocksCost > 0 && !isNaN(Number(stocksGainPercent)) ? (Number(stocksGainPercent) >= 0 ? 'up' : 'down') : null}
+                trendValue={stocksCost > 0 && !isNaN(Number(stocksGainPercent)) ? `${stocksGainPercent}%` : null}
+                subValue={`${stocks.length} positions`}
+              />
+              <StatCard
+                title="Cash & Deposits"
+                value={formatUsd(cashValue)}
+                icon={Banknote}
+                subValue={`${cashDeposits.length} positions`}
+              />
+              <StatCard
+                title="Fixed Income"
+                value={formatUsd(bondsValue)}
+                icon={Landmark}
+                subValue={`${bonds.length} bonds`}
+              />
+              <StatCard
+                title="Alt / PE"
+                value={formatUsd(peFundsValue + peDealsValue + liquidFundsValue)}
+                icon={Building2}
+                subValue={`${peFunds.length + peDeals.length + liquidFunds.length} positions`}
+              />
+            </div>
           </div>
-          <div className="lg:col-span-2">
-            <AllocationChart data={allocationData} />
+        </div>
+
+        {/* Allocation */}
+        <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-slate-900">Asset Allocation</h3>
           </div>
+          <AllocationChart data={allocationData} />
         </div>
 
         {/* Assets + Liabilities cards */}
