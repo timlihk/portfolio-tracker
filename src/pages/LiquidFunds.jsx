@@ -22,11 +22,14 @@ const STRATEGIES = ['Long/Short Equity', 'Global Macro', 'Event Driven', 'Multi-
 const REDEMPTION_FREQ = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Semi-Annual', 'Annual', 'Locked'];
 const STATUSES = ['Active', 'In Redemption', 'Fully Redeemed'];
 
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS', 'HKD'];
+
 const fundFields = [
   { name: 'fundName', label: 'Fund Name', required: true, placeholder: 'Bridgewater Pure Alpha' },
   { name: 'manager', label: 'Fund Manager', placeholder: 'Bridgewater Associates' },
   { name: 'fundType', label: 'Fund Type', type: 'select', options: FUND_TYPES },
   { name: 'strategy', label: 'Strategy', type: 'select', options: STRATEGIES },
+  { name: 'currency', label: 'Currency', type: 'select', options: CURRENCIES, required: true },
   { name: 'investmentAmount', label: 'Investment Amount', type: 'number', required: true, placeholder: '250000' },
   { name: 'currentValue', label: 'Current Value', type: 'number', placeholder: '275000' },
   { name: 'investmentDate', label: 'Investment Date', type: 'date' },
