@@ -190,50 +190,56 @@ export function useBondPrices(bonds: Array<{ id: number | string; isin?: string 
       setError(null);
       const apiPrices = new Map<string, BondPriceEntry>();
 
-      const results = await Promise.all(uniqueIsins.map(async (isin) => {
-        try {
-          const data = await pricingAPI.getBondPriceByIsin(isin);
-          if (data && Number.isFinite(data.pricePct) && data.pricePct > 0) {
-            return { isin, price: {
-              pricePct: Number(data.pricePct),
-              source: data.source || 'api',
-              currency: data.currency || 'USD',
-              updatedAt: data.timestamp || Date.now(),
-            } as BondPriceEntry };
+      try {
+        const results = await Promise.all(uniqueIsins.map(async (isin) => {
+          try {
+            const data = await pricingAPI.getBondPriceByIsin(isin);
+            if (data && Number.isFinite(data.pricePct) && data.pricePct > 0) {
+              return { isin, price: {
+                pricePct: Number(data.pricePct),
+                source: data.source || 'api',
+                currency: data.currency || 'USD',
+                updatedAt: data.timestamp || Date.now(),
+              } as BondPriceEntry };
+            }
+          } catch (err) {
+            console.error('Failed to fetch bond price', isin, err);
+            setError(err);
           }
-        } catch (err) {
-          console.error('Failed to fetch bond price', isin, err);
-          setError(err);
+          return null;
+        }));
+
+        results.filter(Boolean).forEach((entry) => {
+          const typed = entry as { isin: string; price: BondPriceEntry };
+          apiPrices.set(typed.isin, typed.price);
+        });
+
+        const priceMap: Record<string, BondPriceEntry | number> = {};
+        bonds.forEach((bond) => {
+          const priceData = (bond.isin && apiPrices.get(bond.isin)) || null;
+          const manualPrice = toNumber(bond.currentValue);
+          const purchasePct = toNumber(bond.purchasePrice);
+          const chosenPrice = manualPrice ?? priceData?.pricePct ?? purchasePct ?? 100;
+          const entry = {
+            pricePct: chosenPrice,
+            source: manualPrice != null ? 'manual' : priceData ? priceData.source : 'fallback',
+            currency: manualPrice != null ? (bond.currency || priceData?.currency || 'USD') : (priceData?.currency || bond.currency || 'USD'),
+            updatedAt: priceData?.updatedAt || Date.now(),
+          } as BondPriceEntry;
+
+          const key = bond.id?.toString() || bond.isin || bond.name || `${Math.random()}`;
+          priceMap[key] = entry;
+          if (bond.isin) priceMap[bond.isin] = entry;
+          if (bond.name) priceMap[bond.name] = entry;
+        });
+
+        if (!cancelled) {
+          setPrices(priceMap);
         }
-        return null;
-      }));
-
-      results.filter(Boolean).forEach((entry) => {
-        const typed = entry as { isin: string; price: BondPriceEntry };
-        apiPrices.set(typed.isin, typed.price);
-      });
-
-      const priceMap: Record<string, BondPriceEntry | number> = {};
-      bonds.forEach((bond) => {
-        const priceData = (bond.isin && apiPrices.get(bond.isin)) || null;
-        const manualPrice = toNumber(bond.currentValue);
-        const purchasePct = toNumber(bond.purchasePrice);
-        const chosenPrice = manualPrice ?? priceData?.pricePct ?? purchasePct ?? 100;
-        const entry = {
-          pricePct: chosenPrice,
-          source: manualPrice != null ? 'manual' : priceData ? priceData.source : 'fallback',
-          currency: manualPrice != null ? (bond.currency || priceData?.currency || 'USD') : (priceData?.currency || bond.currency || 'USD'),
-          updatedAt: priceData?.updatedAt || Date.now(),
-        } as BondPriceEntry;
-
-        const key = bond.id?.toString() || bond.isin || bond.name || `${Math.random()}`;
-        priceMap[key] = entry;
-        if (bond.isin) priceMap[bond.isin] = entry;
-        if (bond.name) priceMap[bond.name] = entry;
-      });
-
-      if (!cancelled) {
-        setPrices(priceMap);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
