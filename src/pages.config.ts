@@ -1,5 +1,13 @@
-import { lazy } from 'react';
-import __Layout from './Layout.jsx';
+import { lazy, type ComponentType, type LazyExoticComponent, type ReactNode } from 'react';
+import __Layout from './Layout';
+
+export type PageComponent = LazyExoticComponent<ComponentType<any>>;
+
+export interface PagesConfig {
+  mainPage: string;
+  Pages: Record<string, PageComponent>;
+  Layout?: ComponentType<{ currentPageName?: string; children: ReactNode }>;
+}
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Stocks = lazy(() => import('./pages/Stocks'));
@@ -14,23 +22,23 @@ const CashDeposits = lazy(() => import('./pages/CashDeposits'));
 const Liabilities = lazy(() => import('./pages/Liabilities'));
 const Performance = lazy(() => import('./pages/Performance'));
 
-export const PAGES = {
-  "Dashboard": Dashboard,
-  "Stocks": Stocks,
-  "Bonds": Bonds,
-  "PEFunds": PEFunds,
-  "PEDeals": PEDeals,
-  "LiquidFunds": LiquidFunds,
-  "Accounts": Accounts,
-  "Changelog": Changelog,
-  "Transactions": Transactions,
-  "CashDeposits": CashDeposits,
-  "Liabilities": Liabilities,
-  "Performance": Performance,
+export const PAGES: Record<string, PageComponent> = {
+  Dashboard,
+  Stocks,
+  Bonds,
+  PEFunds,
+  PEDeals,
+  LiquidFunds,
+  Accounts,
+  Changelog,
+  Transactions,
+  CashDeposits,
+  Liabilities,
+  Performance,
 };
 
-export const pagesConfig = {
-  mainPage: "Dashboard",
+export const pagesConfig: PagesConfig = {
+  mainPage: 'Dashboard',
   Pages: PAGES,
-  Layout: __Layout,
+  Layout: __Layout as ComponentType<{ currentPageName?: string; children: ReactNode }>
 };

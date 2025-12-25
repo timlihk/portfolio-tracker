@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from './utils';
-import { 
-  LayoutDashboard, 
-  TrendingUp, 
-  Landmark, 
-  Briefcase, 
+import {
+  LayoutDashboard,
+  TrendingUp,
+  Landmark,
+  Briefcase,
   Building2,
   Waves,
   Wallet,
@@ -18,9 +18,15 @@ import {
   CreditCard,
   Lock
 } from 'lucide-react';
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 
-const navItems = [
+type NavItem = {
+  name: string;
+  page: string;
+  icon: React.ComponentType<{ className?: string }>;
+};
+
+const navItems: NavItem[] = [
   { name: 'Dashboard', page: 'Dashboard', icon: LayoutDashboard },
   { name: 'Accounts', page: 'Accounts', icon: Wallet },
   { name: 'Stocks', page: 'Stocks', icon: TrendingUp },
@@ -35,7 +41,12 @@ const navItems = [
   { name: 'Login', page: 'Login', icon: Lock },
 ];
 
-export default function Layout({ children, currentPageName }) {
+export interface LayoutProps {
+  children: ReactNode;
+  currentPageName?: string;
+}
+
+export default function Layout({ children, currentPageName }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
