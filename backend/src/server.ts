@@ -67,6 +67,8 @@ const __dirname = path.dirname(__filename);
 
 const app: Express = express();
 const PORT = process.env.PORT || 3001;
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX || '300', 10);
 
 // Trust proxy for Railway/Heroku/etc
 app.set('trust proxy', 1);
@@ -77,17 +79,15 @@ const allowedOrigins = new Set([
     .split(',')
     .map(o => o.trim())
     .filter(Boolean),
-  // Railway production URLs
   'https://portfolio-tracker-production.up.railway.app',
   'https://mangrove-portfolio.up.railway.app',
-  // Custom domain
   'https://wealth.mangrove-hk.org'
 ]);
 
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
-    if (allowedOrigins.has(origin) || origin.endsWith('.railway.app')) {
+    if (allowedOrigins.has(origin)) {
       return callback(null, true);
     }
     return callback(new Error('Not allowed by CORS'));
@@ -123,10 +123,12 @@ app.use((req, res, next) => {
 app.use(compression());
 app.use(cookieParser());
 
-// Rate limiting (loosened: 100x the original max)
+// Rate limiting (tightened for abuse protection)
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10000 // limit each IP to 10k requests per windowMs
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  max: RATE_LIMIT_MAX,
+  standardHeaders: true,
+  legacyHeaders: false
 });
 app.use(limiter);
 
