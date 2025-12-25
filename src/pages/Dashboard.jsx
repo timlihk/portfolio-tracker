@@ -391,7 +391,7 @@ export default function Dashboard() {
                                 return (
                                   <div className="bg-white px-3 py-2 rounded-lg shadow border border-slate-100 text-sm">
                                     <div className="font-medium text-slate-900">{item.name}</div>
-                                    <div className="text-slate-600">{pct}%</div>
+                                    <div className="text-slate-600">{pct}% • ${Number(item.value || 0).toLocaleString()}</div>
                                   </div>
                                 );
                               }

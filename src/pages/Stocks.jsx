@@ -221,6 +221,13 @@ export default function Stocks() {
     editLookupTriggered.current = false;
   }
 
+  // Cleanup any pending ticker lookups on unmount
+  useEffect(() => {
+    return () => {
+      if (tickerLookupRef.current) clearTimeout(tickerLookupRef.current);
+    };
+  }, []);
+
   const filteredStocks = useMemo(() => {
     return stocks.filter((s) => {
       const matchesAccount = accountFilter ? s.account === accountFilter : true;
@@ -411,6 +418,8 @@ export default function Stocks() {
             onChange={(e) => {
               setAccountFilter(e.target.value);
               setPage(1);
+              setSortKey('ticker');
+              setSortDir('asc');
             }}
           >
             <option value="">All Accounts</option>
@@ -424,6 +433,8 @@ export default function Stocks() {
             onChange={(e) => {
               setSectorFilter(e.target.value);
               setPage(1);
+              setSortKey('ticker');
+              setSortDir('asc');
             }}
           >
             <option value="">All Sectors</option>
