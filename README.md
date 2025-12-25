@@ -71,6 +71,12 @@ npm run build:frontend
 
 # Backend only (tsc)
 npm run build:backend
+
+# E2E tests (requires dev server running or uses webServer config)
+npm run test:e2e           # Run all tests headless
+npm run test:e2e:headed    # Run with visible browser
+npm run test:e2e:ui        # Interactive UI mode
+npm run test:e2e:debug     # Debug mode with inspector
 ```
 
 ### Deployment

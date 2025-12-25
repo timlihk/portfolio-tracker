@@ -32,3 +32,5 @@ dist-ssr
 # Claude settings with local permissions (may contain credentials)
 .claude/settings.local.json
 start-local.sh
+playwright-report/
+test-results/
