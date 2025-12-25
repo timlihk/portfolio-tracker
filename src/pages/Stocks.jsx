@@ -49,6 +49,8 @@ export default function Stocks() {
   const tickerLookupRef = useRef(null);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(50);
+  const [accountFilter, setAccountFilter] = useState('');
+  const [sectorFilter, setSectorFilter] = useState('');
 
   const queryClient = useQueryClient();
 
@@ -92,9 +94,6 @@ export default function Stocks() {
   const stockTickers = useMemo(() => stocks.map(s => s.ticker).filter(Boolean), [stocks]);
   const { prices: stockPrices = {}, loading: pricesLoading } = useStockPrices(stockTickers);
   const { convertToUSD = (v) => v, loading: ratesLoading } = useExchangeRates() || {};
-
-  const [accountFilter, setAccountFilter] = useState('');
-  const [sectorFilter, setSectorFilter] = useState('');
 
   const isLoadingPrices = pricesLoading || ratesLoading;
 
