@@ -14,14 +14,20 @@ const router = Router();
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { skip, take, paginated, page, limit } = getPaginationParams(req);
+    const { account, currency } = req.query as { account?: string; currency?: string };
+    const where = {
+      userId: req.userId,
+      ...(account ? { account } : {}),
+      ...(currency ? { currency } : {})
+    };
     const liabilities = await prisma.liability.findMany({
-      where: { userId: req.userId },
+      where,
       orderBy: { createdAt: 'desc' },
       skip,
       take
     });
     if (paginated && page && limit) {
-      const total = await prisma.liability.count({ where: { userId: req.userId } });
+      const total = await prisma.liability.count({ where });
       setPaginationHeaders(res, total, page, limit);
     }
 

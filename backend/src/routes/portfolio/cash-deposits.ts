@@ -23,14 +23,20 @@ const serializeCashDepositWithAliases = (deposit: any) => {
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { skip, take, paginated, page, limit } = getPaginationParams(req);
+    const { account, currency } = req.query as { account?: string; currency?: string };
+    const where = {
+      userId: req.userId,
+      ...(account ? { account } : {}),
+      ...(currency ? { currency } : {})
+    };
     const cashDeposits = await prisma.cashDeposit.findMany({
-      where: { userId: req.userId },
+      where,
       orderBy: { createdAt: 'desc' },
       skip,
       take
     });
     if (paginated && page && limit) {
-      const total = await prisma.cashDeposit.count({ where: { userId: req.userId } });
+      const total = await prisma.cashDeposit.count({ where });
       setPaginationHeaders(res, total, page, limit);
     }
 

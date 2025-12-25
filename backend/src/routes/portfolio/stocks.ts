@@ -14,14 +14,20 @@ const router = express.Router();
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { skip, take, paginated, page, limit } = getPaginationParams(req);
+    const { account, sector } = req.query as { account?: string; sector?: string };
+    const where = {
+      userId: req.userId,
+      ...(account ? { account } : {}),
+      ...(sector ? { sector } : {})
+    };
     const stocks = await prisma.stock.findMany({
-      where: { userId: req.userId },
+      where,
       orderBy: { createdAt: 'desc' },
       skip,
       take
     });
     if (paginated && page && limit) {
-      const total = await prisma.stock.count({ where: { userId: req.userId } });
+      const total = await prisma.stock.count({ where });
       setPaginationHeaders(res, total, page, limit);
     }
 
