@@ -348,14 +348,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Allocation */}
-        <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-slate-900">Asset Allocation</h3>
-          </div>
-          <AllocationChart data={allocationData} />
-        </div>
-
         {/* Allocation + currency exposure */}
         <div className="bg-white/90 backdrop-blur rounded-3xl p-6 border border-slate-100 shadow-lg mb-8">
           <div className="flex items-center justify-between mb-6">
