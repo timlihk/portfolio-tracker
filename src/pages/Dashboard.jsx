@@ -355,62 +355,24 @@ export default function Dashboard() {
           <AllocationChart data={allocationData} />
         </div>
 
-        {/* Assets + Liabilities cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Assets by Class</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[
-                { label: 'Stocks', value: stocksValue, count: stocks.length, icon: <TrendingUp className="w-4 h-4 text-sky-600" /> },
-                { label: 'Fixed Income', value: bondsValue, count: bonds.length, icon: <Landmark className="w-4 h-4 text-emerald-600" /> },
-                { label: 'Liquid Funds', value: liquidFundsValue, count: liquidFunds.length },
-                { label: 'Cash & Deposits', value: cashValue, count: cashDeposits.length, icon: <Banknote className="w-4 h-4 text-amber-600" /> },
-                { label: 'PE Funds', value: peFundsValue, count: peFunds.length },
-                { label: 'PE Deals', value: peDealsValue, count: peDeals.length }
-              ].map((item) => (
-                <div key={item.label} className="border border-slate-100 rounded-xl p-4 flex flex-col gap-1 bg-slate-50/40">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-slate-500">{item.label}</p>
-                    {item.icon}
-                  </div>
-                  <p className="text-xl font-semibold text-slate-900">{formatUsd(item.value)}</p>
-                  <p className="text-xs text-slate-400">{item.count || 0} positions</p>
-                </div>
-              ))}
+        {/* Allocation + currency exposure */}
+        <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">Allocation & Currency</h3>
+              <p className="text-sm text-slate-500">Breakdown by asset class and currency</p>
             </div>
           </div>
-
-          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Liabilities</h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-slate-500">Total</p>
-                <p className="text-xl font-semibold text-rose-600">-{formatUsd(totalLiabilities)}</p>
-              </div>
-              <div className="space-y-2">
-                {activeLiabilities.slice(0, 4).map((l) => (
-                  <div key={l.id} className="flex items-center justify-between text-sm text-slate-700">
-                    <span className="truncate">{l.name || l.liabilityType || 'Liability'}</span>
-                    <span>-{formatUsd(convertToUSD(Number(l.outstandingBalance) || 0, l.currency))}</span>
-                  </div>
-                ))}
-                {activeLiabilities.length === 0 && (
-                  <p className="text-sm text-slate-400">No active liabilities</p>
-                )}
-              </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="col-span-1">
+              <AllocationChart data={allocationData} />
             </div>
-          </div>
-        </div>
-
-        {/* Currency exposure */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Assets by Currency</h3>
-            <AllocationChart data={buildCurrencyExposure(true)} />
-          </div>
-          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Liabilities by Currency</h3>
-            <AllocationChart data={buildCurrencyExposure(false)} />
+            <div className="col-span-1">
+              <AllocationChart data={buildCurrencyExposure(true)} />
+            </div>
+            <div className="col-span-1">
+              <AllocationChart data={buildCurrencyExposure(false)} />
+            </div>
           </div>
         </div>
 
