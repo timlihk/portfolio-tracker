@@ -195,11 +195,36 @@ export default function Dashboard() {
     totalGainPercent
   } = totals;
 
+  // Classify liquid funds into equity-like vs fixed-income-like
+  const classifyLiquidFunds = (fund) => {
+    const type = (fund.fundType || '').toLowerCase();
+    const strategy = (fund.strategy || '').toLowerCase();
+    const isEquity =
+      type.includes('equity') ||
+      strategy.includes('equity') ||
+      strategy.includes('long/short');
+    const isFixed =
+      type.includes('bond') ||
+      type.includes('fixed') ||
+      strategy.includes('credit') ||
+      strategy.includes('fixed');
+    if (isEquity) return 'equity';
+    if (isFixed) return 'fixed';
+    return 'fixed'; // default bucket to avoid dropping value
+  };
+
+  const equityLiquidValue = liquidFunds.reduce((sum, f) => {
+    if (classifyLiquidFunds(f) !== 'equity') return sum;
+    return sum + (Number(f.currentValue) || Number(f.investmentAmount) || 0);
+  }, 0);
+  const fixedLiquidValue = liquidFundsValue - equityLiquidValue;
+  const stocksDisplayValue = stocksValue + equityLiquidValue;
+  const fixedIncomeDisplayValue = bondsValue + fixedLiquidValue;
+
   const allocationData = [
-    { name: 'Stocks', value: stocksValue },
-    { name: 'Bonds', value: bondsValue },
+    { name: 'Stocks', value: stocksDisplayValue },
+    { name: 'Fixed Income', value: fixedIncomeDisplayValue },
     { name: 'Cash & Deposits', value: cashValue },
-    { name: 'Liquid Funds', value: liquidFundsValue },
     { name: 'PE Funds', value: peFundsValue },
     { name: 'PE Deals', value: peDealsValue }
   ].filter(item => item.value > 0);
@@ -320,11 +345,11 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 gap-4 lg:col-span-2">
               <StatCard
                 title="Stocks"
-                value={formatUsd(stocksValue)}
+                value={formatUsd(stocksDisplayValue)}
                 icon={Wallet}
                 trend={stocksCost > 0 && !isNaN(Number(stocksGainPercent)) ? (Number(stocksGainPercent) >= 0 ? 'up' : 'down') : null}
                 trendValue={stocksCost > 0 && !isNaN(Number(stocksGainPercent)) ? `${stocksGainPercent}%` : null}
-                subValue={`${stocks.length} positions`}
+                subValue={`${stocks.length} positions (+ equity funds)`}
               />
               <StatCard
                 title="Cash & Deposits"
@@ -334,15 +359,15 @@ export default function Dashboard() {
               />
               <StatCard
                 title="Fixed Income"
-                value={formatUsd(bondsValue)}
+                value={formatUsd(fixedIncomeDisplayValue)}
                 icon={Landmark}
-                subValue={`${bonds.length} bonds`}
+                subValue={`${bonds.length} bonds + fixed-income funds`}
               />
               <StatCard
                 title="Alt / PE"
-                value={formatUsd(peFundsValue + peDealsValue + liquidFundsValue)}
+                value={formatUsd(peFundsValue + peDealsValue)}
                 icon={Building2}
-                subValue={`${peFunds.length + peDeals.length + liquidFunds.length} positions`}
+                subValue={`${peFunds.length + peDeals.length} positions`}
               />
             </div>
           </div>
