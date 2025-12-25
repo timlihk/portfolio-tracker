@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { entities } from '@/api/backendClient';
@@ -17,6 +16,7 @@ import { format, subMonths, subYears, startOfMonth, eachMonthOfInterval, isAfter
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import type { Stock, Bond, PeFund, PeDeal, LiquidFund, CashDeposit } from '@/types';
 
 const TIME_PERIODS = [
   { label: '1 Year', value: '1y', months: 12 },
@@ -40,13 +40,13 @@ const ASSET_COLORS = {
   'Cash': '#6366f1',
 };
 
-const formatCurrency = (value) => {
+const formatCurrency = (value: number) => {
   if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
   if (value >= 1000) return `${(value / 1000).toFixed(0)}k`;
   return value.toFixed(0);
 };
 
-const formatFullCurrency = (value) => {
+const formatFullCurrency = (value: number) => {
   return new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -54,39 +54,39 @@ const formatFullCurrency = (value) => {
 };
 
 export default function Performance() {
-  const [timePeriod, setTimePeriod] = useState('5y');
-  const [graphType, setGraphType] = useState('stacked');
-  const [showClosedPositions, setShowClosedPositions] = useState(true);
-  const [showPercentage, setShowPercentage] = useState(false);
-  const [selectedAssetClass, setSelectedAssetClass] = useState('all');
+  const [timePeriod, setTimePeriod] = useState<string>('5y');
+  const [graphType, setGraphType] = useState<string>('stacked');
+  const [showClosedPositions, setShowClosedPositions] = useState<boolean>(true);
+  const [showPercentage, setShowPercentage] = useState<boolean>(false);
+  const [selectedAssetClass, setSelectedAssetClass] = useState<string>('all');
 
   // Fetch all portfolio data
-  const { data: stocks = [], isLoading: stocksLoading } = useQuery({
+  const { data: stocks = [], isLoading: stocksLoading } = useQuery<Stock[]>({
     queryKey: ['stocks'],
     queryFn: () => entities.Stock.list()
   });
 
-  const { data: bonds = [], isLoading: bondsLoading } = useQuery({
+  const { data: bonds = [], isLoading: bondsLoading } = useQuery<Bond[]>({
     queryKey: ['bonds'],
     queryFn: () => entities.Bond.list()
   });
 
-  const { data: peFunds = [], isLoading: peFundsLoading } = useQuery({
+  const { data: peFunds = [], isLoading: peFundsLoading } = useQuery<PeFund[]>({
     queryKey: ['peFunds'],
     queryFn: () => entities.PEFund.list()
   });
 
-  const { data: peDeals = [], isLoading: peDealsLoading } = useQuery({
+  const { data: peDeals = [], isLoading: peDealsLoading } = useQuery<PeDeal[]>({
     queryKey: ['peDeals'],
     queryFn: () => entities.PEDeal.list()
   });
 
-  const { data: liquidFunds = [], isLoading: liquidFundsLoading } = useQuery({
+  const { data: liquidFunds = [], isLoading: liquidFundsLoading } = useQuery<LiquidFund[]>({
     queryKey: ['liquidFunds'],
     queryFn: () => entities.LiquidFund.list()
   });
 
-  const { data: cashDeposits = [], isLoading: cashLoading } = useQuery({
+  const { data: cashDeposits = [], isLoading: cashLoading } = useQuery<CashDeposit[]>({
     queryKey: ['cashDeposits'],
     queryFn: () => entities.CashDeposit.list()
   });
@@ -98,7 +98,7 @@ export default function Performance() {
 
   const isLoading = stocksLoading || bondsLoading || peFundsLoading || peDealsLoading || liquidFundsLoading || cashLoading;
 
-  const getBondPricePct = (bond) => {
+  const getBondPricePct = (bond: Bond) => {
     if (Number.isFinite(Number(bond.currentValue))) return Number(bond.currentValue);
     const entry = bondPrices[bond.id] || bondPrices[bond.isin] || bondPrices[bond.name];
     if (entry && typeof entry === 'object' && Number.isFinite(entry.pricePct)) return Number(entry.pricePct);
@@ -107,12 +107,12 @@ export default function Performance() {
     return 100;
   };
 
-  const getBondMarketValue = (bond) => {
+  const getBondMarketValue = (bond: Bond) => {
     const face = Number(bond.faceValue) || 0;
     return face * (getBondPricePct(bond) / 100);
   };
 
-  const getBondCost = (bond) => {
+  const getBondCost = (bond: Bond) => {
     const face = Number(bond.faceValue) || 0;
     const purchasePct = Number(bond.purchasePrice) || 0;
     return face * (purchasePct / 100);
@@ -311,7 +311,7 @@ export default function Performance() {
       };
     });
 
-    const liquidFundHoldings = liquidFunds.map(f => {
+    const liquidFundHoldings = liquidFunds.map((f) => {
       const value = Number(f.currentValue) || Number(f.investmentAmount) || 0;
       const cost = Number(f.investmentAmount) || 0;
       const capitalGains = value - cost;

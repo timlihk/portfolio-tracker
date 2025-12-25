@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { entities } from '@/api/backendClient';
@@ -8,6 +7,8 @@ import AddAssetDialog from '@/components/portfolio/AddAssetDialog';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import PaginationControls from '@/components/portfolio/PaginationControls';
+import type { PeFund } from '@/types';
+import type React from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,6 +22,22 @@ import {
 
 const FUND_TYPES = ['Buyout', 'Growth Equity', 'Venture Capital', 'Real Estate', 'Infrastructure', 'Credit', 'Secondaries', 'Fund of Funds', 'Other'];
 const STATUSES = ['Active', 'Fully Invested', 'Harvesting', 'Liquidated'];
+
+type TableColumn<T> = {
+  key: keyof T | string;
+  label: string;
+  align?: 'left' | 'right' | 'center';
+  render?: (val: T[keyof T] | undefined, row: T) => React.ReactNode;
+};
+
+type PaginatedResponse<T> = {
+  data: T[];
+  pagination?: {
+    total?: number;
+    page?: number;
+    limit?: number;
+  };
+};
 
 const fundFields = [
   { name: 'fundName', label: 'Fund Name', required: true, placeholder: 'Sequoia Capital XV' },
@@ -38,23 +55,27 @@ const fundFields = [
 
 export default function PEFunds() {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({});
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [formData, setFormData] = useState<Partial<PeFund>>({});
+  const [deleteTarget, setDeleteTarget] = useState<PeFund | null>(null);
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(10);
   
   const queryClient = useQueryClient();
 
-  const { data: fundsResponse = [], isFetching: isLoading } = useQuery({
+  const { data: fundsResponse = [], isFetching: isLoading } = useQuery<PaginatedResponse<PeFund> | PeFund[]>({
     queryKey: ['peFunds', page, limit],
     queryFn: () => entities.PEFund.listWithPagination({ page, limit }),
     keepPreviousData: true
   });
-  const funds = fundsResponse?.data || fundsResponse || [];
-  const pagination = fundsResponse?.pagination || { total: funds.length, page, limit };
+  const funds = Array.isArray(fundsResponse)
+    ? fundsResponse
+    : fundsResponse?.data || [];
+  const pagination = !Array.isArray(fundsResponse)
+    ? fundsResponse?.pagination || { total: funds.length, page, limit }
+    : { total: funds.length, page, limit };
 
   const createMutation = useMutation({
-    mutationFn: (data) => entities.PEFund.create(data),
+    mutationFn: (data: Partial<PeFund>) => entities.PEFund.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['peFunds'] });
       setDialogOpen(false);
@@ -63,7 +84,7 @@ export default function PEFunds() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => entities.PEFund.update(id, data),
+    mutationFn: ({ id, data }: { id: number | string; data: Partial<PeFund> }) => entities.PEFund.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['peFunds'] });
       setDialogOpen(false);
@@ -72,14 +93,14 @@ export default function PEFunds() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => entities.PEFund.delete(id),
+    mutationFn: (id: number | string) => entities.PEFund.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['peFunds'] });
       setDeleteTarget(null);
     }
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (formData.id) {
       const { id, ...data } = formData;
@@ -89,12 +110,12 @@ export default function PEFunds() {
     }
   };
 
-  const handleEdit = (fund) => {
+  const handleEdit = (fund: PeFund) => {
     setFormData(fund);
     setDialogOpen(true);
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status?: string) => {
     switch (status) {
       case 'Active': return 'bg-emerald-100 text-emerald-700';
       case 'Fully Invested': return 'bg-blue-100 text-blue-700';
@@ -104,11 +125,11 @@ export default function PEFunds() {
     }
   };
 
-  const columns = [
+  const columns: TableColumn<PeFund>[] = [
     { 
       key: 'fundName', 
       label: 'Fund',
-      render: (val, row) => (
+      render: (val: PeFund['fundName'], row) => (
         <div>
           <span className="font-semibold text-slate-900">{val}</span>
           {row.manager && (
@@ -120,23 +141,23 @@ export default function PEFunds() {
     { 
       key: 'fundType', 
       label: 'Type',
-      render: (val) => val || '-'
+      render: (val: PeFund['fundType']) => val || '-'
     },
     { 
       key: 'vintageYear', 
       label: 'Vintage',
-      render: (val) => val || '-'
+      render: (val: PeFund['vintageYear']) => val || '-'
     },
     {
       key: 'commitment',
       label: 'Commitment',
       align: 'right',
-      render: (val) => `$${(Number(val) || 0).toLocaleString()}`
+      render: (val: PeFund['commitment']) => `$${(Number(val) || 0).toLocaleString()}`
     },
     {
       key: 'called',
       label: 'Called / Unfunded',
-      render: (_, row) => {
+      render: (_: unknown, row) => {
         const called = Number(row.calledCapital) || 0;
         const commitment = Number(row.commitment) || 0;
         const unfunded = commitment - called;
@@ -156,13 +177,13 @@ export default function PEFunds() {
       key: 'nav',
       label: 'NAV',
       align: 'right',
-      render: (val) => <span className="font-medium">${(Number(val) || 0).toLocaleString()}</span>
+      render: (val: PeFund['nav']) => <span className="font-medium">${(Number(val) || 0).toLocaleString()}</span>
     },
     {
       key: 'distributions',
       label: 'Distributions',
       align: 'right',
-      render: (val) => (
+      render: (val: PeFund['distributions']) => (
         <span className="text-emerald-600">${(Number(val) || 0).toLocaleString()}</span>
       )
     },
@@ -170,7 +191,7 @@ export default function PEFunds() {
       key: 'tvpi',
       label: 'TVPI',
       align: 'right',
-      render: (_, row) => {
+      render: (_: unknown, row) => {
         const called = Number(row.calledCapital) || 0;
         if (called === 0) return '-';
         const tvpi = ((Number(row.nav) || 0) + (Number(row.distributions) || 0)) / called;
@@ -184,7 +205,7 @@ export default function PEFunds() {
     { 
       key: 'status', 
       label: 'Status',
-      render: (val) => val && (
+      render: (val: PeFund['status']) => val && (
         <Badge className={`${getStatusColor(val)} font-normal`}>
           {val}
         </Badge>

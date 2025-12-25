@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { entities } from '@/api/backendClient';
@@ -8,6 +7,8 @@ import AddAssetDialog from '@/components/portfolio/AddAssetDialog';
 import { Badge } from '@/components/ui/badge';
 import PaginationControls from '@/components/portfolio/PaginationControls';
 import { format } from 'date-fns';
+import type { PeDeal } from '@/types';
+import type React from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +23,22 @@ import {
 const DEAL_TYPES = ['Direct Investment', 'Co-Investment', 'SPV', 'Secondary Purchase', 'Other'];
 const SECTORS = ['Technology', 'Healthcare', 'Finance', 'Energy', 'Consumer', 'Industrial', 'Real Estate', 'Other'];
 const STATUSES = ['Active', 'Partially Exited', 'Fully Exited', 'Written Off'];
+
+type TableColumn<T> = {
+  key: keyof T | string;
+  label: string;
+  align?: 'left' | 'right' | 'center';
+  render?: (val: T[keyof T] | undefined, row: T) => React.ReactNode;
+};
+
+type PaginatedResponse<T> = {
+  data: T[];
+  pagination?: {
+    total?: number;
+    page?: number;
+    limit?: number;
+  };
+};
 
 const dealFields = [
   { name: 'companyName', label: 'Company Name', required: true, placeholder: 'Acme Corp' },
@@ -38,23 +55,27 @@ const dealFields = [
 
 export default function PEDeals() {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({});
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [formData, setFormData] = useState<Partial<PeDeal>>({});
+  const [deleteTarget, setDeleteTarget] = useState<PeDeal | null>(null);
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(10);
   
   const queryClient = useQueryClient();
 
-  const { data: dealsResponse = [], isFetching: isLoading } = useQuery({
+  const { data: dealsResponse = [], isFetching: isLoading } = useQuery<PaginatedResponse<PeDeal> | PeDeal[]>({
     queryKey: ['peDeals', page, limit],
     queryFn: () => entities.PEDeal.listWithPagination({ page, limit }),
     keepPreviousData: true
   });
-  const deals = dealsResponse?.data || dealsResponse || [];
-  const pagination = dealsResponse?.pagination || { total: deals.length, page, limit };
+  const deals = Array.isArray(dealsResponse)
+    ? dealsResponse
+    : dealsResponse?.data || [];
+  const pagination = !Array.isArray(dealsResponse)
+    ? dealsResponse?.pagination || { total: deals.length, page, limit }
+    : { total: deals.length, page, limit };
 
   const createMutation = useMutation({
-    mutationFn: (data) => entities.PEDeal.create(data),
+    mutationFn: (data: Partial<PeDeal>) => entities.PEDeal.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['peDeals'] });
       setDialogOpen(false);
@@ -63,7 +84,7 @@ export default function PEDeals() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => entities.PEDeal.update(id, data),
+    mutationFn: ({ id, data }: { id: number | string; data: Partial<PeDeal> }) => entities.PEDeal.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['peDeals'] });
       setDialogOpen(false);
@@ -72,14 +93,14 @@ export default function PEDeals() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => entities.PEDeal.delete(id),
+    mutationFn: (id: number | string) => entities.PEDeal.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['peDeals'] });
       setDeleteTarget(null);
     }
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (formData.id) {
       const { id, ...data } = formData;
@@ -89,12 +110,12 @@ export default function PEDeals() {
     }
   };
 
-  const handleEdit = (deal) => {
+  const handleEdit = (deal: PeDeal) => {
     setFormData(deal);
     setDialogOpen(true);
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status?: string) => {
     switch (status) {
       case 'Active': return 'bg-emerald-100 text-emerald-700';
       case 'Partially Exited': return 'bg-blue-100 text-blue-700';
@@ -104,11 +125,11 @@ export default function PEDeals() {
     }
   };
 
-  const columns = [
+  const columns: TableColumn<PeDeal>[] = [
     { 
       key: 'companyName', 
       label: 'Company',
-      render: (val, row) => (
+      render: (val: PeDeal['companyName'], row) => (
         <div>
           <span className="font-semibold text-slate-900">{val}</span>
           {row.sponsor && (
@@ -120,12 +141,12 @@ export default function PEDeals() {
     { 
       key: 'dealType', 
       label: 'Type',
-      render: (val) => val || '-'
+      render: (val: PeDeal['dealType']) => val || '-'
     },
     { 
       key: 'sector', 
       label: 'Sector',
-      render: (val) => val && (
+      render: (val: PeDeal['sector']) => val && (
         <Badge variant="secondary" className="bg-slate-100 text-slate-700 font-normal">
           {val}
         </Badge>
@@ -135,13 +156,13 @@ export default function PEDeals() {
       key: 'investmentAmount',
       label: 'Invested',
       align: 'right',
-      render: (val) => `$${(Number(val) || 0).toLocaleString()}`
+      render: (val: PeDeal['investmentAmount']) => `$${(Number(val) || 0).toLocaleString()}`
     },
     {
       key: 'currentValue',
       label: 'Current Value',
       align: 'right',
-      render: (val, row) => (
+      render: (val: PeDeal['currentValue'], row) => (
         <span className="font-medium">
           ${(Number(val) || Number(row.investmentAmount) || 0).toLocaleString()}
         </span>
@@ -151,7 +172,7 @@ export default function PEDeals() {
       key: 'moic',
       label: 'MOIC',
       align: 'right',
-      render: (_, row) => {
+      render: (_: unknown, row) => {
         const invested = Number(row.investmentAmount) || 0;
         const current = Number(row.currentValue) || invested;
         const moic = invested > 0 ? current / invested : 0;
@@ -166,17 +187,17 @@ export default function PEDeals() {
       key: 'ownershipPercentage', 
       label: 'Ownership',
       align: 'right',
-      render: (val) => val ? `${val}%` : '-'
+      render: (val: PeDeal['ownershipPercentage']) => val ? `${val}%` : '-'
     },
     { 
       key: 'investmentDate', 
       label: 'Date',
-      render: (val) => val ? format(new Date(val), 'MMM yyyy') : '-'
+      render: (val: PeDeal['investmentDate']) => val ? format(new Date(val), 'MMM yyyy') : '-'
     },
     { 
       key: 'status', 
       label: 'Status',
-      render: (val) => val && (
+      render: (val: PeDeal['status']) => val && (
         <Badge className={`${getStatusColor(val)} font-normal`}>
           {val}
         </Badge>

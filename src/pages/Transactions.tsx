@@ -1,5 +1,4 @@
-// @ts-nocheck
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import PageHeader from '@/components/portfolio/PageHeader';
@@ -31,6 +30,7 @@ import { Pencil, Trash2, ArrowUpRight, ArrowDownLeft, RefreshCw, TrendingUp, Lan
 import { format } from 'date-fns';
 import { cn } from "@/lib/utils";
 import { createChangeLogger } from '@/components/portfolio/useChangelog';
+import type React from 'react';
 
 const logger = createChangeLogger('Transaction');
 
@@ -38,7 +38,32 @@ const ASSET_TYPES = ['Stock', 'Bond', 'PE Fund', 'PE Deal', 'Liquid Fund'];
 const TRANSACTION_TYPES = ['Buy', 'Sell', 'Transfer In', 'Transfer Out', 'Dividend', 'Distribution', 'Capital Call', 'Redemption'];
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS'];
 
-const transactionFields = (accounts) => [
+type Transaction = {
+  id?: number | string;
+  assetType: string;
+  assetName: string;
+  transactionType: string;
+  quantity?: number;
+  price?: number;
+  totalAmount?: number;
+  fees?: number;
+  currency?: string;
+  account?: string;
+  date?: string;
+  notes?: string;
+};
+
+type TransactionFiltersState = {
+  startDate: string;
+  endDate: string;
+  assetType: string;
+  transactionType: string;
+  account: string;
+};
+
+type AccountOption = { id: number | string; name: string };
+
+const transactionFields = (accounts: AccountOption[]) => [
   { name: 'date', label: 'Date', type: 'date', required: true },
   { name: 'assetType', label: 'Asset Type', type: 'select', options: ASSET_TYPES, required: true },
   { name: 'assetName', label: 'Asset Name', type: 'text', required: true, placeholder: 'e.g., AAPL or Bond Name' },
@@ -74,31 +99,31 @@ const assetIcons = {
 export default function Transactions() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({});
-  const [deleteItem, setDeleteItem] = useState(null);
-  const [filters, setFilters] = useState({
+  const [formData, setFormData] = useState<Partial<Transaction>>({});
+  const [deleteItem, setDeleteItem] = useState<Transaction | null>(null);
+  const [filters, setFilters] = useState<TransactionFiltersState>({
     startDate: '',
     endDate: '',
     assetType: 'All',
     transactionType: 'All',
     account: 'All'
   });
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(10);
 
   const queryClient = useQueryClient();
 
-  const { data: transactions = [], isLoading } = useQuery({
+  const { data: transactions = [], isLoading } = useQuery<Transaction[]>({
     queryKey: ['transactions'],
     queryFn: () => base44.entities.Transaction.list('-date'),
   });
 
-  const { data: accounts = [] } = useQuery({
+  const { data: accounts = [] } = useQuery<AccountOption[]>({
     queryKey: ['accounts'],
     queryFn: () => base44.entities.Account.list(),
   });
 
-  const normalizeTransaction = (t) => ({
+  const normalizeTransaction = (t: Transaction): Transaction => ({
     ...t,
     assetType: t.assetType,
     assetName: t.assetName,
@@ -112,7 +137,7 @@ export default function Transactions() {
   );
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Transaction.create(data),
+    mutationFn: (data: Partial<Transaction>) => base44.entities.Transaction.create(data),
     onSuccess: (_, data) => {
       const normalized = normalizeTransaction(data);
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
@@ -121,7 +146,7 @@ export default function Transactions() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Transaction.update(id, data),
+    mutationFn: ({ id, data }: { id: number | string; data: Partial<Transaction> }) => base44.entities.Transaction.update(id, data),
     onSuccess: (_, { data }) => {
       const normalized = normalizeTransaction(data);
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
@@ -130,7 +155,7 @@ export default function Transactions() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Transaction.delete(id),
+    mutationFn: (id: number | string) => base44.entities.Transaction.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       if (deleteItem) {
@@ -139,7 +164,7 @@ export default function Transactions() {
     },
   });
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (formData.id) {
       await updateMutation.mutateAsync({ id: formData.id, data: formData });
@@ -150,28 +175,28 @@ export default function Transactions() {
     setFormData({});
   };
 
-  const handleEdit = (transaction) => {
+  const handleEdit = (transaction: Transaction) => {
     setFormData(transaction);
     setDialogOpen(true);
   };
 
-  const handleDelete = (transaction) => {
+  const handleDelete = (transaction: Transaction) => {
     setDeleteItem(transaction);
     setDeleteDialogOpen(true);
   };
 
   const confirmDelete = async () => {
     if (deleteItem) {
-      await deleteMutation.mutateAsync(deleteItem.id);
+      await deleteMutation.mutateAsync(deleteItem.id as number | string);
       setDeleteDialogOpen(false);
       setDeleteItem(null);
     }
   };
 
   const filteredTransactions = useMemo(() => {
-    return normalizedTransactions.filter(t => {
-      if (filters.startDate && t.date < filters.startDate) return false;
-      if (filters.endDate && t.date > filters.endDate) return false;
+    return normalizedTransactions.filter((t) => {
+      if (filters.startDate && (t.date || '') < filters.startDate) return false;
+      if (filters.endDate && (t.date || '') > filters.endDate) return false;
       if (filters.assetType !== 'All' && t.assetType !== filters.assetType) return false;
       if (filters.transactionType !== 'All' && t.transactionType !== filters.transactionType) return false;
       if (filters.account !== 'All' && t.account !== filters.account) return false;

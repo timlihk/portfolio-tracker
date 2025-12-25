@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { format } from 'date-fns';
@@ -15,6 +14,16 @@ import {
   Trash2,
   History
 } from 'lucide-react';
+import type React from 'react';
+
+type ChangelogEntry = {
+  id: string | number;
+  action: 'created' | 'updated' | 'deleted' | string;
+  assetType: string;
+  assetName: string;
+  details?: string;
+  createdDate: string;
+};
 
 const ACTION_CONFIG = {
   created: { label: 'Created', color: 'bg-emerald-100 text-emerald-700', icon: Plus },
@@ -41,13 +50,13 @@ const ASSET_COLORS = {
 };
 
 export default function Changelog() {
-  const { data: logs = [], isLoading } = useQuery({
+  const { data: logs = [], isLoading } = useQuery<ChangelogEntry[]>({
     queryKey: ['changelog'],
     queryFn: () => base44.entities.Changelog.list('-createdDate', 100)
   });
 
   // Group logs by date
-  const groupedLogs = logs.reduce((groups, log) => {
+  const groupedLogs = logs.reduce<Record<string, ChangelogEntry[]>>((groups, log) => {
     const date = format(new Date(log.createdDate), 'yyyy-MM-dd');
     if (!groups[date]) groups[date] = [];
     groups[date].push(log);

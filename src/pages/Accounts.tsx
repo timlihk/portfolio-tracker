@@ -53,30 +53,43 @@ export default function Accounts() {
 
   const queryClient = useQueryClient();
 
-  const { data: accountsResponse = [] , isFetching: accountsLoading } = useQuery({
+  type PaginatedResponse<T> = {
+    data: T[];
+    pagination?: {
+      total?: number;
+      page?: number;
+      limit?: number;
+    };
+  };
+
+  const { data: accountsResponse = [] , isFetching: accountsLoading } = useQuery<PaginatedResponse<Account> | Account[]>({
     queryKey: ['accounts', page, limit],
     queryFn: () => entities.Account.listWithPagination({ page, limit }),
     keepPreviousData: true
   });
-  const accounts = accountsResponse?.data || accountsResponse || [];
-  const pagination = accountsResponse?.pagination || { total: accounts.length, page, limit };
+  const accounts = Array.isArray(accountsResponse)
+    ? accountsResponse
+    : accountsResponse?.data || [];
+  const pagination = !Array.isArray(accountsResponse)
+    ? accountsResponse?.pagination || { total: accounts.length, page, limit }
+    : { total: accounts.length, page, limit };
 
-  const { data: stocks = [] } = useQuery({
+  const { data: stocks = [] } = useQuery<Stock[]>({
     queryKey: ['stocks'],
     queryFn: () => entities.Stock.list()
   });
 
-  const { data: bonds = [] } = useQuery({
+  const { data: bonds = [] } = useQuery<Bond[]>({
     queryKey: ['bonds'],
     queryFn: () => entities.Bond.list()
   });
 
-  const { data: liabilities = [] } = useQuery({
+  const { data: liabilities = [] } = useQuery<Liability[]>({
     queryKey: ['liabilities'],
     queryFn: () => entities.Liability.list()
   });
 
-  const { data: cashDeposits = [] } = useQuery({
+  const { data: cashDeposits = [] } = useQuery<CashDeposit[]>({
     queryKey: ['cashDeposits'],
     queryFn: () => entities.CashDeposit.list()
   });
@@ -89,8 +102,10 @@ export default function Accounts() {
 
   // Helper to get current price (real-time or manual)
   // Note: PostgreSQL returns DECIMAL as strings, so we need to convert to numbers
-  const getCurrentPrice = (stock) => Number(stockPrices[stock.ticker]?.price) || Number(stock.currentPrice) || Number(stock.averageCost) || 0;
-  const getBondPricePct = (bond) => {
+  const getCurrentPrice = (stock: Stock) =>
+    Number(stockPrices[stock.ticker]?.price) || Number(stock.currentPrice) || Number(stock.averageCost) || 0;
+
+  const getBondPricePct = (bond: Bond) => {
     if (Number.isFinite(Number(bond.currentValue))) return Number(bond.currentValue);
     const entry = bondPrices[bond.id] || bondPrices[bond.isin] || bondPrices[bond.name];
     if (entry && typeof entry === 'object' && Number.isFinite(entry.pricePct)) return Number(entry.pricePct);
@@ -98,13 +113,20 @@ export default function Accounts() {
     if (Number.isFinite(Number(bond.purchasePrice))) return Number(bond.purchasePrice);
     return 100;
   };
-  const getBondMarketValue = (bond) => {
+  const getBondMarketValue = (bond: Bond) => {
     const face = Number(bond.faceValue) || 0;
     return face * (getBondPricePct(bond) / 100);
   };
 
   // Columns for stocks table (matching Stocks page)
-  const stockColumns = useMemo(() => [
+  type TableColumn<T> = {
+    key: keyof T | string;
+    label: string;
+    align?: 'left' | 'right' | 'center';
+    render?: (val: T[keyof T] | undefined, row: T) => React.ReactNode;
+  };
+
+  const stockColumns: TableColumn<Stock>[] = useMemo(() => [
     {
       key: 'ticker',
       label: 'Ticker',
@@ -211,7 +233,7 @@ export default function Accounts() {
   ], [stockPrices, CURRENCY_SYMBOLS]);
 
   const createMutation = useMutation({
-    mutationFn: (data) => entities.Account.create(data),
+    mutationFn: (data: Partial<Account>) => entities.Account.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       setDialogOpen(false);
@@ -220,7 +242,7 @@ export default function Accounts() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => entities.Account.update(id, data),
+    mutationFn: ({ id, data }: { id: number | string; data: Partial<Account> }) => entities.Account.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       setDialogOpen(false);
@@ -229,14 +251,14 @@ export default function Accounts() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => entities.Account.delete(id),
+    mutationFn: (id: number | string) => entities.Account.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['accounts'] });
       setDeleteTarget(null);
     }
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (formData.id) {
       const { id, ...data } = formData;
@@ -246,7 +268,7 @@ export default function Accounts() {
     }
   };
 
-  const toggleExpanded = (accountName) => {
+  const toggleExpanded = (accountName: string) => {
     setExpandedAccounts(prev => ({
       ...prev,
       [accountName]: !prev[accountName]
@@ -254,7 +276,7 @@ export default function Accounts() {
   };
 
   // Group assets by account - all values converted to USD
-  const getAccountAssets = (accountName) => {
+  const getAccountAssets = (accountName: string) => {
     const accountStocks = stocks.filter(s => s.account === accountName);
     const accountBonds = bonds.filter(b => b.account === accountName);
     const accountLiabilities = liabilities.filter(l => l.account === accountName && l.status !== 'Paid Off');
