@@ -214,10 +214,10 @@ export default function Dashboard() {
     if (assetsOnly) {
       stocks.forEach((s) => add(s.currency || 'USD', convertToUSD((Number(s.shares) || 0) * (Number(stockPrices[s.ticker]?.price) || Number(s.currentPrice) || Number(s.averageCost) || 0), s.currency)));
       bonds.forEach((b) => add(b.currency || 'USD', convertToUSD(getBondMarketValue(b), b.currency)));
-      liquidFunds.forEach((f) => add(f.currency || 'USD', Number(f.currentValue) || Number(f.investmentAmount) || 0));
+      liquidFunds.forEach((f) => add(f.currency || 'USD', convertToUSD(Number(f.currentValue) || Number(f.investmentAmount) || 0, f.currency)));
       cashDeposits.forEach((c) => add(c.currency || 'USD', convertToUSD(Number(c.amount) || 0, c.currency)));
-      peFunds.forEach((f) => add('USD', Number(f.nav) || Number(f.distributions) || 0));
-      peDeals.forEach((d) => add('USD', Number(d.currentValue) || Number(d.investmentAmount) || 0));
+      peFunds.forEach((f) => add(f.currency || 'USD', convertToUSD((Number(f.nav) || 0) + (Number(f.distributions) || 0), f.currency)));
+      peDeals.forEach((d) => add(d.currency || 'USD', convertToUSD(Number(d.currentValue) || Number(d.investmentAmount) || 0, d.currency)));
     } else {
       liabilities.forEach((l) => add(l.currency || 'USD', convertToUSD(Number(l.outstandingBalance) || 0, l.currency)));
     }

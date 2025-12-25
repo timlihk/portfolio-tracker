@@ -55,15 +55,11 @@ export default function Liabilities() {
   const queryClient = useQueryClient();
 
   const { data: liabilitiesResponse = [], isFetching: liabilitiesLoading } = useQuery({
-    queryKey: ['liabilities', page, limit],
-    queryFn: () => entities.Liability.listWithPagination({ page, limit }),
+    queryKey: ['liabilities', page, limit, accountFilter, currencyFilter],
+    queryFn: () => entities.Liability.listWithPagination({ page, limit, account: accountFilter || undefined, currency: currencyFilter || undefined }),
     keepPreviousData: true
   });
-  const liabilities = (liabilitiesResponse?.data || liabilitiesResponse || []).filter((l) => {
-    const matchesAccount = accountFilter ? l.account === accountFilter : true;
-    const matchesCurrency = currencyFilter ? l.currency === currencyFilter : true;
-    return matchesAccount && matchesCurrency;
-  });
+  const liabilities = liabilitiesResponse?.data || liabilitiesResponse || [];
   const pagination = liabilitiesResponse?.pagination || { total: liabilities.length, page, limit };
 
   const { data: accounts = [] } = useQuery({

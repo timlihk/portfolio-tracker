@@ -49,15 +49,11 @@ export default function CashDeposits() {
   const queryClient = useQueryClient();
 
   const { data: depositsResponse = [], isFetching: depositsLoading } = useQuery({
-    queryKey: ['cashDeposits', page, limit],
-    queryFn: () => entities.CashDeposit.listWithPagination({ page, limit }),
+    queryKey: ['cashDeposits', page, limit, accountFilter, currencyFilter],
+    queryFn: () => entities.CashDeposit.listWithPagination({ page, limit, account: accountFilter || undefined, currency: currencyFilter || undefined }),
     keepPreviousData: true
   });
-  const deposits = (depositsResponse?.data || depositsResponse || []).filter((d) => {
-    const matchesAccount = accountFilter ? d.account === accountFilter : true;
-    const matchesCurrency = currencyFilter ? d.currency === currencyFilter : true;
-    return matchesAccount && matchesCurrency;
-  });
+  const deposits = depositsResponse?.data || depositsResponse || [];
   const pagination = depositsResponse?.pagination || { total: deposits.length, page, limit };
 
   const { data: accounts = [] } = useQuery({

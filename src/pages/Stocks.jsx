@@ -53,8 +53,13 @@ export default function Stocks() {
   const queryClient = useQueryClient();
 
   const { data: stocksResponse, isFetching: stocksLoading } = useQuery({
-    queryKey: ['stocks', page, limit],
-    queryFn: () => entities.Stock.listWithPagination({ page, limit }),
+    queryKey: ['stocks', page, limit, accountFilter, sectorFilter],
+    queryFn: () => entities.Stock.listWithPagination({
+      page,
+      limit,
+      account: accountFilter || undefined,
+      sector: sectorFilter || undefined
+    }),
     keepPreviousData: true
   });
   const stocks = stocksResponse?.data || [];
