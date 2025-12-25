@@ -365,8 +365,8 @@ export default function Dashboard() {
               const hasData = data && data.length > 0;
               const total = data?.reduce((s, d) => s + d.value, 0) || 1;
               return (
-                <div key={label} className="col-span-1">
-                  <p className="text-sm font-medium text-slate-700 mb-3">{label}</p>
+                <div key={label} className="col-span-1 flex flex-col gap-3">
+                  <p className="text-sm font-medium text-slate-700">{label}</p>
                   <div className="w-full h-64 bg-slate-50/60 rounded-2xl border border-slate-100 flex items-center justify-center">
                     {hasData ? (
                       <ResponsiveContainer width="100%" height="100%">
@@ -404,6 +404,25 @@ export default function Dashboard() {
                       <span className="text-sm text-slate-400">No data</span>
                     )}
                   </div>
+                  {hasData && (
+                    <div className="space-y-1.5 bg-slate-50/70 rounded-xl border border-slate-100 p-3">
+                      {data.map((item, i) => {
+                        const pct = ((item.value / total) * 100).toFixed(1);
+                        return (
+                          <div key={item.name} className="flex items-center justify-between text-sm text-slate-700">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="w-2.5 h-2.5 rounded-full"
+                                style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                              />
+                              <span className="truncate">{item.name}</span>
+                            </div>
+                            <span className="font-medium">{pct}%</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               );
             })}
