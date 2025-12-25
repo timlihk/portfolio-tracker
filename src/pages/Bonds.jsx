@@ -10,8 +10,6 @@ import { useExchangeRates, useBondPrices, CURRENCY_SYMBOLS } from '@/components/
 import { createChangeLogger } from '@/components/portfolio/useChangelog';
 import { RefreshCw } from 'lucide-react';
 import PaginationControls from '@/components/portfolio/PaginationControls';
-
-const bondLogger = createChangeLogger('Bond');
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +20,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+
+const bondLogger = createChangeLogger('Bond');
 
 const BOND_TYPES = ['Treasury', 'Corporate', 'Municipal', 'Agency', 'International', 'High Yield', 'Other'];
 const RATINGS = ['AAA', 'AA', 'A', 'BBB', 'BB', 'B', 'CCC', 'CC', 'C', 'D', 'NR'];
