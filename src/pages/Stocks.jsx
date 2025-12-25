@@ -238,8 +238,8 @@ export default function Stocks() {
     copy.sort((a, b) => {
       const dir = sortDir === 'asc' ? 1 : -1;
       if (sortKey === 'marketValue') {
-        const va = (Number(a.shares) || 0) * getCurrentPrice(a);
-        const vb = (Number(b.shares) || 0) * getCurrentPrice(b);
+        const va = convertToUSD((Number(a.shares) || 0) * getCurrentPrice(a), a.currency);
+        const vb = convertToUSD((Number(b.shares) || 0) * getCurrentPrice(b), b.currency);
         return (va - vb) * dir;
       }
       if (sortKey === 'gainLoss') {
@@ -249,8 +249,8 @@ export default function Stocks() {
         const cb = Number(b.averageCost) || 0;
         const sa = Number(a.shares) || 0;
         const sb = Number(b.shares) || 0;
-        const ga = sa * (pa - ca);
-        const gb = sb * (pb - cb);
+        const ga = convertToUSD(sa * (pa - ca), a.currency);
+        const gb = convertToUSD(sb * (pb - cb), b.currency);
         return (ga - gb) * dir;
       }
       if (sortKey === 'companyName') {
@@ -270,7 +270,7 @@ export default function Stocks() {
       return 0;
     });
     return copy;
-  }, [stocks, sortKey, sortDir, stockPrices, getCurrentPrice]);
+  }, [filteredStocks, sortKey, sortDir, stockPrices, getCurrentPrice, convertToUSD]);
 
   const columns = [
     {
