@@ -140,6 +140,7 @@ model LiquidFund {
   ytdReturn           Decimal?  @map("ytd_return") @db.Decimal(5, 3)
   managementFee       Decimal?  @map("management_fee") @db.Decimal(5, 3)
   performanceFee      Decimal?  @map("performance_fee") @db.Decimal(5, 3)
+  currency            String?   @default("USD") @db.VarChar(10)
   redemptionFrequency String?   @map("redemption_frequency") @db.VarChar(50)
   lockupEndDate       DateTime? @map("lockup_end_date") @db.Date
   investmentDate      DateTime? @map("investment_date") @db.Date

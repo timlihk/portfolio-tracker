@@ -91,6 +91,7 @@ export interface LiquidFund {
   ytdReturn: number | null;
   managementFee: number | null;
   performanceFee: number | null;
+  currency: string | null;
   redemptionFrequency: string | null;
   lockupEndDate: Date | string | null;
   investmentDate: Date | string | null;

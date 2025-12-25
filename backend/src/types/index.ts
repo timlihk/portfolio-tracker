@@ -123,6 +123,7 @@ export interface LiquidFund {
   ytdReturn: number | null;
   managementFee: number | null;
   performanceFee: number | null;
+  currency: string | null;
   redemptionFrequency: string | null;
   lockupEndDate: Date | null;
   investmentDate: Date | null;
@@ -253,6 +254,7 @@ export interface CreateLiquidFundRequest {
   ytdReturn?: number;
   managementFee?: number;
   performanceFee?: number;
+  currency?: string;
   redemptionFrequency?: string;
   lockupEndDate?: string;
   investmentDate?: string;
