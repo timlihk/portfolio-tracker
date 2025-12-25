@@ -417,7 +417,6 @@ export default function Dashboard() {
             })}
           </div>
         </div>
-        </div>
 
         {/* By Account view */}
         <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
