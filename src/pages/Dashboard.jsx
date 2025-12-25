@@ -3,20 +3,16 @@ import { useQuery } from '@tanstack/react-query';
 import { entities, authAPI } from '@/api/backendClient';
 import StatCard from '@/components/portfolio/StatCard';
 import AllocationChart from '@/components/portfolio/AllocationChart';
-import AIPortfolioAnalysis from '@/components/portfolio/AIPortfolioAnalysis';
 import { useExchangeRates, useStockPrices, useBondPrices } from '@/components/portfolio/useMarketData';
 import { 
   TrendingUp, 
-  Briefcase, 
-  Building2, 
   Landmark, 
   Wallet,
-  Waves,
   Banknote,
   RefreshCw,
-  CreditCard
+  CreditCard,
+  Building2
 } from 'lucide-react';
-import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 
 export default function Dashboard() {
@@ -59,6 +55,10 @@ export default function Dashboard() {
   const { data: liabilities = [], isLoading: liabilitiesLoading } = useQuery({
     queryKey: ['liabilities'],
     queryFn: () => entities.Liability.list()
+  });
+  const { data: accounts = [], isLoading: accountsLoading } = useQuery({
+    queryKey: ['accounts'],
+    queryFn: () => entities.Account.list()
   });
 
   // Get exchange rates and real-time prices
@@ -202,78 +202,58 @@ export default function Dashboard() {
     { name: 'PE Deals', value: peDealsValue }
   ].filter(item => item.value > 0);
 
-  // Prepare portfolio data for AI analysis
-  const portfolioDataForAI = useMemo(() => ({
-    totalValue,
-    totalCost,
-    totalGainPercent,
-    allocation: allocationData,
-    stocks: stocks.map(s => ({
-      ticker: s.ticker,
-      company: s.companyName,
-      sector: s.sector,
-      shares: s.shares,
-      averageCost: s.averageCost,
-      currentPrice: stockPrices[s.ticker]?.price || s.currentPrice || s.averageCost || 0,
-      currency: s.currency
-    })),
-    bonds: bonds.map(b => ({
-      name: b.name,
-      type: b.bondType,
-      faceValue: b.faceValue,
-      couponRate: b.couponRate,
-      maturityDate: b.maturityDate,
-      rating: b.rating,
-      currency: b.currency
-    })),
-    liquidFunds: liquidFunds.map(f => ({
-      name: f.fundName,
-      type: f.fundType,
-      strategy: f.strategy,
-      invested: f.investmentAmount,
-      currentValue: f.currentValue,
-      ytdReturn: f.ytdReturn
-    })),
-    peFunds: peFunds.map(f => ({
-      name: f.fundName,
-      type: f.fundType,
-      vintage: f.vintageYear,
-      commitment: f.commitment,
-      called: f.calledCapital,
-      nav: f.nav,
-      distributions: f.distributions
-    })),
-    peDeals: peDeals.map(d => ({
-      company: d.companyName,
-      sector: d.sector,
-      type: d.dealType,
-      invested: d.investmentAmount,
-      currentValue: d.currentValue,
-      status: d.status
-    }))
-  }), [totalValue, totalCost, totalGainPercent, allocationData, stocks, bonds, liquidFunds, peFunds, peDeals, stockPrices]);
+  const formatUsd = (v) => `$${Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
-  // Recent activity
-  const allAssets = [
-    ...stocks.map(s => ({ ...s, type: 'Stock', date: s.purchaseDate })),
-    ...bonds.map(b => ({ ...b, type: 'Bond', date: b.purchaseDate })),
-    ...liquidFunds.map(f => ({ ...f, type: 'Liquid Fund', date: f.investmentDate })),
-    ...peFunds.map(f => ({ ...f, type: 'PE Fund', date: f.commitmentDate })),
-    ...peDeals.map(d => ({ ...d, type: 'PE Deal', date: d.investmentDate }))
-  ].filter(a => a.date).sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+  const accountSummaries = useMemo(() => {
+    if (!accounts || accounts.length === 0) return [];
 
-  const isEmpty =
-    stocks.length === 0 &&
-    bonds.length === 0 &&
-    peFunds.length === 0 &&
-    peDeals.length === 0 &&
-    liquidFunds.length === 0 &&
-    cashDeposits.length === 0 &&
-    liabilities.length === 0;
+    return accounts.map((account) => {
+      const accountName = account.name;
+      const stocksVal = stocks.reduce((sum, s) => {
+        if (s.account !== accountName) return sum;
+        const price = Number(stockPrices[s.ticker]?.price) || Number(s.currentPrice) || Number(s.averageCost) || 0;
+        const value = (Number(s.shares) || 0) * price;
+        return sum + convertToUSD(value, s.currency);
+      }, 0);
+      const bondsVal = bonds.reduce((sum, b) => {
+        if (b.account !== accountName) return sum;
+        const value = getBondMarketValue(b);
+        return sum + convertToUSD(value, b.currency);
+      }, 0);
+      const cashVal = cashDeposits.reduce((sum, c) => {
+        if (c.account !== accountName) return sum;
+        return sum + convertToUSD(Number(c.amount) || 0, c.currency);
+      }, 0);
+      const liquidVal = liquidFunds.reduce((sum, f) => {
+        if (f.account !== accountName) return sum;
+        return sum + (Number(f.currentValue) || Number(f.investmentAmount) || 0);
+      }, 0);
+      const liabilitiesVal = liabilities.reduce((sum, l) => {
+        if (l.account !== accountName || l.status === 'Paid Off') return sum;
+        return sum + convertToUSD(Number(l.outstandingBalance) || 0, l.currency);
+      }, 0);
+
+      const assetsTotal = stocksVal + bondsVal + cashVal + liquidVal;
+      const netWorth = assetsTotal - liabilitiesVal;
+
+      return {
+        name: accountName,
+        assetsTotal,
+        netWorth,
+        liabilitiesVal,
+        breakdown: {
+          stocksVal,
+          bondsVal,
+          cashVal,
+          liquidVal
+        }
+      };
+    }).sort((a, b) => b.assetsTotal - a.assetsTotal);
+  }, [accounts, stocks, bonds, cashDeposits, liquidFunds, liabilities, convertToUSD, stockPrices, bondPrices]);
 
   const isLoadingData = profileLoading || stocksLoading || bondsLoading || peFundsLoading || peDealsLoading || liquidFundsLoading || cashLoading || liabilitiesLoading;
 
-  if (isLoadingData) {
+  if (isLoadingData || accountsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center space-y-2">
@@ -288,10 +268,10 @@ export default function Dashboard() {
     <div className="min-h-screen bg-slate-50/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Portfolio Overview</h1>
-            <p className="text-slate-500 mt-1">Track your investments across all asset classes</p>
+            <p className="text-slate-500 mt-1">Net worth, allocation, and account-level view</p>
           </div>
           <div className="flex items-center gap-2">
             {isLoadingPrices && (
@@ -306,123 +286,120 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Main Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-          <StatCard
-            title="Net Worth"
-            value={`$${totalValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
-            icon={Wallet}
-            trend={totalCost > 0 && !isNaN(Number(totalGainPercent)) ? (Number(totalGainPercent) >= 0 ? 'up' : 'down') : null}
-            trendValue={totalCost > 0 && !isNaN(Number(totalGainPercent)) ? `${totalGainPercent}%` : null}
-            subValue={totalLiabilities > 0 ? `$${totalAssets.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} assets - $${totalLiabilities.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} liabilities` : 'all time'}
-          />
-          <StatCard
-            title="Stocks"
-            value={`$${stocksValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
-            icon={TrendingUp}
-            trend={stocksCost > 0 && !isNaN(Number(stocksGainPercent)) ? (Number(stocksGainPercent) >= 0 ? 'up' : 'down') : null}
-            trendValue={stocksCost > 0 && !isNaN(Number(stocksGainPercent)) ? `${stocksGainPercent}%` : null}
-            subValue={`${stocks.length} positions`}
-          />
-          <StatCard
-            title="Fixed Income"
-            value={`$${bondsValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
-            icon={Landmark}
-            subValue={`${bonds.length} bonds`}
-          />
-          <StatCard
-            title="Cash & Deposits"
-            value={`$${cashValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
-            icon={Banknote}
-            subValue={`${cashDeposits.length} positions`}
-          />
-          {totalLiabilities > 0 && (
+        {/* Top: Net worth + allocation */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="lg:col-span-1">
             <StatCard
-              title="Liabilities"
-              value={`-$${totalLiabilities.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
-              icon={CreditCard}
-              subValue={`${activeLiabilities.length} active loans`}
+              title="Net Worth"
+              value={formatUsd(totalValue)}
+              icon={Wallet}
+              trend={totalCost > 0 && !isNaN(Number(totalGainPercent)) ? (Number(totalGainPercent) >= 0 ? 'up' : 'down') : null}
+              trendValue={totalCost > 0 && !isNaN(Number(totalGainPercent)) ? `${totalGainPercent}%` : null}
+              subValue={`${formatUsd(totalAssets)} assets • ${formatUsd(totalLiabilities)} liabilities`}
             />
-          )}
-        </div>
-
-        {/* Secondary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-8">
-          <StatCard
-            title="Liquid Funds"
-            value={`$${liquidFundsValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
-            icon={Waves}
-            trend={liquidFundsCost > 0 ? ((liquidFundsValue - liquidFundsCost) >= 0 ? 'up' : 'down') : null}
-            trendValue={liquidFundsCost > 0 ? `${(((liquidFundsValue - liquidFundsCost) / liquidFundsCost) * 100).toFixed(1)}%` : null}
-            subValue={`${liquidFunds.length} funds`}
-          />
-          <StatCard
-            title="Private Equity"
-            value={`$${(peFundsValue + peDealsValue).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
-            icon={Briefcase}
-            subValue={`$${peFundsUnfunded.toLocaleString()} unfunded`}
-          />
-          <StatCard
-            title="Alternative Investments"
-            value={`$${(peFundsValue + peDealsValue + liquidFundsValue).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
-            icon={Building2}
-            subValue={`${peFunds.length + peDeals.length + liquidFunds.length} positions`}
-          />
-        </div>
-
-        {/* Charts and Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <AllocationChart data={allocationData} />
-          
-          {/* Recent Activity */}
-          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
-            <h3 className="text-lg font-semibold text-slate-900 mb-6">Recent Activity</h3>
-            
-            {allAssets.length === 0 ? (
-              <div className="h-48 flex items-center justify-center text-slate-400">
-                No recent activity
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {allAssets.map((asset, index) => (
-                  <div 
-                    key={`${asset.type}-${asset.id}`}
-                    className="flex items-center justify-between py-3 border-b border-slate-50 last:border-0"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`p-2 rounded-xl ${
-                        asset.type === 'Stock' ? 'bg-sky-50' :
-                        asset.type === 'Bond' ? 'bg-emerald-50' :
-                        asset.type === 'Liquid Fund' ? 'bg-cyan-50' :
-                        asset.type === 'PE Fund' ? 'bg-violet-50' : 'bg-amber-50'
-                      }`}>
-                        {asset.type === 'Stock' && <TrendingUp className="w-4 h-4 text-sky-600" />}
-                        {asset.type === 'Bond' && <Landmark className="w-4 h-4 text-emerald-600" />}
-                        {asset.type === 'Liquid Fund' && <Waves className="w-4 h-4 text-cyan-600" />}
-                        {asset.type === 'PE Fund' && <Briefcase className="w-4 h-4 text-violet-600" />}
-                        {asset.type === 'PE Deal' && <Building2 className="w-4 h-4 text-amber-600" />}
-                      </div>
-                      <div>
-                        <p className="font-medium text-slate-900">
-                          {asset.ticker || asset.name || asset.fundName || asset.companyName}
-                        </p>
-                        <p className="text-sm text-slate-500">{asset.type}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-slate-500">
-                        {asset.date && format(new Date(asset.date), 'MMM d, yyyy')}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+          </div>
+          <div className="lg:col-span-2">
+            <AllocationChart data={allocationData} />
           </div>
         </div>
 
-        {/* Auth / data status */}
-        <div className="mb-6 space-y-3">
+        {/* Assets + Liabilities cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Assets by Class</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                { label: 'Stocks', value: stocksValue, count: stocks.length, icon: <TrendingUp className="w-4 h-4 text-sky-600" /> },
+                { label: 'Fixed Income', value: bondsValue, count: bonds.length, icon: <Landmark className="w-4 h-4 text-emerald-600" /> },
+                { label: 'Liquid Funds', value: liquidFundsValue, count: liquidFunds.length },
+                { label: 'Cash & Deposits', value: cashValue, count: cashDeposits.length, icon: <Banknote className="w-4 h-4 text-amber-600" /> },
+                { label: 'PE Funds', value: peFundsValue, count: peFunds.length },
+                { label: 'PE Deals', value: peDealsValue, count: peDeals.length }
+              ].map((item) => (
+                <div key={item.label} className="border border-slate-100 rounded-xl p-4 flex flex-col gap-1 bg-slate-50/40">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-slate-500">{item.label}</p>
+                    {item.icon}
+                  </div>
+                  <p className="text-xl font-semibold text-slate-900">{formatUsd(item.value)}</p>
+                  <p className="text-xs text-slate-400">{item.count || 0} positions</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Liabilities</h3>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-slate-500">Total</p>
+                <p className="text-xl font-semibold text-rose-600">-{formatUsd(totalLiabilities)}</p>
+              </div>
+              <div className="space-y-2">
+                {activeLiabilities.slice(0, 4).map((l) => (
+                  <div key={l.id} className="flex items-center justify-between text-sm text-slate-700">
+                    <span className="truncate">{l.name || l.liabilityType || 'Liability'}</span>
+                    <span>-{formatUsd(convertToUSD(Number(l.outstandingBalance) || 0, l.currency))}</span>
+                  </div>
+                ))}
+                {activeLiabilities.length === 0 && (
+                  <p className="text-sm text-slate-400">No active liabilities</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* By Account view */}
+        <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-slate-900">By Account</h3>
+            <Badge variant="outline" className="text-slate-600">
+              {accountSummaries.length} accounts
+            </Badge>
+          </div>
+          {accountSummaries.length === 0 ? (
+            <p className="text-sm text-slate-500">No accounts found.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {accountSummaries.map((acc) => (
+                <div key={acc.name} className="border border-slate-100 rounded-xl p-4 bg-slate-50/40">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="font-semibold text-slate-900">{acc.name}</p>
+                    <Building2 className="w-4 h-4 text-slate-400" />
+                  </div>
+                  <p className="text-sm text-slate-500 mb-2">Net Worth</p>
+                  <p className="text-xl font-semibold text-slate-900 mb-3">{formatUsd(acc.netWorth)}</p>
+                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-600">
+                    <div className="flex items-center justify-between">
+                      <span>Stocks</span>
+                      <span>{formatUsd(acc.breakdown.stocksVal)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Bonds</span>
+                      <span>{formatUsd(acc.breakdown.bondsVal)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Cash</span>
+                      <span>{formatUsd(acc.breakdown.cashVal)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span>Liquid</span>
+                      <span>{formatUsd(acc.breakdown.liquidVal)}</span>
+                    </div>
+                    <div className="flex items-center justify-between col-span-2">
+                      <span className="text-rose-600">Liabilities</span>
+                      <span className="text-rose-600">-{formatUsd(acc.liabilitiesVal)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Auth status */}
+        <div className="mt-6 space-y-3">
           {profileLoading && (
             <div className="text-sm text-slate-600 bg-white border border-slate-200 rounded-xl px-4 py-3 shadow-sm">
               Checking access…
@@ -439,82 +416,8 @@ export default function Dashboard() {
               <span className="text-slate-900">{profile.email || `User #${profile.id}`}</span>
               <span className="text-slate-400">•</span>
               <span className="text-slate-600">User ID: {profile.id}</span>
-              {isEmpty && (
-                <>
-                  <span className="text-slate-400">•</span>
-                  <span className="text-slate-600">No portfolio data found for this user.</span>
-                </>
-              )}
             </div>
           )}
-        </div>
-
-        {/* AI Portfolio Analysis */}
-        <div className="mt-8">
-          <AIPortfolioAnalysis portfolioData={portfolioDataForAI} />
-        </div>
-
-        {/* PE Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">PE Funds Summary</h3>
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <p className="text-sm text-slate-500 mb-1">Total Commitment</p>
-                <p className="text-2xl font-semibold text-slate-900">
-                  ${peFundsCommitment.toLocaleString()}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-slate-500 mb-1">Called Capital</p>
-                <p className="text-2xl font-semibold text-slate-900">
-                  ${peFundsCalled.toLocaleString()}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-slate-500 mb-1">Distributions</p>
-                <p className="text-2xl font-semibold text-emerald-600">
-                  ${peFunds.reduce((sum, f) => sum + (Number(f.distributions) || 0), 0).toLocaleString()}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-slate-500 mb-1">Current NAV</p>
-                <p className="text-2xl font-semibold text-slate-900">
-                  ${peFunds.reduce((sum, f) => sum + (Number(f.nav) || 0), 0).toLocaleString()}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Direct Investments</h3>
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <p className="text-sm text-slate-500 mb-1">Total Invested</p>
-                <p className="text-2xl font-semibold text-slate-900">
-                  ${peDealsCost.toLocaleString()}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-slate-500 mb-1">Current Value</p>
-                <p className="text-2xl font-semibold text-slate-900">
-                  ${peDealsValue.toLocaleString()}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-slate-500 mb-1">Active Deals</p>
-                <p className="text-2xl font-semibold text-slate-900">
-                  {peDeals.filter(d => d.status === 'Active').length}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-slate-500 mb-1">Unrealized Gain</p>
-                <p className={`text-2xl font-semibold ${peDealsValue - peDealsCost >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  ${(peDealsValue - peDealsCost).toLocaleString()}
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
