@@ -143,6 +143,7 @@ export function useStockPrices(tickers) {
 export function useBondPrices(bonds) {
   const [prices, setPrices] = useState({});
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const toNumber = (val) => {
     const num = Number(val);
@@ -160,6 +161,7 @@ export function useBondPrices(bonds) {
 
     const fetchPrices = async () => {
       setLoading(true);
+      setError(null);
       const apiPrices = new Map();
 
       // Fetch prices per unique ISIN from backend (Finnhub)
@@ -176,6 +178,7 @@ export function useBondPrices(bonds) {
           }
         } catch (error) {
           console.error('Failed to fetch bond price', isin, error);
+          setError(error);
         }
       }
 
@@ -215,7 +218,7 @@ export function useBondPrices(bonds) {
     faceValue: b.faceValue
   })))]);
 
-  return { prices, loading };
+  return { prices, loading, error };
 }
 
 export const CURRENCY_SYMBOLS = {

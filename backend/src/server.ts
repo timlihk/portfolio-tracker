@@ -274,14 +274,16 @@ export async function startServer(): Promise<void> {
 
       // Serve static files with proper MIME types
       app.use(express.static(frontendDistPath, {
-        maxAge: '1d',
+        maxAge: '0',
         etag: true,
         setHeaders: (res, filePath) => {
           // Set correct MIME types explicitly
           if (filePath.endsWith('.js')) {
             res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+            res.setHeader('Cache-Control', 'no-store, max-age=0');
           } else if (filePath.endsWith('.css')) {
             res.setHeader('Content-Type', 'text/css; charset=utf-8');
+            res.setHeader('Cache-Control', 'no-store, max-age=0');
           } else if (filePath.endsWith('.svg')) {
             res.setHeader('Content-Type', 'image/svg+xml');
           }
