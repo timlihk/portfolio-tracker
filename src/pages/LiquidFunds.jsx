@@ -6,6 +6,7 @@ import AssetTable from '@/components/portfolio/AssetTable';
 import AddAssetDialog from '@/components/portfolio/AddAssetDialog';
 import { Badge } from '@/components/ui/badge';
 import PaginationControls from '@/components/portfolio/PaginationControls';
+import { useExchangeRates, CURRENCY_SYMBOLS } from '@/components/portfolio/useMarketData';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,6 +51,7 @@ export default function LiquidFunds() {
   const [limit, setLimit] = useState(10);
   
   const queryClient = useQueryClient();
+  const { convertToUSD } = useExchangeRates();
 
   const { data: fundsResponse = [], isFetching: isLoading } = useQuery({
     queryKey: ['liquidFunds', page, limit],
@@ -87,11 +89,15 @@ export default function LiquidFunds() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const payload = {
+      ...formData,
+      currency: formData.currency || 'USD'
+    };
     if (formData.id) {
-      const { id, ...data } = formData;
+      const { id, ...data } = payload;
       updateMutation.mutate({ id, data });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(payload);
     }
   };
 
@@ -150,17 +156,20 @@ export default function LiquidFunds() {
       key: 'investmentAmount',
       label: 'Invested',
       align: 'right',
-      render: (val) => `$${(Number(val) || 0).toLocaleString()}`
+      render: (val, row) => {
+        const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
+        return `${symbol}${(Number(val) || 0).toLocaleString()}`;
+      }
     },
     {
       key: 'currentValue',
       label: 'Current Value',
       align: 'right',
-      render: (val, row) => (
-        <span className="font-medium">
-          ${(Number(val) || Number(row.investmentAmount) || 0).toLocaleString()}
-        </span>
-      )
+      render: (val, row) => {
+        const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
+        const base = Number(val) || Number(row.investmentAmount) || 0;
+        return <span className="font-medium">{symbol}{base.toLocaleString()}</span>;
+      }
     },
     {
       key: 'gainLoss',
@@ -210,8 +219,12 @@ export default function LiquidFunds() {
     }
   ];
 
-  const totalInvested = funds.reduce((sum, f) => sum + (Number(f.investmentAmount) || 0), 0);
-  const totalValue = funds.reduce((sum, f) => sum + (Number(f.currentValue) || Number(f.investmentAmount) || 0), 0);
+  const totalInvested = funds.reduce((sum, f) => {
+    return sum + convertToUSD(Number(f.investmentAmount) || 0, f.currency);
+  }, 0);
+  const totalValue = funds.reduce((sum, f) => {
+    return sum + convertToUSD(Number(f.currentValue) || Number(f.investmentAmount) || 0, f.currency);
+  }, 0);
   const totalCount = pagination?.total ?? funds.length;
 
   return (
@@ -219,7 +232,7 @@ export default function LiquidFunds() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <PageHeader
           title="Liquid Funds"
-          subtitle={`${totalCount} funds • $${totalInvested.toLocaleString()} invested • $${totalValue.toLocaleString()} current value`}
+          subtitle={`${totalCount} funds • $${totalInvested.toLocaleString()} invested • $${totalValue.toLocaleString()} current value (USD)`}
           onAdd={() => {
             setFormData({});
             setDialogOpen(true);
