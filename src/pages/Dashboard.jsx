@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { entities, authAPI } from '@/api/backendClient';
 import StatCard from '@/components/portfolio/StatCard';
 import AllocationChart from '@/components/portfolio/AllocationChart';
+import CurrencyExposureChart from '@/components/portfolio/CurrencyExposureChart';
 import { useExchangeRates, useStockPrices, useBondPrices } from '@/components/portfolio/useMarketData';
 import { 
   TrendingUp, 
@@ -203,6 +204,24 @@ export default function Dashboard() {
   ].filter(item => item.value > 0);
 
   const formatUsd = (v) => `$${Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  const buildCurrencyExposure = (assetsOnly = true) => {
+    const map = new Map();
+    const add = (currency, amount) => {
+      if (!currency || !Number.isFinite(amount)) return;
+      map.set(currency, (map.get(currency) || 0) + amount);
+    };
+    if (assetsOnly) {
+      stocks.forEach((s) => add(s.currency || 'USD', convertToUSD((Number(s.shares) || 0) * (Number(stockPrices[s.ticker]?.price) || Number(s.currentPrice) || Number(s.averageCost) || 0), s.currency)));
+      bonds.forEach((b) => add(b.currency || 'USD', convertToUSD(getBondMarketValue(b), b.currency)));
+      liquidFunds.forEach((f) => add(f.currency || 'USD', Number(f.currentValue) || Number(f.investmentAmount) || 0));
+      cashDeposits.forEach((c) => add(c.currency || 'USD', convertToUSD(Number(c.amount) || 0, c.currency)));
+      peFunds.forEach((f) => add('USD', Number(f.nav) || Number(f.distributions) || 0));
+      peDeals.forEach((d) => add('USD', Number(d.currentValue) || Number(d.investmentAmount) || 0));
+    } else {
+      liabilities.forEach((l) => add(l.currency || 'USD', convertToUSD(Number(l.outstandingBalance) || 0, l.currency)));
+    }
+    return Array.from(map.entries()).map(([name, value]) => ({ name, value })).filter(d => d.value > 0);
+  };
 
   const accountSummaries = useMemo(() => {
     if (!accounts || accounts.length === 0) return [];
@@ -286,7 +305,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Top: Net worth + allocation */}
+        {/* Top: Net worth + allocation + currency exposure */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-1">
             <StatCard
@@ -298,8 +317,12 @@ export default function Dashboard() {
               subValue={`${formatUsd(totalAssets)} assets • ${formatUsd(totalLiabilities)} liabilities`}
             />
           </div>
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-4">
             <AllocationChart data={allocationData} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CurrencyExposureChart data={buildCurrencyExposure(true)} title="Assets by Currency" />
+              <CurrencyExposureChart data={buildCurrencyExposure(false)} title="Liabilities by Currency" />
+            </div>
           </div>
         </div>
 

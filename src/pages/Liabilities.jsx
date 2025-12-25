@@ -49,6 +49,8 @@ export default function Liabilities() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
+  const [accountFilter, setAccountFilter] = useState('');
+  const [currencyFilter, setCurrencyFilter] = useState('');
   
   const queryClient = useQueryClient();
 
@@ -57,7 +59,11 @@ export default function Liabilities() {
     queryFn: () => entities.Liability.listWithPagination({ page, limit }),
     keepPreviousData: true
   });
-  const liabilities = liabilitiesResponse?.data || liabilitiesResponse || [];
+  const liabilities = (liabilitiesResponse?.data || liabilitiesResponse || []).filter((l) => {
+    const matchesAccount = accountFilter ? l.account === accountFilter : true;
+    const matchesCurrency = currencyFilter ? l.currency === currencyFilter : true;
+    return matchesAccount && matchesCurrency;
+  });
   const pagination = liabilitiesResponse?.pagination || { total: liabilities.length, page, limit };
 
   const { data: accounts = [] } = useQuery({
@@ -200,6 +206,35 @@ export default function Liabilities() {
           }}
           addLabel="Add Loan"
         />
+
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+          <select
+            className="border rounded-md px-3 py-2 text-sm text-slate-700 w-full sm:w-52"
+            value={accountFilter}
+            onChange={(e) => {
+              setAccountFilter(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">All Accounts</option>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.name}>{a.name}</option>
+            ))}
+          </select>
+          <select
+            className="border rounded-md px-3 py-2 text-sm text-slate-700 w-full sm:w-52"
+            value={currencyFilter}
+            onChange={(e) => {
+              setCurrencyFilter(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">All Currencies</option>
+            {CURRENCIES.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
 
         <AssetTable
           columns={columns}

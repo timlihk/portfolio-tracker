@@ -48,7 +48,7 @@ export default function Stocks() {
   const [sortDir, setSortDir] = useState('asc');
   const tickerLookupRef = useRef(null);
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState(50);
 
   const queryClient = useQueryClient();
 
