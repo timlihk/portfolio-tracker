@@ -1,51 +1,12 @@
-import express, { Response } from 'express';
 import { body, param } from 'express-validator';
 import prisma from '../../lib/prisma.js';
-import { requireAuth } from '../../middleware/auth.js';
-import logger from '../../services/logger.js';
-import type { AuthRequest, Stock, CreateStockRequest, UpdateStockRequest } from '../../types/index.js';
-import { serializeDecimals } from '../../types/index.js';
-import { getPaginationParams, setPaginationHeaders } from './pagination.js';
-import { sendServerError, sendNotFound } from '../response.js';
-import { handleValidationOrRespond } from './utils.js';
+import { serializeDecimals, CreateStockRequest, UpdateStockRequest } from '../../types/index.js';
+import { createCrudRouter } from './crudFactory.js';
+import { toDateOrNull } from './utils.js';
 
-const router = express.Router();
+const serializeStock = (stock: any) => serializeDecimals(stock);
 
-// GET /stocks - List all stocks
-router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
-  try {
-    const { skip, take, paginated, page, limit } = getPaginationParams(req);
-    const rawAccount = (req.query as { account?: string }).account;
-    const rawSector = (req.query as { sector?: string }).sector;
-    const account = rawAccount && rawAccount !== 'undefined' ? rawAccount : undefined;
-    const sector = rawSector && rawSector !== 'undefined' ? rawSector : undefined;
-    const where = {
-      userId: req.userId,
-      ...(account ? { account } : {}),
-      ...(sector ? { sector } : {})
-    };
-    const stocks = await prisma.stock.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      skip,
-      take
-    });
-    if (paginated && page && limit) {
-      const total = await prisma.stock.count({ where });
-      setPaginationHeaders(res, total, page, limit);
-    }
-
-    // Convert Prisma Decimal fields to numbers for JSON response
-    const serializedStocks = stocks.map(stock => serializeDecimals(stock));
-    res.json(serializedStocks);
-  } catch (error) {
-    logger.error('Error fetching stocks:', { error: (error as Error).message, userId: req.userId });
-    sendServerError(res, 'Failed to fetch stocks');
-  }
-});
-
-// POST /stocks - Create a stock
-router.post('/', requireAuth, [
+const createValidators = [
   body('ticker').notEmpty().trim().isLength({ max: 20 }),
   body('shares').isFloat({ gt: 0 }),
   body('averageCost').isFloat({ gt: 0 }),
@@ -53,48 +14,9 @@ router.post('/', requireAuth, [
   body('account').optional().isLength({ max: 255 }),
   body('purchaseDate').optional().isISO8601(),
   body('notes').optional().isLength({ max: 1000 }),
-], async (req: AuthRequest, res: Response) => {
-  try {
-    if (!handleValidationOrRespond(req, res)) return;
+];
 
-    const body = req.body as any;
-    const ticker = body.ticker;
-    const companyName = body.companyName;
-    const sector = body.sector;
-    const shares = body.shares;
-    const averageCost = body.averageCost;
-    const currentPrice = body.currentPrice;
-    const currency = body.currency;
-    const account = body.account;
-    const purchaseDate = body.purchaseDate;
-    const notes = body.notes;
-
-    const stock = await prisma.stock.create({
-      data: {
-        userId: req.userId!,
-        ticker,
-        companyName,
-        sector,
-        shares,
-        averageCost,
-        currentPrice,
-        currency: currency || 'USD',
-        account,
-        purchaseDate: purchaseDate ? new Date(purchaseDate) : null,
-        notes
-      }
-    });
-
-    const serializedStock = serializeDecimals(stock);
-    res.status(201).json(serializedStock);
-  } catch (error) {
-    logger.error('Error creating stock:', { error: (error as Error).message, userId: req.userId });
-    sendServerError(res, 'Failed to create stock');
-  }
-});
-
-// PUT /stocks/:id - Update a stock
-router.put('/:id', requireAuth, [
+const updateValidators = [
   param('id').isInt({ gt: 0 }),
   body('ticker').optional().notEmpty().trim().isLength({ max: 20 }),
   body('shares').optional().isFloat({ gt: 0 }),
@@ -103,89 +25,48 @@ router.put('/:id', requireAuth, [
   body('account').optional().isLength({ max: 255 }),
   body('purchaseDate').optional().isISO8601(),
   body('notes').optional().isLength({ max: 1000 }),
-], async (req: AuthRequest, res: Response) => {
-  try {
-    if (!handleValidationOrRespond(req, res)) return;
+];
 
-    const { id } = req.params;
-    const body = req.body as any;
-    const ticker = body.ticker;
-    const companyName = body.companyName;
-    const sector = body.sector;
-    const shares = body.shares;
-    const averageCost = body.averageCost;
-    const currentPrice = body.currentPrice;
-    const currency = body.currency;
-    const account = body.account;
-    const purchaseDate = body.purchaseDate;
-    const notes = body.notes;
-
-    // Check if stock exists and belongs to user
-    const existingStock = await prisma.stock.findFirst({
-      where: {
-        id: parseInt(id, 10),
-        userId: req.userId
-      }
-    });
-
-    if (!existingStock) {
-      return sendNotFound(res, 'Stock not found');
-    }
-
-    const stock = await prisma.stock.update({
-      where: { id: parseInt(id, 10) },
-      data: {
-        ticker,
-        companyName,
-        sector,
-        shares,
-        averageCost,
-        currentPrice,
-        currency,
-        account,
-        purchaseDate: purchaseDate ? new Date(purchaseDate) : undefined,
-        notes
-      }
-    });
-
-    const serializedStock = serializeDecimals(stock);
-    res.json(serializedStock);
-  } catch (error) {
-    logger.error('Error updating stock:', { error: (error as Error).message, userId: req.userId, stockId: req.params.id });
-    sendServerError(res, 'Failed to update stock');
-  }
-});
-
-// DELETE /stocks/:id - Delete a stock
-router.delete('/:id', requireAuth, [
-  param('id').isInt({ gt: 0 }),
-], async (req: AuthRequest, res: Response) => {
-  try {
-    if (!handleValidationOrRespond(req, res)) return;
-
-    const { id } = req.params;
-
-    // Check if stock exists and belongs to user
-    const existingStock = await prisma.stock.findFirst({
-      where: {
-        id: parseInt(id, 10),
-        userId: req.userId
-      }
-    });
-
-    if (!existingStock) {
-      return sendNotFound(res, 'Stock not found');
-    }
-
-    await prisma.stock.delete({
-      where: { id: parseInt(id, 10) }
-    });
-
-    res.json({ message: 'Stock deleted successfully' });
-  } catch (error) {
-    logger.error('Error deleting stock:', { error: (error as Error).message, userId: req.userId, stockId: req.params.id });
-    sendServerError(res, 'Failed to delete stock');
-  }
+const router = createCrudRouter<CreateStockRequest, UpdateStockRequest>({
+  resourceName: 'Stock',
+  prismaModel: prisma.stock,
+  serialize: serializeStock,
+  createValidators,
+  updateValidators,
+  buildFilters: (req) => {
+    const rawAccount = (req.query as { account?: string }).account;
+    const rawSector = (req.query as { sector?: string }).sector;
+    const account = rawAccount && rawAccount !== 'undefined' ? rawAccount : undefined;
+    const sector = rawSector && rawSector !== 'undefined' ? rawSector : undefined;
+    return {
+      ...(account ? { account } : {}),
+      ...(sector ? { sector } : {})
+    };
+  },
+  buildCreateData: (body) => ({
+    ticker: body.ticker,
+    companyName: body.companyName,
+    sector: body.sector,
+    shares: body.shares,
+    averageCost: body.averageCost,
+    currentPrice: body.currentPrice,
+    currency: body.currency || 'USD',
+    account: body.account,
+    purchaseDate: body.purchaseDate ? toDateOrNull(body.purchaseDate) : null,
+    notes: body.notes
+  }),
+  buildUpdateData: (body) => ({
+    ticker: body.ticker,
+    companyName: body.companyName,
+    sector: body.sector,
+    shares: body.shares,
+    averageCost: body.averageCost,
+    currentPrice: body.currentPrice,
+    currency: body.currency,
+    account: body.account,
+    purchaseDate: body.purchaseDate ? toDateOrNull(body.purchaseDate) : undefined,
+    notes: body.notes
+  })
 });
 
 export default router;
