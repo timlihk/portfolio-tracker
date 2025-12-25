@@ -42,6 +42,7 @@ model Stock {
   notes        String?   @db.Text
   createdAt    DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
 
   user User @relation(fields: [userId], references: [id])
 
@@ -70,6 +71,7 @@ model Bond {
   notes         String?   @db.Text
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
 
   user User @relation(fields: [userId], references: [id])
 
@@ -95,6 +97,7 @@ model PeFund {
   notes          String?   @db.Text
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @default(now()) @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
 
   user User @relation(fields: [userId], references: [id])
 
@@ -119,6 +122,7 @@ model PeDeal {
   notes               String?   @db.Text
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @default(now()) @updatedAt @map("updated_at")
+  deletedAt           DateTime? @map("deleted_at")
 
   user User @relation(fields: [userId], references: [id])
 
@@ -196,6 +200,7 @@ model Liability {
   notes              String?   @db.Text
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at")
+  deletedAt          DateTime? @map("deleted_at")
 
   user User @relation(fields: [userId], references: [id])
 
@@ -214,6 +219,7 @@ model Account {
   accountNumber String?  @map("account_number") @db.VarChar(20)
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
 
   user User @relation(fields: [userId], references: [id])
 

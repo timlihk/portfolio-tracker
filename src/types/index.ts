@@ -42,6 +42,7 @@ export interface Bond {
   notes: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
+  deletedAt?: Date | string | null;
 }
 
 export interface PeFund {
@@ -60,6 +61,7 @@ export interface PeFund {
   notes: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
+  deletedAt?: Date | string | null;
 }
 
 export interface PeDeal {
@@ -77,6 +79,7 @@ export interface PeDeal {
   notes: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
+  deletedAt?: Date | string | null;
 }
 
 export interface LiquidFund {
@@ -99,6 +102,7 @@ export interface LiquidFund {
   notes: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
+  deletedAt?: Date | string | null;
 }
 
 export interface CashDeposit {
@@ -114,6 +118,7 @@ export interface CashDeposit {
   notes: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
+  deletedAt?: Date | string | null;
 }
 
 export interface Liability {
@@ -134,6 +139,7 @@ export interface Liability {
   notes: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
+  deletedAt?: Date | string | null;
 }
 
 export interface Account {
@@ -145,6 +151,7 @@ export interface Account {
   accountNumber: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
+  deletedAt?: Date | string | null;
 }
 
 // Auth Types

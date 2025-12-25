@@ -54,6 +54,7 @@ export interface Stock {
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date | null;
 }
 
 export interface Bond {
@@ -74,6 +75,7 @@ export interface Bond {
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date | null;
 }
 
 export interface PeFund {
@@ -92,6 +94,7 @@ export interface PeFund {
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date | null;
 }
 
 export interface PeDeal {
@@ -109,6 +112,7 @@ export interface PeDeal {
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date | null;
 }
 
 export interface LiquidFund {
@@ -131,6 +135,7 @@ export interface LiquidFund {
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date | null;
 }
 
 export interface CashDeposit {
@@ -146,6 +151,7 @@ export interface CashDeposit {
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date | null;
 }
 
 export interface Liability {
@@ -166,6 +172,7 @@ export interface Liability {
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date | null;
 }
 
 export interface Account {
@@ -177,6 +184,7 @@ export interface Account {
   accountNumber: string | null;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date | null;
 }
 
 // Request types
