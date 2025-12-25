@@ -298,6 +298,7 @@ export async function startServer(): Promise<void> {
         if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map)$/)) {
           return res.status(404).send('Not found');
         }
+        res.setHeader('Cache-Control', 'no-store, max-age=0');
         res.sendFile(path.join(frontendDistPath, 'index.html'));
       });
     } else {

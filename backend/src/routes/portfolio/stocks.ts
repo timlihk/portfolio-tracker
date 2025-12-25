@@ -14,7 +14,10 @@ const router = express.Router();
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { skip, take, paginated, page, limit } = getPaginationParams(req);
-    const { account, sector } = req.query as { account?: string; sector?: string };
+    const rawAccount = (req.query as { account?: string }).account;
+    const rawSector = (req.query as { sector?: string }).sector;
+    const account = rawAccount && rawAccount !== 'undefined' ? rawAccount : undefined;
+    const sector = rawSector && rawSector !== 'undefined' ? rawSector : undefined;
     const where = {
       userId: req.userId,
       ...(account ? { account } : {}),

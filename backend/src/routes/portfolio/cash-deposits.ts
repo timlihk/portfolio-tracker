@@ -23,7 +23,10 @@ const serializeCashDepositWithAliases = (deposit: any) => {
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { skip, take, paginated, page, limit } = getPaginationParams(req);
-    const { account, currency } = req.query as { account?: string; currency?: string };
+    const rawAccount = (req.query as { account?: string }).account;
+    const rawCurrency = (req.query as { currency?: string }).currency;
+    const account = rawAccount && rawAccount !== 'undefined' ? rawAccount : undefined;
+    const currency = rawCurrency && rawCurrency !== 'undefined' ? rawCurrency : undefined;
     const where = {
       userId: req.userId,
       ...(account ? { account } : {}),
