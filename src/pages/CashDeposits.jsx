@@ -104,11 +104,12 @@ export default function CashDeposits() {
     setSubmitError('');
 
     const { name, amount, account, currency } = formData;
+    const numericAmount = Number(amount);
     if (!name || !account || !currency || amount === undefined || amount === null || amount === '') {
       setSubmitError('Please fill in Name, Amount, Currency, and Institution.');
       return;
     }
-    if (Number(amount) <= 0) {
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
       setSubmitError('Amount must be greater than zero.');
       return;
     }
@@ -122,7 +123,12 @@ export default function CashDeposits() {
       if (payload[key] === '' || payload[key] === undefined || payload[key] === null) {
         delete payload[key];
       } else {
-        payload[key] = Number(payload[key]);
+        const num = Number(payload[key]);
+        if (!Number.isFinite(num)) {
+          delete payload[key];
+        } else {
+          payload[key] = num;
+        }
       }
     });
 
