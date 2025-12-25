@@ -103,8 +103,15 @@ export default function CashDeposits() {
     e.preventDefault();
     setSubmitError('');
 
+    const parseNumber = (val) => {
+      if (val === undefined || val === null || val === '') return null;
+      const cleaned = typeof val === 'string' ? val.replace(/,/g, '').trim() : val;
+      const num = Number(cleaned);
+      return Number.isFinite(num) ? num : null;
+    };
+
     const { name, amount, account, currency } = formData;
-    const numericAmount = Number(amount);
+    const numericAmount = parseNumber(amount);
     if (!name || !account || !currency || amount === undefined || amount === null || amount === '') {
       setSubmitError('Please fill in Name, Amount, Currency, and Institution.');
       return;
@@ -119,18 +126,20 @@ export default function CashDeposits() {
     const payload = { ...dataWithoutId };
 
     // Normalize numeric fields
+    let hasNumberError = false;
     ['amount', 'interestRate'].forEach((key) => {
       if (payload[key] === '' || payload[key] === undefined || payload[key] === null) {
         delete payload[key];
       } else {
-        const num = Number(payload[key]);
+        const num = parseNumber(payload[key]);
         if (!Number.isFinite(num)) {
-          delete payload[key];
-        } else {
-          payload[key] = num;
+          setSubmitError(`Invalid number for ${key === 'amount' ? 'Amount' : 'Interest Rate'}. Use digits only.`);
+          hasNumberError = true;
         }
+        payload[key] = num;
       }
     });
+    if (hasNumberError) return;
 
     // Drop empty dates/strings
     if (payload.maturityDate === '' || payload.maturityDate === undefined) delete payload.maturityDate;
