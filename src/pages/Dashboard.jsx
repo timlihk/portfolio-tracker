@@ -305,7 +305,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Top: Net worth + allocation + currency exposure */}
+        {/* Top: Net worth + allocation */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-1">
             <StatCard
@@ -317,12 +317,8 @@ export default function Dashboard() {
               subValue={`${formatUsd(totalAssets)} assets • ${formatUsd(totalLiabilities)} liabilities`}
             />
           </div>
-          <div className="lg:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="lg:col-span-2">
             <AllocationChart data={allocationData} />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <CurrencyExposureChart data={buildCurrencyExposure(true)} title="Assets by Currency" />
-              <CurrencyExposureChart data={buildCurrencyExposure(false)} title="Liabilities by Currency" />
-            </div>
           </div>
         </div>
 
@@ -370,6 +366,18 @@ export default function Dashboard() {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Currency exposure */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Assets by Currency</h3>
+            <AllocationChart data={buildCurrencyExposure(true)} />
+          </div>
+          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Liabilities by Currency</h3>
+            <AllocationChart data={buildCurrencyExposure(false)} />
           </div>
         </div>
 
