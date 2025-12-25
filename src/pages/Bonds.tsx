@@ -10,6 +10,8 @@ import { useExchangeRates, useBondPrices, CURRENCY_SYMBOLS } from '@/components/
 import { createChangeLogger } from '@/components/portfolio/useChangelog';
 import { RefreshCw } from 'lucide-react';
 import PaginationControls from '@/components/portfolio/PaginationControls';
+import type { Bond, Account } from '@/types';
+import type React from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +29,16 @@ const BOND_TYPES = ['Treasury', 'Corporate', 'Municipal', 'Agency', 'Internation
 const RATINGS = ['AAA', 'AA', 'A', 'BBB', 'BB', 'B', 'CCC', 'CC', 'C', 'D', 'NR'];
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS'];
 
-const getBondFields = (accounts) => [
+type PaginatedResponse<T> = {
+  data: T[];
+  pagination?: {
+    total?: number;
+    page?: number;
+    limit?: number;
+  };
+};
+
+const getBondFields = (accounts: Account[]) => [
   { name: 'name', label: 'Bond Name / Issuer', required: true, placeholder: 'US Treasury 10Y' },
   { name: 'isin', label: 'ISIN', placeholder: 'US912810RZ49 (12 characters)' },
   { name: 'bondType', label: 'Bond Type', type: 'select', options: BOND_TYPES },
@@ -45,14 +56,14 @@ const getBondFields = (accounts) => [
 
 export default function Bonds() {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({});
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [deleteTarget, setDeleteTarget] = useState<Bond | null>(null);
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(10);
   
   const queryClient = useQueryClient();
 
-  const { data: bondResponse, isFetching: bondsLoading } = useQuery({
+  const { data: bondResponse, isFetching: bondsLoading } = useQuery<PaginatedResponse<Bond>>({
     queryKey: ['bonds', page, limit],
     queryFn: () => entities.Bond.listWithPagination({ page, limit }),
     keepPreviousData: true
@@ -60,7 +71,7 @@ export default function Bonds() {
   const bonds = bondResponse?.data || [];
   const pagination = bondResponse?.pagination || { total: bonds.length, page, limit };
 
-  const { data: accounts = [] } = useQuery({
+  const { data: accounts = [] } = useQuery<Account[]>({
     queryKey: ['accounts'],
     queryFn: () => entities.Account.list()
   });
@@ -69,18 +80,18 @@ export default function Bonds() {
 
   // Get real-time bond values and exchange rates
   const { prices: bondPrices, loading: pricesLoading } = useBondPrices(bonds);
-  const { convertToUSD, loading: ratesLoading } = useExchangeRates();
+  const { convertToUSD = (v: number) => v, loading: ratesLoading = false } = useExchangeRates() || {};
 
   const isLoadingPrices = pricesLoading || ratesLoading;
 
-  const getBondPriceData = (bond) => {
+  const getBondPriceData = (bond: Bond) => {
     const price = bondPrices[bond.id] || bondPrices[bond.isin] || bondPrices[bond.name];
     if (price && typeof price === 'object') return price;
     if (price != null) return { pricePct: Number(price) || 0, source: 'manual' };
     return null;
   };
 
-  const getPricePct = (bond) => {
+  const getPricePct = (bond: Bond) => {
     const manual = Number(bond.currentValue);
     const priceData = getBondPriceData(bond);
     const purchasePct = Number(bond.purchasePrice);
@@ -90,19 +101,19 @@ export default function Bonds() {
     return 100;
   };
 
-  const getMarketValue = (bond) => {
+  const getMarketValue = (bond: Bond) => {
     const face = Number(bond.faceValue) || 0;
     return face * (getPricePct(bond) / 100);
   };
 
-  const getCostBasis = (bond) => {
+  const getCostBasis = (bond: Bond) => {
     const face = Number(bond.faceValue) || 0;
     const purchasePct = Number(bond.purchasePrice) || 0;
     return face * (purchasePct / 100);
   };
 
   const createMutation = useMutation({
-    mutationFn: (data) => entities.Bond.create(data),
+    mutationFn: (data: Partial<Bond>) => entities.Bond.create(data),
     onSuccess: (_, data) => {
       bondLogger.logCreate(data.name, `Face value ${data.faceValue}`);
       queryClient.invalidateQueries({ queryKey: ['bonds'] });
@@ -112,7 +123,7 @@ export default function Bonds() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => entities.Bond.update(id, data),
+    mutationFn: ({ id, data }: { id: any; data: Partial<Bond> }) => entities.Bond.update(id, data),
     onSuccess: (_, { data }) => {
       bondLogger.logUpdate(data.name, 'Updated position');
       queryClient.invalidateQueries({ queryKey: ['bonds'] });
