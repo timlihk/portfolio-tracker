@@ -2,16 +2,15 @@
 
 A full-stack portfolio tracking application for managing investments across multiple asset classes including stocks, bonds, private equity funds, liquid funds, and private deals.
 
-> **v1.7.0** - December 2025
+> **v1.7.1** - December 2025
 >
 > ### What's New
-> - **100% TypeScript frontend** - All pages migrated with strict typing, zero `@ts-nocheck`
-> - **CRUD factory pattern** - 8 portfolio routes consolidated, ~1,000 lines eliminated
-> - **Route-level code splitting** - React.lazy() for all pages, faster initial load
-> - **Security hardening** - Timing-safe auth, no hardcoded secrets, rate limiting
-> - **Soft delete support** - `deletedAt` field on all portfolio models
-> - **Performance boost** - Single dashboard endpoint (was 8 calls), parallel bond fetches
-> - **Removed unused deps** - Dropped `three`, `react-leaflet`, `moment` (~800KB saved)
+> - **GitHub Actions CI** - Automated typecheck, build, and lint on every push
+> - **Rate limiting** - Configurable via `RATE_LIMIT_MAX` env var (default 500/15min)
+> - **Dashboard stability** - Fixed stuck "Updating prices" badge
+> - **Railway deployment fixes** - Resolved EBUSY build errors
+>
+> See [DEVELOPMENT.md](DEVELOPMENT.md) for the roadmap and remaining tasks.
 
 ## Features
 
