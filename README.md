@@ -1,15 +1,22 @@
 # Mangrove Portfolio Tracker
 
-A full-stack portfolio tracking application for managing investments across multiple asset classes including stocks, bonds, private equity funds, and private deals.
+A full-stack portfolio tracking application for managing investments across multiple asset classes including stocks, bonds, private equity funds, liquid funds, and private deals.
 
-> Last updated: December 3, 2025 - Single-tenant shared-secret login and cash/deposit form fixes
+> Last updated: December 25, 2024 - v1.6.0
+> - Multi-currency support for all asset types (stocks, bonds, cash, liquid funds, liabilities)
+> - Dashboard shows allocation by asset class with equity/fixed-income fund classification
+> - Currency conversion using live exchange rates
+> - Server-side filtering for stocks, cash deposits, and liabilities
+> - Bond pricing via Finnhub API
+> - Improved error handling and sourcemaps for debugging
 
 ## Features
 
-- **Multi-Asset Portfolio Management**: Track stocks, bonds, PE funds, and private deals
+- **Multi-Asset Portfolio Management**: Track stocks, bonds, PE funds, liquid funds, and private deals
+- **Multi-Currency Support**: Track assets in USD, EUR, GBP, CHF, JPY, and more with live FX conversion
 - **Single-Tenant Family Mode**: Shared-secret login mapped to a single user (no multi-user UI needed)
-- **Live Market Data**: Real-time stock pricing via Yahoo Finance API
-- **Dashboard Analytics**: Interactive charts and performance metrics
+- **Live Market Data**: Real-time stock pricing via Yahoo Finance API, bond pricing via Finnhub
+- **Dashboard Analytics**: Interactive charts showing allocation and currency exposure
 - **Secure Authentication**: JWT-based user authentication with optional shared-secret shortcut
 - **Responsive Design**: Mobile-friendly interface built with React and Tailwind CSS
 
@@ -96,6 +103,7 @@ For family/demo use, the app uses a shared secret mapped to a single user ID:
 | `/api/pricing/currency/to-usd` | GET | Convert amount to USD |
 | `/api/pricing/currency/rates/:base` | GET | Get exchange rates |
 | `/api/pricing/currency/supported` | GET | List supported currencies |
+| `/api/pricing/bond/:isin` | GET | Get bond price by ISIN (via Finnhub) |
 
 ### Example Usage
 
