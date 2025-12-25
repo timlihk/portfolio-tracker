@@ -24,7 +24,12 @@ function getAuthToken() {
 async function apiCall(endpoint, options = {}) {
   const { includePagination, ...restOptions } = options;
   const params = restOptions.params
-    ? '?' + new URLSearchParams(Object.entries(restOptions.params).map(([k, v]) => [k, String(v)])).toString()
+    ? (() => {
+        const entries = Object.entries(restOptions.params).filter(
+          ([, v]) => v !== undefined && v !== null && v !== ''
+        ).map(([k, v]) => [k, String(v)]);
+        return entries.length ? '?' + new URLSearchParams(entries).toString() : '';
+      })()
     : '';
   const url = `${API_BASE_URL}${endpoint}${params}`;
 
