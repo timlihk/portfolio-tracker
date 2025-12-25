@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { useExchangeRates, useStockPrices, CURRENCY_SYMBOLS } from '@/components/portfolio/useMarketData';
 import { createChangeLogger } from '@/components/portfolio/useChangelog';
 import { RefreshCw } from 'lucide-react';
+import type { Stock, Account } from '@/types';
+import type React from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +27,16 @@ const stockLogger = createChangeLogger('Stock');
 const SECTORS = ['Technology', 'Healthcare', 'Finance', 'Energy', 'Consumer', 'Industrial', 'Real Estate', 'Utilities', 'Materials', 'Communications', 'Other'];
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS', 'HKD'];
 
-const getStockFields = (accounts, sectorOptions) => [
+type PaginatedResponse<T> = {
+  data: T[];
+  pagination?: {
+    total?: number;
+    page?: number;
+    limit?: number;
+  };
+};
+
+const getStockFields = (accounts: Account[], sectorOptions: string[]) => [
   { name: 'ticker', label: 'Ticker Symbol', required: true, placeholder: 'AAPL' },
   { name: 'companyName', label: 'Company Name', placeholder: 'Apple Inc.' },
   { name: 'currency', label: 'Currency', type: 'select', options: CURRENCIES },
@@ -40,21 +51,21 @@ const getStockFields = (accounts, sectorOptions) => [
 
 export default function Stocks() {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({});
-  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [deleteTarget, setDeleteTarget] = useState<Stock | null>(null);
   const [tickerLookupLoading, setTickerLookupLoading] = useState(false);
   const [tickerError, setTickerError] = useState('');
-  const [sortKey, setSortKey] = useState('ticker');
-  const [sortDir, setSortDir] = useState('asc');
-  const tickerLookupRef = useRef(null);
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(50);
+  const [sortKey, setSortKey] = useState<string>('ticker');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const tickerLookupRef = useRef<number | null>(null);
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(50);
   const [accountFilter, setAccountFilter] = useState('');
   const [sectorFilter, setSectorFilter] = useState('');
 
   const queryClient = useQueryClient();
 
-  const { data: stocksResponse, isFetching: stocksLoading, isError: stocksError, error: stocksErrorObj } = useQuery({
+  const { data: stocksResponse, isFetching: stocksLoading, isError: stocksError, error: stocksErrorObj } = useQuery<PaginatedResponse<Stock>>({
     queryKey: ['stocks', page, limit, accountFilter, sectorFilter],
     queryFn: () => entities.Stock.listWithPagination({
       page,
@@ -67,7 +78,7 @@ export default function Stocks() {
   const stocks = stocksResponse?.data || [];
   const pagination = stocksResponse?.pagination || { total: stocks.length, page, limit };
 
-  const { data: accounts = [], isError: accountsError, error: accountsErrorObj } = useQuery({
+  const { data: accounts = [], isError: accountsError, error: accountsErrorObj } = useQuery<Account[]>({
     queryKey: ['accounts'],
     queryFn: () => entities.Account.list()
   });
@@ -93,14 +104,18 @@ export default function Stocks() {
   // Get real-time prices and exchange rates
   const stockTickers = useMemo(() => stocks.map(s => s.ticker).filter(Boolean), [stocks]);
   const { prices: stockPrices = {}, loading: pricesLoading } = useStockPrices(stockTickers);
-  const { convertToUSD = (v) => v, loading: ratesLoading } = useExchangeRates() || {};
+  const {
+    convertToUSD = ((v: number) => v) as (val: number, currency?: string | null) => number,
+    loading: ratesLoading = false
+  } = useExchangeRates() || {};
 
   const isLoadingPrices = pricesLoading || ratesLoading;
 
   // Helper to get current price (real-time or manual)
   // Note: PostgreSQL returns DECIMAL as strings, so we need to convert to numbers
   // stockPrices[ticker] is an object with { price, currency, name, ... }
-  const getCurrentPrice = (stock) => Number(stockPrices[stock.ticker]?.price) || Number(stock.currentPrice) || Number(stock.averageCost) || 0;
+  const getCurrentPrice = (stock: Stock): number =>
+    Number(stockPrices[stock.ticker]?.price) || Number(stock.currentPrice) || Number(stock.averageCost) || 0;
 
   const createMutation = useMutation({
     mutationFn: (data) => entities.Stock.create(data),
@@ -131,7 +146,7 @@ export default function Stocks() {
     }
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const tickerUpper = formData.ticker?.toUpperCase();
     const enrichedSector = formData.sector || stockPrices[tickerUpper]?.sector;
@@ -145,7 +160,7 @@ export default function Stocks() {
     }
   };
 
-  const handleEdit = (stock) => {
+  const handleEdit = (stock: Stock) => {
     setFormData(stock);
     setDialogOpen(true);
   };
@@ -157,7 +172,7 @@ export default function Stocks() {
 
   // Lookup ticker info from Yahoo Finance
   const lookupRequestId = useRef(0);
-  const lookupTicker = useCallback(async (tickerInput) => {
+  const lookupTicker = useCallback(async (tickerInput: string) => {
     const trimmed = tickerInput?.trim();
     if (!trimmed || trimmed.length < 3) return;
     const ticker = trimmed.toUpperCase();
@@ -187,7 +202,7 @@ export default function Stocks() {
   }, []);
 
   // Handle form field changes with auto-lookup for ticker
-  const handleFieldChange = useCallback((name, value) => {
+  const handleFieldChange = useCallback((name: string, value: any) => {
     setFormData(prev => {
       if (name === 'ticker') {
         setTickerError('');
@@ -208,7 +223,7 @@ export default function Stocks() {
         clearTimeout(tickerLookupRef.current);
       }
       if (value && value.trim().length >= 3) {
-        tickerLookupRef.current = setTimeout(() => {
+        tickerLookupRef.current = window.setTimeout(() => {
           lookupTicker(value.trim());
         }, 1000); // allow user to finish typing before lookup
       }
@@ -242,7 +257,7 @@ export default function Stocks() {
 
   const sortedStocks = useMemo(() => {
     const copy = [...filteredStocks];
-    const getCompanyName = (stock) => {
+    const getCompanyName = (stock: Stock) => {
       const yahooData = stockPrices[stock.ticker] || {};
       return (stock.companyName || yahooData.name || yahooData.shortName || stock.ticker || '').toString().toUpperCase();
     };
@@ -274,8 +289,8 @@ export default function Stocks() {
         if (av > bv) return 1 * dir;
         return 0;
       }
-      const av = (a[sortKey] || '').toString().toUpperCase();
-      const bv = (b[sortKey] || '').toString().toUpperCase();
+      const av = ((a as any)[sortKey] || '').toString().toUpperCase();
+      const bv = ((b as any)[sortKey] || '').toString().toUpperCase();
       if (av < bv) return -1 * dir;
       if (av > bv) return 1 * dir;
       return 0;

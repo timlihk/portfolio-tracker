@@ -4,9 +4,9 @@ import { authAPI, portfolioAPI } from '@/api/backendClient';
 import StatCard from '@/components/portfolio/StatCard';
 import { useExchangeRates, useStockPrices, useBondPrices } from '@/components/portfolio/useMarketData';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { 
-  TrendingUp, 
-  Landmark, 
+import {
+  TrendingUp,
+  Landmark,
   Wallet,
   Banknote,
   RefreshCw,
@@ -14,17 +14,40 @@ import {
   Building2
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import type { Stock, Bond, PeFund, PeDeal, LiquidFund, CashDeposit, Liability, Account, User } from '@/types';
 
 const COLORS = ['#0ea5e9', '#10b981', '#06b6d4', '#8b5cf6', '#f59e0b', '#ec4899'];
 
+type DashboardData = {
+  stocks: Stock[];
+  bonds: Bond[];
+  peFunds: PeFund[];
+  peDeals: PeDeal[];
+  liquidFunds: LiquidFund[];
+  cashDeposits: CashDeposit[];
+  liabilities: Liability[];
+  accounts: Account[];
+};
+
+const emptyDashboard: DashboardData = {
+  stocks: [],
+  bonds: [],
+  peFunds: [],
+  peDeals: [],
+  liquidFunds: [],
+  cashDeposits: [],
+  liabilities: [],
+  accounts: []
+};
+
 export default function Dashboard() {
-  const { data: profile, error: profileError, isLoading: profileLoading } = useQuery({
+  const { data: profile, error: profileError, isLoading: profileLoading } = useQuery<User>({
     queryKey: ['profile'],
     queryFn: () => authAPI.getProfile(),
     retry: false
   });
 
-  const { data: dashboardData = {}, isLoading: dashboardLoading, isError: dashboardError, error: dashboardErrorObj } = useQuery({
+  const { data: dashboardData = emptyDashboard, isLoading: dashboardLoading, isError: dashboardError, error: dashboardErrorObj } = useQuery<DashboardData>({
     queryKey: ['portfolio-dashboard'],
     queryFn: () => portfolioAPI.getDashboard()
   });
@@ -39,7 +62,7 @@ export default function Dashboard() {
   const accounts = dashboardData.accounts || [];
 
   // Get exchange rates and real-time prices
-  const { convertToUSD, loading: ratesLoading } = useExchangeRates();
+  const { convertToUSD = (v: number) => v, loading: ratesLoading = false } = useExchangeRates() || {};
   
   const stockTickers = useMemo(() => stocks.map(s => s.ticker).filter(Boolean), [stocks]);
   const { prices: stockPrices = {}, loading: stockPricesLoading } = useStockPrices(stockTickers);
@@ -47,7 +70,7 @@ export default function Dashboard() {
 
   const isLoadingPrices = ratesLoading || stockPricesLoading || bondPricesLoading;
 
-  const getBondPricePct = (bond) => {
+  const getBondPricePct = (bond: Bond): number => {
     const manual = Number(bond.currentValue);
     const priceEntry = bondPrices[bond.id] || bondPrices[bond.isin] || bondPrices[bond.name];
     const purchasePct = Number(bond.purchasePrice);
@@ -62,12 +85,12 @@ export default function Dashboard() {
     return 100;
   };
 
-  const getBondMarketValue = (bond) => {
+  const getBondMarketValue = (bond: Bond): number => {
     const face = Number(bond.faceValue) || 0;
     return face * (getBondPricePct(bond) / 100);
   };
 
-  const getBondCost = (bond) => {
+  const getBondCost = (bond: Bond): number => {
     const face = Number(bond.faceValue) || 0;
     const purchasePct = Number(bond.purchasePrice) || 0;
     return face * (purchasePct / 100);
@@ -204,10 +227,10 @@ export default function Dashboard() {
     { name: 'PE Deals', value: peDealsValue }
   ].filter(item => item.value > 0);
 
-  const formatUsd = (v) => `$${Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  const formatUsd = (v: number) => `$${Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   const buildCurrencyExposure = (assetsOnly = true) => {
     const map = new Map();
-    const add = (currency, amount) => {
+    const add = (currency: string, amount: number) => {
       if (!currency || !Number.isFinite(amount)) return;
       map.set(currency, (map.get(currency) || 0) + amount);
     };
