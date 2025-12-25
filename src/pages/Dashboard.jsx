@@ -5,6 +5,7 @@ import StatCard from '@/components/portfolio/StatCard';
 import AllocationChart from '@/components/portfolio/AllocationChart';
 import CurrencyExposureChart from '@/components/portfolio/CurrencyExposureChart';
 import { useExchangeRates, useStockPrices, useBondPrices } from '@/components/portfolio/useMarketData';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { 
   TrendingUp, 
   Landmark, 
@@ -15,6 +16,9 @@ import {
   Building2
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+
+const COLORS = ['#0ea5e9', '#10b981', '#06b6d4', '#8b5cf6', '#f59e0b', '#ec4899'];
 
 export default function Dashboard() {
   const { data: profile, error: profileError, isLoading: profileLoading } = useQuery({
@@ -360,19 +364,48 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-lg font-semibold text-slate-900">Allocation & Currency</h3>
-              <p className="text-sm text-slate-500">Breakdown by asset class and currency</p>
+              <p className="text-sm text-slate-500">Hover to view category and percentage</p>
             </div>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="col-span-1">
-              <AllocationChart data={allocationData} />
-            </div>
-            <div className="col-span-1">
-              <AllocationChart data={buildCurrencyExposure(true)} />
-            </div>
-            <div className="col-span-1">
-              <AllocationChart data={buildCurrencyExposure(false)} />
-            </div>
+            {[allocationData, buildCurrencyExposure(true), buildCurrencyExposure(false)].map((chartData, idx) => (
+              <div key={idx} className="col-span-1">
+                <div className="w-full h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={chartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={75}
+                        dataKey="value"
+                      >
+                        {chartData.map((entry, i) => (
+                          <Cell key={entry.name} fill={COLORS[i % COLORS.length]} className="hover:opacity-80 transition-opacity cursor-pointer" />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const item = payload[0].payload;
+                            const total = chartData.reduce((s, d) => s + d.value, 0) || 1;
+                            const pct = ((item.value / total) * 100).toFixed(1);
+                            return (
+                              <div className="bg-white px-3 py-2 rounded-lg shadow border border-slate-100 text-sm">
+                                <div className="font-medium text-slate-900">{item.name}</div>
+                                <div className="text-slate-600">{pct}%</div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
