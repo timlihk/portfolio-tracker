@@ -9,7 +9,6 @@ export default [
     files: [
       "src/components/**/*.{js,mjs,cjs,jsx}",
       "src/pages/**/*.{js,mjs,cjs,jsx}",
-      "src/Layout.tsx",
     ],
     ...pluginJs.configs.recommended,
     ...pluginReact.configs.flat.recommended,
