@@ -16,6 +16,7 @@ const serializeLiquidFundWithAliases = (fund: any) => {
     ...s,
     fundName: s.fundName,
     fundType: s.fundType,
+    currency: s.currency,
     investmentAmount: s.investmentAmount,
     currentValue: s.currentValue,
     ytdReturn: s.ytdReturn,
@@ -65,6 +66,7 @@ router.post('/', requireAuth, [
   body('lockupEndDate').optional().isISO8601(),
   body('investmentDate').optional().isISO8601(),
   body('status').optional().isLength({ max: 50 }),
+  body('currency').optional().isLength({ max: 10 }),
   body('notes').optional().isLength({ max: 1000 }),
 ], async (req: AuthRequest, res: Response) => {
   try {
@@ -88,6 +90,7 @@ router.post('/', requireAuth, [
     const investmentDate = body.investmentDate;
     const status = body.status;
     const notes = body.notes;
+    const currency = body.currency;
 
     const liquidFund = await prisma.liquidFund.create({
       data: {
@@ -105,6 +108,7 @@ router.post('/', requireAuth, [
         lockupEndDate: lockupEndDate ? new Date(lockupEndDate) : null,
         investmentDate: investmentDate ? new Date(investmentDate) : null,
         status: status || 'Active',
+        currency: currency || 'USD',
         notes
       }
     });
@@ -133,6 +137,7 @@ router.put('/:id', requireAuth, [
   body('lockupEndDate').optional().isISO8601(),
   body('investmentDate').optional().isISO8601(),
   body('status').optional().isLength({ max: 50 }),
+  body('currency').optional().isLength({ max: 10 }),
   body('notes').optional().isLength({ max: 1000 }),
 ], async (req: AuthRequest, res: Response) => {
   try {
@@ -157,6 +162,7 @@ router.put('/:id', requireAuth, [
     const investmentDate = body.investmentDate;
     const status = body.status;
     const notes = body.notes;
+    const currency = body.currency;
 
     // Check if liquid fund exists and belongs to user
     const existingLiquidFund = await prisma.liquidFund.findFirst({
@@ -186,6 +192,7 @@ router.put('/:id', requireAuth, [
         lockupEndDate: lockupEndDate ? new Date(lockupEndDate) : undefined,
         investmentDate: investmentDate ? new Date(investmentDate) : undefined,
         status,
+        currency,
         notes
       }
     });
