@@ -1,16 +1,17 @@
 import { useState } from 'react';
+import type React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { portfolioAPI, authAPI } from '@/api/backendClient';
 import { Loader2 } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
-  const [secret, setSecret] = useState('');
+  const [secret, setSecret] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [status, setStatus] = useState('');
+  const [error, setError] = useState<string>('');
+  const [status, setStatus] = useState<string>('');
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setStatus('');
@@ -30,8 +31,8 @@ export default function Login() {
       setStatus('Connected. Redirecting...');
       // Full page reload to re-initialize AuthContext with the new cookie
       setTimeout(() => window.location.href = '/', 500);
-    } catch (err) {
-      setError(err.message || 'Could not verify access. Please check the secret phrase.');
+    } catch (err: any) {
+      setError(err?.message || 'Could not verify access. Please check the secret phrase.');
     } finally {
       setIsSubmitting(false);
     }

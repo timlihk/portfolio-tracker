@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { entities } from '@/api/backendClient';
 import { Button } from "@/components/ui/button";
 import { Badge } from '@/components/ui/badge';
@@ -38,16 +38,18 @@ import {
 } from "@/components/ui/collapsible";
 import { useExchangeRates, useStockPrices, useBondPrices, CURRENCY_SYMBOLS } from '@/components/portfolio/useMarketData';
 import PaginationControls from '@/components/portfolio/PaginationControls';
+import type { Account, Stock, Bond, CashDeposit, Liability } from '@/types';
+import type React from 'react';
 
 const ACCOUNT_TYPES = ['Brokerage', 'IRA', '401k', 'Roth IRA', 'Bank', 'Other'];
 
 export default function Accounts() {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({});
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [expandedAccounts, setExpandedAccounts] = useState({});
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [formData, setFormData] = useState<Partial<Account>>({});
+  const [deleteTarget, setDeleteTarget] = useState<Account | null>(null);
+  const [expandedAccounts, setExpandedAccounts] = useState<Record<string, boolean>>({});
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(10);
 
   const queryClient = useQueryClient();
 

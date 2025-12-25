@@ -2,13 +2,12 @@
 
 A full-stack portfolio tracking application for managing investments across multiple asset classes including stocks, bonds, private equity funds, liquid funds, and private deals.
 
-> Last updated: December 25, 2024 - v1.6.0
-> - Multi-currency support for all asset types (stocks, bonds, cash, liquid funds, liabilities)
-> - Dashboard shows allocation by asset class with equity/fixed-income fund classification
-> - Currency conversion using live exchange rates
-> - Server-side filtering for stocks, cash deposits, and liabilities
-> - Bond pricing via Finnhub API
-> - Improved error handling and sourcemaps for debugging
+> Last updated: December 2025 - v1.6.x
+> - Frontend migrated to TypeScript with route-level code splitting
+> - Prisma ORM for backend routes with shared CRUD factory
+> - Multi-currency support across all asset types with live FX conversion
+> - Bond pricing via Finnhub API (env key required)
+> - Shared-secret single-tenant auth with HTTP-only cookies
 
 ## Features
 
@@ -33,29 +32,42 @@ A full-stack portfolio tracking application for managing investments across mult
 
 ### Local Development
 
-1. **Clone and install dependencies**:
-   ```bash
-   git clone https://github.com/timlihk/portfolio-tracker.git
-   cd portfolio-tracker
-   npm install
-   cd backend && npm install && cd ..
-   ```
+1) Install dependencies
+```bash
+git clone https://github.com/timlihk/portfolio-tracker.git
+cd portfolio-tracker
+npm install
+npm run install:backend
+```
 
-2. **Set up environment variables**:
-   ```bash
-   cp .env.example .env.local
-   cp .env.example .env
-   # Edit .env and .env.local with your configuration
-   ```
+2) Configure environment
+```bash
+cp .env.example .env
+cp .env.example .env.local
+# Required: DATABASE_URL, JWT_SECRET, FINNHUB_API_KEY, SHARED_SECRET
+# Optional: SHARED_SECRET_USER_ID, SHARED_SECRET_USER_EMAIL, RATE_LIMIT_MAX
+```
 
-3. **Start development servers**:
-   ```bash
-   # Start backend (port 3001)
-   npm run dev:backend
+3) Run dev servers
+```bash
+# Backend (port 3001)
+npm run dev:backend
 
-   # In another terminal, start frontend (port 5173)
-   npm run dev
-   ```
+# Frontend (port 5173)
+npm run dev
+```
+
+### Build & Test
+```bash
+# Typecheck + build everything
+npm run build:all
+
+# Frontend only
+npm run build:frontend
+
+# Backend only (tsc)
+npm run build:backend
+```
 
 ### Deployment
 
@@ -78,12 +90,12 @@ For family/demo use, the app uses a shared secret mapped to a single user ID:
 │   ├── components/        # React components
 │   ├── lib/              # Utilities and contexts
 │   ├── api/              # API client and services
-│   └── App.jsx           # Main application component
+│   └── App.tsx           # Main application component
 ├── backend/              # Express.js backend API
 │   ├── src/
 │   │   ├── routes/       # API routes
 │   │   ├── models/       # Database models
-│   │   └── server.js     # Express server
+│   │   └── server.ts     # Express server (compiled to dist/main.js)
 │   └── package.json      # Backend dependencies
 ├── railway.toml          # Railway deployment configuration
 ├── package.json          # Root dependencies and scripts
