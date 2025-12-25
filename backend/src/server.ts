@@ -106,8 +106,8 @@ app.use((req, res, next) => {
       useDefaults: false,
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "https://static.cloudflareinsights.com", "https://*.cloudflare.com"],
-        scriptSrcElem: ["'self'", "'unsafe-inline'", "https://static.cloudflareinsights.com", "https://*.cloudflare.com"],
+        scriptSrc: ["'self'", "https://static.cloudflareinsights.com", "https://*.cloudflare.com"],
+        scriptSrcElem: ["'self'", "https://static.cloudflareinsights.com", "https://*.cloudflare.com"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", "data:", "https:"],
         connectSrc: ["'self'", "https:", ...Array.from(allowedOrigins)],

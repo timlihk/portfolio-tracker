@@ -24,7 +24,8 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
       peDeals,
       liquidFunds,
       cashDeposits,
-      liabilities
+      liabilities,
+      accounts
     ] = await Promise.all([
       prisma.stock.findMany({ where: { userId } }),
       prisma.bond.findMany({ where: { userId } }),
@@ -32,7 +33,8 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
       prisma.peDeal.findMany({ where: { userId } }),
       prisma.liquidFund.findMany({ where: { userId } }),
       prisma.cashDeposit.findMany({ where: { userId } }),
-      prisma.liability.findMany({ where: { userId } })
+      prisma.liability.findMany({ where: { userId } }),
+      prisma.account.findMany({ where: { userId } })
     ]);
 
     const portfolioData = {
@@ -42,7 +44,8 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
       peDeals: peDeals.map(deal => serializeDecimals(deal)),
       liquidFunds: liquidFunds.map(fund => serializeDecimals(fund)),
       cashDeposits: cashDeposits.map(deposit => serializeDecimals(deposit)),
-      liabilities: liabilities.map(liability => serializeDecimals(liability))
+      liabilities: liabilities.map(liability => serializeDecimals(liability)),
+      accounts: accounts.map(account => serializeDecimals(account))
     };
 
     res.json(portfolioData);

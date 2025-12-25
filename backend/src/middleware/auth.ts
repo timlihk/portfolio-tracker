@@ -10,6 +10,14 @@ import { sendUnauthorized } from '../routes/response.js';
 let singleUserEnsured = false;
 let ensurePromise: Promise<void> | null = null;
 
+function timingSafeEqualStrings(a?: string, b?: string): boolean {
+  if (!a || !b) return false;
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+
 async function ensureSingleUserExists(userId: number): Promise<void> {
   if (singleUserEnsured) return;
   if (ensurePromise) {
@@ -92,7 +100,7 @@ export const requireAuth = async (
 
     const providedSecret = sharedHeader || cookieSecret;
 
-    if (sharedSecret && providedSecret && providedSecret === sharedSecret) {
+    if (sharedSecret && timingSafeEqualStrings(providedSecret, sharedSecret)) {
       req.userId = singleUserId;
       return next();
     }

@@ -1,12 +1,13 @@
 import express, { Response } from 'express';
-import { body, param, validationResult } from 'express-validator';
+import { body, param } from 'express-validator';
 import prisma from '../../lib/prisma.js';
 import { requireAuth } from '../../middleware/auth.js';
 import logger from '../../services/logger.js';
 import type { AuthRequest, Stock, CreateStockRequest, UpdateStockRequest } from '../../types/index.js';
 import { serializeDecimals } from '../../types/index.js';
 import { getPaginationParams, setPaginationHeaders } from './pagination.js';
-import { sendValidationError, sendServerError, sendNotFound } from '../response.js';
+import { sendServerError, sendNotFound } from '../response.js';
+import { handleValidationOrRespond } from './utils.js';
 
 const router = express.Router();
 
@@ -54,11 +55,7 @@ router.post('/', requireAuth, [
   body('notes').optional().isLength({ max: 1000 }),
 ], async (req: AuthRequest, res: Response) => {
   try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return sendValidationError(res, errors.array());
-    }
+    if (!handleValidationOrRespond(req, res)) return;
 
     const body = req.body as any;
     const ticker = body.ticker;
@@ -108,11 +105,7 @@ router.put('/:id', requireAuth, [
   body('notes').optional().isLength({ max: 1000 }),
 ], async (req: AuthRequest, res: Response) => {
   try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return sendValidationError(res, errors.array());
-    }
+    if (!handleValidationOrRespond(req, res)) return;
 
     const { id } = req.params;
     const body = req.body as any;
@@ -168,11 +161,7 @@ router.delete('/:id', requireAuth, [
   param('id').isInt({ gt: 0 }),
 ], async (req: AuthRequest, res: Response) => {
   try {
-    // Check for validation errors
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return sendValidationError(res, errors.array());
-    }
+    if (!handleValidationOrRespond(req, res)) return;
 
     const { id } = req.params;
 

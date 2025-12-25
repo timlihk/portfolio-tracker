@@ -48,7 +48,7 @@ export default function CashDeposits() {
   
   const queryClient = useQueryClient();
 
-  const { data: depositsResponse = [], isFetching: depositsLoading } = useQuery({
+  const { data: depositsResponse = [], isFetching: depositsLoading, isError: depositsError, error: depositsErrorObj } = useQuery({
     queryKey: ['cashDeposits', page, limit, accountFilter, currencyFilter],
     queryFn: () => entities.CashDeposit.listWithPagination({ page, limit, account: accountFilter || undefined, currency: currencyFilter || undefined }),
     keepPreviousData: true
@@ -56,13 +56,14 @@ export default function CashDeposits() {
   const deposits = depositsResponse?.data || depositsResponse || [];
   const pagination = depositsResponse?.pagination || { total: deposits.length, page, limit };
 
-  const { data: accounts = [] } = useQuery({
+  const { data: accounts = [], isError: accountsError, error: accountsErrorObj } = useQuery({
     queryKey: ['accounts'],
     queryFn: () => entities.Account.list()
   });
 
   const cashFields = getCashFields(accounts);
   const { convertToUSD } = useExchangeRates();
+  const loadError = depositsError ? (depositsErrorObj?.message || 'Failed to load cash & deposits') : accountsError ? (accountsErrorObj?.message || 'Failed to load accounts') : '';
 
   const createMutation = useMutation({
     mutationFn: (data) => entities.CashDeposit.create(data),
@@ -246,6 +247,11 @@ export default function CashDeposits() {
           }}
           addLabel="Add Cash/Deposit"
         />
+        {loadError && (
+          <div className="mb-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            {loadError}
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
           <select

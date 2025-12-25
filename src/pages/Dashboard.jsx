@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { entities, authAPI } from '@/api/backendClient';
+import { authAPI, portfolioAPI } from '@/api/backendClient';
 import StatCard from '@/components/portfolio/StatCard';
 import { useExchangeRates, useStockPrices, useBondPrices } from '@/components/portfolio/useMarketData';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
@@ -24,44 +24,19 @@ export default function Dashboard() {
     retry: false
   });
 
-  const { data: stocks = [], isLoading: stocksLoading } = useQuery({
-    queryKey: ['stocks'],
-    queryFn: () => entities.Stock.list()
+  const { data: dashboardData = {}, isLoading: dashboardLoading, isError: dashboardError, error: dashboardErrorObj } = useQuery({
+    queryKey: ['portfolio-dashboard'],
+    queryFn: () => portfolioAPI.getDashboard()
   });
 
-  const { data: bonds = [], isLoading: bondsLoading } = useQuery({
-    queryKey: ['bonds'],
-    queryFn: () => entities.Bond.list()
-  });
-
-  const { data: peFunds = [], isLoading: peFundsLoading } = useQuery({
-    queryKey: ['peFunds'],
-    queryFn: () => entities.PEFund.list()
-  });
-
-  const { data: peDeals = [], isLoading: peDealsLoading } = useQuery({
-    queryKey: ['peDeals'],
-    queryFn: () => entities.PEDeal.list()
-  });
-
-  const { data: liquidFunds = [], isLoading: liquidFundsLoading } = useQuery({
-    queryKey: ['liquidFunds'],
-    queryFn: () => entities.LiquidFund.list()
-  });
-
-  const { data: cashDeposits = [], isLoading: cashLoading } = useQuery({
-    queryKey: ['cashDeposits'],
-    queryFn: () => entities.CashDeposit.list()
-  });
-
-  const { data: liabilities = [], isLoading: liabilitiesLoading } = useQuery({
-    queryKey: ['liabilities'],
-    queryFn: () => entities.Liability.list()
-  });
-  const { data: accounts = [], isLoading: accountsLoading } = useQuery({
-    queryKey: ['accounts'],
-    queryFn: () => entities.Account.list()
-  });
+  const stocks = dashboardData.stocks || [];
+  const bonds = dashboardData.bonds || [];
+  const peFunds = dashboardData.peFunds || [];
+  const peDeals = dashboardData.peDeals || [];
+  const liquidFunds = dashboardData.liquidFunds || [];
+  const cashDeposits = dashboardData.cashDeposits || [];
+  const liabilities = dashboardData.liabilities || [];
+  const accounts = dashboardData.accounts || [];
 
   // Get exchange rates and real-time prices
   const { convertToUSD, loading: ratesLoading } = useExchangeRates();
@@ -296,9 +271,10 @@ export default function Dashboard() {
     }).sort((a, b) => b.assetsTotal - a.assetsTotal);
   }, [accounts, stocks, bonds, cashDeposits, liquidFunds, liabilities, convertToUSD, stockPrices, bondPrices]);
 
-  const isLoadingData = profileLoading || stocksLoading || bondsLoading || peFundsLoading || peDealsLoading || liquidFundsLoading || cashLoading || liabilitiesLoading;
+  const isLoadingData = profileLoading || dashboardLoading || isLoadingPrices;
+  const loadError = dashboardError ? (dashboardErrorObj?.message || 'Failed to load dashboard data') : '';
 
-  if (isLoadingData || accountsLoading) {
+  if (isLoadingData) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center space-y-2">
@@ -331,6 +307,11 @@ export default function Dashboard() {
             </Badge>
           </div>
         </div>
+        {loadError && (
+          <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {loadError}
+          </div>
+        )}
 
         {/* Hero Net Worth */}
         <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 rounded-3xl p-6 md:p-8 text-white shadow-xl border border-white/10">

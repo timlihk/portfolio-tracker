@@ -54,7 +54,7 @@ export default function Liabilities() {
   
   const queryClient = useQueryClient();
 
-  const { data: liabilitiesResponse = [], isFetching: liabilitiesLoading } = useQuery({
+  const { data: liabilitiesResponse = [], isFetching: liabilitiesLoading, isError: liabilitiesError, error: liabilitiesErrorObj } = useQuery({
     queryKey: ['liabilities', page, limit, accountFilter, currencyFilter],
     queryFn: () => entities.Liability.listWithPagination({ page, limit, account: accountFilter || undefined, currency: currencyFilter || undefined }),
     keepPreviousData: true
@@ -62,7 +62,7 @@ export default function Liabilities() {
   const liabilities = liabilitiesResponse?.data || liabilitiesResponse || [];
   const pagination = liabilitiesResponse?.pagination || { total: liabilities.length, page, limit };
 
-  const { data: accounts = [] } = useQuery({
+  const { data: accounts = [], isError: accountsError, error: accountsErrorObj } = useQuery({
     queryKey: ['accounts'],
     queryFn: () => entities.Account.list()
   });
@@ -189,6 +189,7 @@ export default function Liabilities() {
     return sum + convertToUSD(Number(l.outstandingBalance) || 0, l.currency);
   }, 0);
   const totalCount = pagination?.total ?? liabilities.length;
+  const loadError = liabilitiesError ? (liabilitiesErrorObj?.message || 'Failed to load liabilities') : accountsError ? (accountsErrorObj?.message || 'Failed to load accounts') : '';
 
   return (
     <div className="min-h-screen bg-slate-50/50">
@@ -202,6 +203,11 @@ export default function Liabilities() {
           }}
           addLabel="Add Loan"
         />
+        {loadError && (
+          <div className="mb-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            {loadError}
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
           <select

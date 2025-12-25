@@ -331,7 +331,7 @@ class PricingService {
       return { ...cached, source: 'cache' };
     }
 
-    const apiKey = process.env.FINNHUB_API_KEY || process.env.NEXT_PUBLIC_FINNHUB_API_KEY || 'bq444c7rh5rb0pdpi4j0';
+    const apiKey = process.env.FINNHUB_API_KEY || process.env.NEXT_PUBLIC_FINNHUB_API_KEY;
     if (!apiKey) {
       throw new Error('FINNHUB_API_KEY not configured');
     }

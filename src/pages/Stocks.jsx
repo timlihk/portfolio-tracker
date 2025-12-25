@@ -54,7 +54,7 @@ export default function Stocks() {
 
   const queryClient = useQueryClient();
 
-  const { data: stocksResponse, isFetching: stocksLoading } = useQuery({
+  const { data: stocksResponse, isFetching: stocksLoading, isError: stocksError, error: stocksErrorObj } = useQuery({
     queryKey: ['stocks', page, limit, accountFilter, sectorFilter],
     queryFn: () => entities.Stock.listWithPagination({
       page,
@@ -67,7 +67,7 @@ export default function Stocks() {
   const stocks = stocksResponse?.data || [];
   const pagination = stocksResponse?.pagination || { total: stocks.length, page, limit };
 
-  const { data: accounts = [] } = useQuery({
+  const { data: accounts = [], isError: accountsError, error: accountsErrorObj } = useQuery({
     queryKey: ['accounts'],
     queryFn: () => entities.Account.list()
   });
@@ -396,6 +396,7 @@ export default function Stocks() {
     return sum + convertToUSD(value || 0, s.currency);
   }, 0);
   const totalPositions = total || stocks.length;
+  const loadError = stocksError ? (stocksErrorObj?.message || 'Failed to load stocks') : accountsError ? (accountsErrorObj?.message || 'Failed to load accounts') : '';
 
   return (
     <div className="min-h-screen bg-slate-50/50">
@@ -414,6 +415,11 @@ export default function Stocks() {
           }}
           addLabel="Add Stock"
         />
+        {loadError && (
+          <div className="mb-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            {loadError}
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
           <select

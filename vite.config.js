@@ -18,6 +18,13 @@ export default defineConfig({
     }
   },
   build: {
-    sourcemap: true
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', '@tanstack/react-query'],
+        }
+      }
+    }
   }
 });

@@ -8,8 +8,8 @@ process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://test:test@l
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
 process.env.SHARED_SECRET = process.env.SHARED_SECRET || 'test-shared-secret';
 process.env.VITEST_WORKER_ID = process.env.VITEST_WORKER_ID || '1';
-// In sandboxed environments, binding to a local port often fails; force skip of supertest suites.
-process.env.PORT_BINDING_BLOCKED = process.env.PORT_BINDING_BLOCKED || 'true';
+// In sandboxed environments, binding to a local port often fails; allow opt-out via env.
+process.env.PORT_BINDING_BLOCKED = process.env.PORT_BINDING_BLOCKED || 'false';
 
 import { vi } from 'vitest';
 

@@ -164,23 +164,28 @@ export function useBondPrices(bonds) {
       setError(null);
       const apiPrices = new Map();
 
-      // Fetch prices per unique ISIN from backend (Finnhub)
-      for (const isin of uniqueIsins) {
+      // Fetch prices per unique ISIN from backend (Finnhub) in parallel
+      const results = await Promise.all(uniqueIsins.map(async (isin) => {
         try {
           const data = await pricingAPI.getBondPriceByIsin(isin);
           if (data && Number.isFinite(data.pricePct) && data.pricePct > 0) {
-            apiPrices.set(isin, {
+            return { isin, price: {
               pricePct: Number(data.pricePct),
               source: data.source || 'api',
               currency: data.currency || 'USD',
               updatedAt: data.timestamp || Date.now()
-            });
+            }};
           }
         } catch (error) {
           console.error('Failed to fetch bond price', isin, error);
           setError(error);
         }
-      }
+        return null;
+      }));
+
+      results.filter(Boolean).forEach((entry) => {
+        apiPrices.set(entry.isin, entry.price);
+      });
 
       const priceMap = {};
       bonds.forEach((bond) => {

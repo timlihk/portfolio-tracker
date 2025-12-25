@@ -53,13 +53,14 @@ export default function LiquidFunds() {
   const queryClient = useQueryClient();
   const { convertToUSD } = useExchangeRates();
 
-  const { data: fundsResponse = [], isFetching: isLoading } = useQuery({
+  const { data: fundsResponse = [], isFetching: isLoading, isError: fundsError, error: fundsErrorObj } = useQuery({
     queryKey: ['liquidFunds', page, limit],
     queryFn: () => entities.LiquidFund.listWithPagination({ page, limit }),
     keepPreviousData: true
   });
   const funds = fundsResponse?.data || fundsResponse || [];
   const pagination = fundsResponse?.pagination || { total: funds.length, page, limit };
+  const loadError = fundsError ? (fundsErrorObj?.message || 'Failed to load liquid funds') : '';
 
   const createMutation = useMutation({
     mutationFn: (data) => entities.LiquidFund.create(data),
@@ -239,6 +240,11 @@ export default function LiquidFunds() {
           }}
           addLabel="Add Fund"
         />
+        {loadError && (
+          <div className="mb-4 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            {loadError}
+          </div>
+        )}
 
         <AssetTable
           columns={columns}

@@ -1,3 +1,7 @@
+import type { Request, Response } from 'express';
+import { validationResult } from 'express-validator';
+import { sendValidationError } from '../response.js';
+
 export const toNumberOrNull = (val: unknown): number | null => {
   if (val === null || val === undefined || val === '') return null;
   const num = Number(val);
@@ -12,4 +16,13 @@ export const toDateOrNull = (val: unknown): Date | null => {
     return isNaN(date.getTime()) ? null : date;
   }
   return null;
+};
+
+export const handleValidationOrRespond = (req: Request, res: Response): boolean => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    sendValidationError(res, errors.array());
+    return false;
+  }
+  return true;
 };

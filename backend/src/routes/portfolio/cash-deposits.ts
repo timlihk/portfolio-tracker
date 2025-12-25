@@ -1,12 +1,12 @@
 import { Router, Response } from 'express';
-import { body, param, validationResult } from 'express-validator';
+import { body, param } from 'express-validator';
 import { prisma } from '../../lib/prisma.js';
 import { requireAuth } from '../../middleware/auth.js';
 import logger from '../../services/logger.js';
 import { AuthRequest, serializeDecimals, CashDeposit, CreateCashDepositRequest, UpdateCashDepositRequest } from '../../types/index.js';
-import { toDateOrNull, toNumberOrNull } from './utils.js';
+import { handleValidationOrRespond, toDateOrNull, toNumberOrNull } from './utils.js';
 import { getPaginationParams, setPaginationHeaders } from './pagination.js';
-import { sendNotFound, sendServerError, sendUnauthorized, sendValidationError } from '../response.js';
+import { sendNotFound, sendServerError, sendUnauthorized } from '../response.js';
 
 const router = Router();
 const serializeCashDepositWithAliases = (deposit: any) => {
@@ -75,10 +75,7 @@ router.post('/', requireAuth, [
   body('notes').optional({ nullable: true, checkFalsy: true }).isLength({ max: 1000 })
 ], async (req: AuthRequest, res: Response) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return sendValidationError(res, errors.array());
-    }
+    if (!handleValidationOrRespond(req, res)) return;
 
     if (!req.userId) {
       return sendUnauthorized(res);
@@ -146,10 +143,7 @@ router.put('/:id', requireAuth, [
   body('notes').optional({ nullable: true, checkFalsy: true }).isLength({ max: 1000 })
 ], async (req: AuthRequest, res: Response) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return sendValidationError(res, errors.array());
-    }
+    if (!handleValidationOrRespond(req, res)) return;
 
     const { id } = req.params;
 
@@ -209,10 +203,7 @@ router.delete('/:id', requireAuth, [
   param('id').isInt({ gt: 0 })
 ], async (req: AuthRequest, res: Response) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return sendValidationError(res, errors.array());
-    }
+    if (!handleValidationOrRespond(req, res)) return;
 
     const { id } = req.params;
 
