@@ -275,6 +275,9 @@ export const pricingAPI = {
   // Cache management
   getCacheStats: () => apiCall('/pricing/cache/stats'),
   clearCache: () => apiCall('/pricing/cache/clear', { method: 'POST' }),
+
+  // Get bond price by ISIN (percent of par)
+  getBondPriceByIsin: (isin) => apiCall(`/pricing/bond/${encodeURIComponent(isin)}`),
 };
 
 // Mock entities to maintain compatibility with existing code

@@ -70,6 +70,32 @@ export default function Dashboard() {
 
   const isLoadingPrices = ratesLoading || stockPricesLoading || bondPricesLoading;
 
+  const getBondPricePct = (bond) => {
+    const priceEntry = bondPrices[bond.id] || bondPrices[bond.isin] || bondPrices[bond.name];
+    const manual = Number(bond.currentValue);
+    const purchasePct = Number(bond.purchasePrice);
+    if (priceEntry && typeof priceEntry === 'object' && Number.isFinite(priceEntry.pricePct)) {
+      return Number(priceEntry.pricePct);
+    }
+    if (priceEntry != null && Number.isFinite(Number(priceEntry))) {
+      return Number(priceEntry);
+    }
+    if (Number.isFinite(manual)) return manual;
+    if (Number.isFinite(purchasePct)) return purchasePct;
+    return 100;
+  };
+
+  const getBondMarketValue = (bond) => {
+    const face = Number(bond.faceValue) || 0;
+    return face * (getBondPricePct(bond) / 100);
+  };
+
+  const getBondCost = (bond) => {
+    const face = Number(bond.faceValue) || 0;
+    const purchasePct = Number(bond.purchasePrice) || 0;
+    return face * (purchasePct / 100);
+  };
+
   const totals = useMemo(() => {
     const stocksValue = stocks.reduce((sum, s) => {
       const realTimePrice = Number(stockPrices[s.ticker]?.price) || Number(s.currentPrice) || Number(s.averageCost) || 0;
@@ -86,12 +112,13 @@ export default function Dashboard() {
       return sum + (isNaN(converted) ? 0 : converted);
     }, 0);
     const bondsValue = bonds.reduce((sum, b) => {
-      const realTimeValue = Number(b.currentValue) || Number(bondPrices[b.name]) || Number(b.purchasePrice) || 0;
-      const converted = convertToUSD(realTimeValue, b.currency);
+      const value = getBondMarketValue(b);
+      const converted = convertToUSD(value, b.currency);
       return sum + (isNaN(converted) ? 0 : converted);
     }, 0);
     const bondsCost = bonds.reduce((sum, b) => {
-      const converted = convertToUSD(Number(b.purchasePrice) || 0, b.currency);
+      const cost = getBondCost(b);
+      const converted = convertToUSD(cost, b.currency);
       return sum + (isNaN(converted) ? 0 : converted);
     }, 0);
     const peFundsValue = peFunds.reduce((sum, f) => sum + (Number(f.nav) || 0) + (Number(f.distributions) || 0), 0);

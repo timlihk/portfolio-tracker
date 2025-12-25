@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { entities } from '@/api/backendClient';
-import { useExchangeRates, useStockPrices } from '@/components/portfolio/useMarketData';
+import { useExchangeRates, useStockPrices, useBondPrices } from '@/components/portfolio/useMarketData';
 import {
   AreaChart,
   Area,
@@ -93,8 +93,29 @@ export default function Performance() {
   const { convertToUSD } = useExchangeRates();
   const stockTickers = useMemo(() => stocks.map(s => s.ticker).filter(Boolean), [stocks]);
   const { prices: stockPrices = {} } = useStockPrices(stockTickers);
+  const { prices: bondPrices = {} } = useBondPrices(bonds);
 
   const isLoading = stocksLoading || bondsLoading || peFundsLoading || peDealsLoading || liquidFundsLoading || cashLoading;
+
+  const getBondPricePct = (bond) => {
+    const entry = bondPrices[bond.id] || bondPrices[bond.isin] || bondPrices[bond.name];
+    if (entry && typeof entry === 'object' && Number.isFinite(entry.pricePct)) return Number(entry.pricePct);
+    if (entry != null && Number.isFinite(Number(entry))) return Number(entry);
+    if (Number.isFinite(Number(bond.currentValue))) return Number(bond.currentValue);
+    if (Number.isFinite(Number(bond.purchasePrice))) return Number(bond.purchasePrice);
+    return 100;
+  };
+
+  const getBondMarketValue = (bond) => {
+    const face = Number(bond.faceValue) || 0;
+    return face * (getBondPricePct(bond) / 100);
+  };
+
+  const getBondCost = (bond) => {
+    const face = Number(bond.faceValue) || 0;
+    const purchasePct = Number(bond.purchasePrice) || 0;
+    return face * (purchasePct / 100);
+  };
 
   // Generate historical data points
   const chartData = useMemo(() => {
@@ -129,7 +150,7 @@ export default function Performance() {
           return !purchaseDate || isBefore(purchaseDate, date);
         })
         .reduce((sum, b) => {
-          const value = Number(b.currentValue) || Number(b.purchasePrice) || 0;
+          const value = getBondMarketValue(b);
           return sum + convertToUSD(value, b.currency);
         }, 0);
 
@@ -220,18 +241,19 @@ export default function Performance() {
     });
 
     const bondHoldings = bonds.map(b => {
-      const value = convertToUSD(Number(b.currentValue) || Number(b.purchasePrice) || 0, b.currency);
-      const cost = convertToUSD(Number(b.purchasePrice) || 0, b.currency);
+      const pricePct = getBondPricePct(b);
+      const value = convertToUSD(getBondMarketValue(b), b.currency);
+      const cost = convertToUSD(getBondCost(b), b.currency);
       const capitalGains = value - cost;
       const interest = Number(b.accruedInterest) || 0;
 
       return {
         id: b.id,
-        ticker: b.name,
-        name: b.issuer || b.bondType,
+        ticker: b.isin || b.name,
+        name: b.name,
         assetClass: 'Bonds',
-        price: value,
-        quantity: 1,
+        price: pricePct,
+        quantity: b.faceValue,
         value,
         cost,
         capitalGains,

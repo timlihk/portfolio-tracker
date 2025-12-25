@@ -56,6 +56,15 @@ interface StocksResponse {
   timestamp: number;
 }
 
+interface BondPriceResponse {
+  isin: string;
+  pricePct: number;
+  currency?: string | null;
+  source: string;
+  timestamp: number;
+  message?: string;
+}
+
 /**
  * POST /api/pricing/stocks
  * Get real-time prices for multiple stocks
@@ -162,6 +171,32 @@ router.get('/validate/:ticker', async (req: Request<{ ticker: string }>, res: Re
       valid: false,
       error: 'Failed to validate ticker',
       message: errorMessage
+    } as any);
+  }
+});
+
+/**
+ * GET /api/pricing/bond/:isin
+ * Get latest bond price (percent of par) by ISIN via Finnhub
+ */
+router.get('/bond/:isin', async (req: Request<{ isin: string }>, res: Response<BondPriceResponse>) => {
+  const { isin } = req.params;
+  if (!isin) {
+    return res.status(400).json({} as any);
+  }
+  try {
+    const data = await pricingService.getBondPriceByIsin(isin);
+    return res.json(data);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Error fetching bond price:', { isin, error: message });
+    return res.status(500).json({
+      isin: isin.toUpperCase(),
+      pricePct: 0,
+      currency: undefined,
+      source: 'error',
+      timestamp: Date.now(),
+      message
     } as any);
   }
 });

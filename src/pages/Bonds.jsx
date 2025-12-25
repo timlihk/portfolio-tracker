@@ -33,9 +33,9 @@ const getBondFields = (accounts) => [
   { name: 'bondType', label: 'Bond Type', type: 'select', options: BOND_TYPES },
   { name: 'currency', label: 'Currency', type: 'select', options: CURRENCIES },
   { name: 'account', label: 'Account', type: 'select', options: accounts.map(a => a.name), allowCustom: true },
-  { name: 'faceValue', label: 'Face Value', type: 'number', required: true, placeholder: '10000' },
-  { name: 'purchasePrice', label: 'Purchase Price', type: 'number', required: true, placeholder: '9800' },
-  { name: 'currentValue', label: 'Current Value (leave empty for estimate)', type: 'number', placeholder: 'Auto-estimated' },
+  { name: 'faceValue', label: 'Face Value (total nominal)', type: 'number', required: true, placeholder: '10000' },
+  { name: 'purchasePrice', label: 'Purchase Price (% of par)', type: 'number', required: true, placeholder: '101.131' },
+  { name: 'currentValue', label: 'Current Price (% of par, leave empty to auto-fetch)', type: 'number', placeholder: 'Auto-fetched' },
   { name: 'couponRate', label: 'Coupon Rate (%)', type: 'number', placeholder: '4.5' },
   { name: 'maturityDate', label: 'Maturity Date', type: 'date' },
   { name: 'purchaseDate', label: 'Purchase Date', type: 'date' },
@@ -73,9 +73,33 @@ export default function Bonds() {
 
   const isLoadingPrices = pricesLoading || ratesLoading;
 
-  // Helper to get current value (estimated or manual)
-  // Note: PostgreSQL returns DECIMAL as strings, so we need to convert to numbers
-  const getCurrentValue = (bond) => Number(bondPrices[bond.name]) || Number(bond.currentValue) || Number(bond.purchasePrice) || 0;
+  const getBondPriceData = (bond) => {
+    const price = bondPrices[bond.id] || bondPrices[bond.isin] || bondPrices[bond.name];
+    if (price && typeof price === 'object') return price;
+    if (price != null) return { pricePct: Number(price) || 0, source: 'manual' };
+    return null;
+  };
+
+  const getPricePct = (bond) => {
+    const priceData = getBondPriceData(bond);
+    const manual = Number(bond.currentValue);
+    const purchasePct = Number(bond.purchasePrice);
+    if (Number.isFinite(priceData?.pricePct)) return Number(priceData?.pricePct);
+    if (Number.isFinite(manual)) return manual;
+    if (Number.isFinite(purchasePct)) return purchasePct;
+    return 100;
+  };
+
+  const getMarketValue = (bond) => {
+    const face = Number(bond.faceValue) || 0;
+    return face * (getPricePct(bond) / 100);
+  };
+
+  const getCostBasis = (bond) => {
+    const face = Number(bond.faceValue) || 0;
+    const purchasePct = Number(bond.purchasePrice) || 0;
+    return face * (purchasePct / 100);
+  };
 
   const createMutation = useMutation({
     mutationFn: (data) => entities.Bond.create(data),
@@ -154,19 +178,29 @@ export default function Bonds() {
       }
     },
     {
-      key: 'currentValue',
-      label: 'Current Value',
+      key: 'currentPrice',
+      label: 'Price (% of par)',
       align: 'right',
       render: (val, row) => {
-        const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
-        const value = getCurrentValue(row);
-        const isLive = bondPrices[row.name] && !row.currentValue;
+        const priceData = getBondPriceData(row);
+        const pricePct = getPricePct(row);
+        const isLive = priceData?.source === 'api';
         return (
-          <div className="flex items-center justify-end gap-1">
-            <span className="font-medium">{symbol}{value.toLocaleString()}</span>
-            {isLive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Estimated value" />}
+          <div className="flex items-center justify-end gap-1 text-sm text-slate-700">
+            <span className="font-medium">{pricePct.toFixed(3)}%</span>
+            {isLive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Live price from Finnhub" />}
           </div>
         );
+      }
+    },
+    {
+      key: 'marketValue',
+      label: 'Market Value',
+      align: 'right',
+      render: (_, row) => {
+        const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
+        const value = getMarketValue(row);
+        return <span className="font-medium">{symbol}{value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
       }
     },
     { 
@@ -211,7 +245,7 @@ export default function Bonds() {
 
   // Calculate total in USD
   const totalValueUSD = bonds.reduce((sum, b) => {
-    const value = getCurrentValue(b);
+    const value = getMarketValue(b);
     return sum + convertToUSD(value, b.currency);
   }, 0);
   const totalPositions = pagination?.total ?? bonds.length;

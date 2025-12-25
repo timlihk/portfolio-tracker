@@ -5,6 +5,14 @@
 import logger from './logger.js';
 import type { StockPriceData } from '../types/index.js';
 
+interface BondPriceData {
+  isin: string;
+  pricePct: number;
+  currency?: string | null;
+  source: 'finnhub' | 'cache';
+  timestamp: number;
+}
+
 interface CachedPrice extends StockPriceData {
   timestamp: number;
 }
@@ -93,7 +101,9 @@ interface CacheStats {
 
 class PricingService {
   private priceCache: Map<string, CachedPrice>;
+  private bondPriceCache: Map<string, BondPriceData>;
   private readonly CACHE_TTL: number;
+  private readonly BOND_CACHE_TTL: number;
   private failureCount: number;
   private lastFailure: number | null;
   private readonly CIRCUIT_BREAKER_THRESHOLD: number;
@@ -103,6 +113,8 @@ class PricingService {
     // Cache for stock prices (5 minute TTL)
     this.priceCache = new Map<string, CachedPrice>();
     this.CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+    this.bondPriceCache = new Map<string, BondPriceData>();
+    this.BOND_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
     // Circuit breaker state
     this.failureCount = 0;
@@ -157,6 +169,21 @@ class PricingService {
    */
   private setCachedPrice(ticker: string, data: StockPriceData): void {
     this.priceCache.set(ticker.toUpperCase(), {
+      ...data,
+      timestamp: Date.now()
+    });
+  }
+
+  private getCachedBondPrice(isin: string): BondPriceData | null {
+    const cached = this.bondPriceCache.get(isin.toUpperCase());
+    if (cached && (Date.now() - cached.timestamp) < this.BOND_CACHE_TTL) {
+      return cached;
+    }
+    return null;
+  }
+
+  private setCachedBondPrice(isin: string, data: BondPriceData): void {
+    this.bondPriceCache.set(isin.toUpperCase(), {
       ...data,
       timestamp: Date.now()
     });
@@ -293,6 +320,79 @@ class PricingService {
     }
   }
 
+  async getBondPriceByIsin(isin: string): Promise<BondPriceData> {
+    const upperIsin = isin.toUpperCase().trim();
+    if (!upperIsin || upperIsin.length < 6) {
+      throw new Error('Invalid ISIN');
+    }
+
+    const cached = this.getCachedBondPrice(upperIsin);
+    if (cached) {
+      return { ...cached, source: 'cache' };
+    }
+
+    const apiKey = process.env.FINNHUB_API_KEY || process.env.NEXT_PUBLIC_FINNHUB_API_KEY || 'bq444c7rh5rb0pdpi4j0';
+    if (!apiKey) {
+      throw new Error('FINNHUB_API_KEY not configured');
+    }
+
+    // Try Finnhub bond profile (returns last price as percentage of par for many issues)
+    const endpoints = [
+      `https://finnhub.io/api/v1/bond/profile?isin=${encodeURIComponent(upperIsin)}&token=${apiKey}`,
+      `https://finnhub.io/api/v1/bond/price?isin=${encodeURIComponent(upperIsin)}&token=${apiKey}`
+    ];
+
+    let pricePct: number | null = null;
+    let currency: string | null = null;
+    let lastError: string | null = null;
+
+    for (const url of endpoints) {
+      try {
+        const resp = await fetch(url);
+        if (!resp.ok) {
+          lastError = `HTTP ${resp.status}`;
+          continue;
+        }
+        const data = await resp.json() as any;
+        const candidates = [
+          data?.lastPrice,
+          data?.last_price,
+          data?.marketPrice,
+          data?.price,
+          data?.midPrice,
+          data?.mid_price,
+          data?.close,
+          data?.data?.price
+        ];
+        const found = candidates
+          .map((v) => Number(v))
+          .find((v) => Number.isFinite(v) && v > 0);
+        if (Number.isFinite(found)) {
+          pricePct = found!;
+          currency = data?.currency ?? data?.baseCurrency ?? null;
+          break;
+        }
+      } catch (err) {
+        const error = err as Error;
+        lastError = error.message;
+      }
+    }
+
+    if (!pricePct) {
+      throw new Error(lastError || 'No bond price available');
+    }
+
+    const result: BondPriceData = {
+      isin: upperIsin,
+      pricePct,
+      currency: currency ?? 'USD',
+      source: 'finnhub',
+      timestamp: Date.now()
+    };
+    this.setCachedBondPrice(upperIsin, result);
+    return result;
+  }
+
   /**
    * Fetch multiple stock prices
    * @param tickers - Array of ticker symbols
@@ -347,6 +447,7 @@ class PricingService {
    */
   clearCache(): void {
     this.priceCache.clear();
+    this.bondPriceCache.clear();
     logger.info('Price cache cleared');
   }
 

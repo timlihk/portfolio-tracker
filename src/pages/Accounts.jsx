@@ -36,7 +36,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { useExchangeRates, useStockPrices, CURRENCY_SYMBOLS } from '@/components/portfolio/useMarketData';
+import { useExchangeRates, useStockPrices, useBondPrices, CURRENCY_SYMBOLS } from '@/components/portfolio/useMarketData';
 import PaginationControls from '@/components/portfolio/PaginationControls';
 
 const ACCOUNT_TYPES = ['Brokerage', 'IRA', '401k', 'Roth IRA', 'Bank', 'Other'];
@@ -83,10 +83,23 @@ export default function Accounts() {
   
   const stockTickers = stocks.map(s => s.ticker).filter(Boolean);
   const { prices: stockPrices } = useStockPrices(stockTickers);
+  const { prices: bondPrices = {} } = useBondPrices(bonds);
 
   // Helper to get current price (real-time or manual)
   // Note: PostgreSQL returns DECIMAL as strings, so we need to convert to numbers
   const getCurrentPrice = (stock) => Number(stockPrices[stock.ticker]?.price) || Number(stock.currentPrice) || Number(stock.averageCost) || 0;
+  const getBondPricePct = (bond) => {
+    const entry = bondPrices[bond.id] || bondPrices[bond.isin] || bondPrices[bond.name];
+    if (entry && typeof entry === 'object' && Number.isFinite(entry.pricePct)) return Number(entry.pricePct);
+    if (entry != null && Number.isFinite(Number(entry))) return Number(entry);
+    if (Number.isFinite(Number(bond.currentValue))) return Number(bond.currentValue);
+    if (Number.isFinite(Number(bond.purchasePrice))) return Number(bond.purchasePrice);
+    return 100;
+  };
+  const getBondMarketValue = (bond) => {
+    const face = Number(bond.faceValue) || 0;
+    return face * (getBondPricePct(bond) / 100);
+  };
 
   // Columns for stocks table (matching Stocks page)
   const stockColumns = useMemo(() => [
@@ -251,7 +264,7 @@ export default function Accounts() {
       return sum + convertToUSD(value, s.currency);
     }, 0);
     const bondsValue = accountBonds.reduce((sum, b) => {
-      const value = Number(b.currentValue) || Number(b.purchasePrice) || 0;
+      const value = getBondMarketValue(b);
       return sum + convertToUSD(value, b.currency);
     }, 0);
     const liabilitiesValue = accountLiabilities.reduce((sum, l) => {
@@ -282,7 +295,7 @@ export default function Accounts() {
       const price = Number(stockPrices[s.ticker]?.price) || Number(s.currentPrice) || Number(s.averageCost) || 0;
       return sum + convertToUSD(Number(s.shares) * price, s.currency);
     }, 0) +
-    unassignedBonds.reduce((sum, b) => sum + convertToUSD(Number(b.currentValue) || Number(b.purchasePrice) || 0, b.currency), 0);
+    unassignedBonds.reduce((sum, b) => sum + convertToUSD(getBondMarketValue(b), b.currency), 0);
 
   return (
     <div className="min-h-screen bg-slate-50/50">

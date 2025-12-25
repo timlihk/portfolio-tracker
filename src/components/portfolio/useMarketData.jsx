@@ -144,22 +144,76 @@ export function useBondPrices(bonds) {
   const [prices, setPrices] = useState({});
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!bonds || bonds.length === 0) return;
+  const toNumber = (val) => {
+    const num = Number(val);
+    return Number.isFinite(num) ? num : null;
+  };
 
-    // For bonds, use currentValue/faceValue/purchasePrice as the default value
-    const bondPrices = {};
-    for (const bond of bonds) {
-      const { currentValue, faceValue, purchasePrice } = bond;
-      bondPrices[bond.name] = currentValue || faceValue || purchasePrice || 0;
+  useEffect(() => {
+    if (!bonds || bonds.length === 0) {
+      setPrices({});
+      return;
     }
 
-    setPrices(bondPrices);
-    setLoading(false);
-    return () => {
-      setPrices({});
+    const uniqueIsins = Array.from(new Set(bonds.map((b) => b.isin).filter(Boolean)));
+    let cancelled = false;
+
+    const fetchPrices = async () => {
+      setLoading(true);
+      const apiPrices = new Map();
+
+      // Fetch prices per unique ISIN from backend (Finnhub)
+      for (const isin of uniqueIsins) {
+        try {
+          const data = await pricingAPI.getBondPriceByIsin(isin);
+          if (data && Number.isFinite(data.pricePct) && data.pricePct > 0) {
+            apiPrices.set(isin, {
+              pricePct: Number(data.pricePct),
+              source: data.source || 'api',
+              currency: data.currency || 'USD',
+              updatedAt: data.timestamp || Date.now()
+            });
+          }
+        } catch (error) {
+          console.error('Failed to fetch bond price', isin, error);
+        }
+      }
+
+      const priceMap = {};
+      bonds.forEach((bond) => {
+        const priceData = apiPrices.get(bond.isin) || null;
+        const manualPrice = toNumber(bond.currentValue);
+        const purchasePct = toNumber(bond.purchasePrice);
+        const derivedPrice = priceData?.pricePct ?? manualPrice ?? purchasePct ?? 100;
+        const entry = {
+          pricePct: derivedPrice,
+          source: priceData ? priceData.source : manualPrice ? 'manual' : 'fallback',
+          currency: priceData?.currency || bond.currency || 'USD',
+          updatedAt: priceData?.updatedAt || Date.now()
+        };
+
+        priceMap[bond.id] = entry;
+        if (bond.isin) priceMap[bond.isin] = entry;
+        priceMap[bond.name] = entry;
+      });
+
+      if (!cancelled) {
+        setPrices(priceMap);
+        setLoading(false);
+      }
     };
-  }, [bonds?.map(b => b.id).join(',')]);
+
+    fetchPrices();
+    return () => {
+      cancelled = true;
+    };
+  }, [JSON.stringify(bonds?.map(b => ({
+    id: b.id,
+    isin: b.isin,
+    currentValue: b.currentValue,
+    purchasePrice: b.purchasePrice,
+    faceValue: b.faceValue
+  })))]);
 
   return { prices, loading };
 }
