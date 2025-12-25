@@ -1,7 +1,7 @@
 [build]
 builder = "NIXPACKS"
 # Install root deps (frontend) + backend deps before building both
-buildCommand = "npm ci && DATABASE_URL=${DATABASE_URL:-$DATABASE_PUBLIC_URL} npm install --prefix backend && DATABASE_URL=${DATABASE_URL:-$DATABASE_PUBLIC_URL} npx --prefix backend prisma generate && npm run build:all"
+buildCommand = "npm install && DATABASE_URL=${DATABASE_URL:-$DATABASE_PUBLIC_URL} npm install --prefix backend && DATABASE_URL=${DATABASE_URL:-$DATABASE_PUBLIC_URL} npx --prefix backend prisma generate && npm run build:all"
 
 [deploy]
 startCommand = "cd backend && DATABASE_URL=${DATABASE_URL:-$DATABASE_PUBLIC_URL} node dist/main.js"
