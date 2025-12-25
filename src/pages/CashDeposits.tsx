@@ -9,6 +9,8 @@ import { format } from 'date-fns';
 import { useExchangeRates, CURRENCY_SYMBOLS } from '@/components/portfolio/useMarketData';
 import { createChangeLogger } from '@/components/portfolio/useChangelog';
 import PaginationControls from '@/components/portfolio/PaginationControls';
+import type { CashDeposit, Account } from '@/types';
+import type React from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,10 +24,26 @@ import {
 
 const cashLogger = createChangeLogger('Cash/Deposit');
 
-const DEPOSIT_TYPES = ['Cash', 'Savings Account', 'Fixed Deposit', 'Money Market', 'CD', 'Other'];
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS'];
+const DEPOSIT_TYPES = ['Cash', 'Savings Account', 'Fixed Deposit', 'Money Market', 'CD', 'Other'] as const;
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS'] as const;
 
-const getCashFields = (accounts) => [
+type TableColumn<T> = {
+  key: keyof T | string;
+  label: string;
+  align?: 'left' | 'right' | 'center';
+  render?: (val: T[keyof T] | undefined, row: T) => React.ReactNode;
+};
+
+type PaginatedResponse<T> = {
+  data: T[];
+  pagination?: {
+    total?: number;
+    page?: number;
+    limit?: number;
+  };
+};
+
+const getCashFields = (accounts: Account[]) => [
   { name: 'name', label: 'Name', required: true, placeholder: 'Emergency Fund' },
   { name: 'depositType', label: 'Type', type: 'select', options: DEPOSIT_TYPES },
   { name: 'amount', label: 'Amount', type: 'number', required: true, placeholder: '50000' },
@@ -36,37 +54,49 @@ const getCashFields = (accounts) => [
   { name: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Additional notes...' }
 ];
 
+const parseNumber = (val: unknown): number | null => {
+  if (val === undefined || val === null || val === '') return null;
+  const cleaned = typeof val === 'string' ? val.replace(/,/g, '').trim() : val;
+  const num = Number(cleaned);
+  return Number.isFinite(num) ? num : null;
+};
+
 export default function CashDeposits() {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({});
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [submitError, setSubmitError] = useState('');
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
-  const [accountFilter, setAccountFilter] = useState('');
-  const [currencyFilter, setCurrencyFilter] = useState('');
+  const [formData, setFormData] = useState<Partial<CashDeposit>>({});
+  const [deleteTarget, setDeleteTarget] = useState<CashDeposit | null>(null);
+  const [submitError, setSubmitError] = useState<string>('');
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(10);
+  const [accountFilter, setAccountFilter] = useState<string>('');
+  const [currencyFilter, setCurrencyFilter] = useState<string>('');
   
   const queryClient = useQueryClient();
 
-  const { data: depositsResponse = [], isFetching: depositsLoading, isError: depositsError, error: depositsErrorObj } = useQuery({
+  const { data: depositsResponse = [], isFetching: depositsLoading, isError: depositsError, error: depositsErrorObj } = useQuery<PaginatedResponse<CashDeposit> | CashDeposit[]>({
     queryKey: ['cashDeposits', page, limit, accountFilter, currencyFilter],
     queryFn: () => entities.CashDeposit.listWithPagination({ page, limit, account: accountFilter || undefined, currency: currencyFilter || undefined }),
     keepPreviousData: true
   });
-  const deposits = depositsResponse?.data || depositsResponse || [];
-  const pagination = depositsResponse?.pagination || { total: deposits.length, page, limit };
 
-  const { data: accounts = [], isError: accountsError, error: accountsErrorObj } = useQuery({
+  const deposits = Array.isArray(depositsResponse)
+    ? depositsResponse as CashDeposit[]
+    : (depositsResponse as PaginatedResponse<CashDeposit>)?.data || [];
+  const pagination = !Array.isArray(depositsResponse)
+    ? (depositsResponse as PaginatedResponse<CashDeposit>)?.pagination || { total: deposits.length, page, limit }
+    : { total: deposits.length, page, limit };
+
+  const { data: accounts = [], isError: accountsError, error: accountsErrorObj } = useQuery<Account[]>({
     queryKey: ['accounts'],
     queryFn: () => entities.Account.list()
   });
 
   const cashFields = getCashFields(accounts);
-  const { convertToUSD } = useExchangeRates();
+  const { convertToUSD } = useExchangeRates() || { convertToUSD: (value: number, currency?: string) => value };
   const loadError = depositsError ? (depositsErrorObj?.message || 'Failed to load cash & deposits') : accountsError ? (accountsErrorObj?.message || 'Failed to load accounts') : '';
 
   const createMutation = useMutation({
-    mutationFn: (data) => entities.CashDeposit.create(data),
+    mutationFn: (data: Partial<CashDeposit>) => entities.CashDeposit.create(data),
     onSuccess: (_, data) => {
       cashLogger.logCreate(data.name, `${data.depositType || 'Cash'} - ${data.amount}`);
       queryClient.invalidateQueries({ queryKey: ['cashDeposits'] });
@@ -74,13 +104,13 @@ export default function CashDeposits() {
       setFormData({});
       setSubmitError('');
     },
-    onError: (err) => {
+    onError: (err: { message?: string }) => {
       setSubmitError(err?.message || 'Failed to add cash/deposit. Please try again.');
     }
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => entities.CashDeposit.update(id, data),
+    mutationFn: ({ id, data }: { id: number | string; data: Partial<CashDeposit> }) => entities.CashDeposit.update(id, data),
     onSuccess: (_, { data }) => {
       cashLogger.logUpdate(data.name, 'Updated');
       queryClient.invalidateQueries({ queryKey: ['cashDeposits'] });
@@ -88,13 +118,13 @@ export default function CashDeposits() {
       setFormData({});
       setSubmitError('');
     },
-    onError: (err) => {
+    onError: (err: { message?: string }) => {
       setSubmitError(err?.message || 'Failed to update cash/deposit. Please try again.');
     }
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => entities.CashDeposit.delete(id),
+    mutationFn: (id: number | string) => entities.CashDeposit.delete(id),
     onSuccess: () => {
       cashLogger.logDelete(deleteTarget?.name, 'Removed');
       queryClient.invalidateQueries({ queryKey: ['cashDeposits'] });
@@ -102,16 +132,9 @@ export default function CashDeposits() {
     }
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSubmitError('');
-
-    const parseNumber = (val) => {
-      if (val === undefined || val === null || val === '') return null;
-      const cleaned = typeof val === 'string' ? val.replace(/,/g, '').trim() : val;
-      const num = Number(cleaned);
-      return Number.isFinite(num) ? num : null;
-    };
 
     const { name, amount, account, currency } = formData;
     const numericAmount = parseNumber(amount);
@@ -119,32 +142,30 @@ export default function CashDeposits() {
       setSubmitError('Please fill in Name, Amount, Currency, and Institution.');
       return;
     }
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    if (!Number.isFinite(numericAmount) || (numericAmount ?? 0) <= 0) {
       setSubmitError('Amount must be greater than zero.');
       return;
     }
 
-    // Build payload without id field for API, stripping empty strings and normalizing numbers
     const { id, ...dataWithoutId } = formData;
-    const payload = { ...dataWithoutId };
+    const payload: Partial<CashDeposit> & Record<string, unknown> = { ...dataWithoutId };
 
-    // Normalize numeric fields
     let hasNumberError = false;
-    ['amount', 'interestRate'].forEach((key) => {
-      if (payload[key] === '' || payload[key] === undefined || payload[key] === null) {
+    (['amount', 'interestRate'] as const).forEach((key) => {
+      const value = payload[key];
+      if (value === '' || value === undefined || value === null) {
         delete payload[key];
       } else {
-        const num = parseNumber(payload[key]);
+        const num = parseNumber(value);
         if (!Number.isFinite(num)) {
           setSubmitError(`Invalid number for ${key === 'amount' ? 'Amount' : 'Interest Rate'}. Use digits only.`);
           hasNumberError = true;
         }
-        payload[key] = num;
+        payload[key] = num as number;
       }
     });
     if (hasNumberError) return;
 
-    // Drop empty dates/strings
     if (payload.maturityDate === '' || payload.maturityDate === undefined) delete payload.maturityDate;
     if (payload.notes === '') delete payload.notes;
     if (payload.depositType === '') delete payload.depositType;
@@ -158,12 +179,12 @@ export default function CashDeposits() {
     }
   };
 
-  const handleEdit = (deposit) => {
+  const handleEdit = (deposit: CashDeposit) => {
     setFormData(deposit);
     setDialogOpen(true);
   };
 
-  const getTypeColor = (type) => {
+  const getTypeColor = (type?: string) => {
     const colors = {
       'Cash': 'bg-emerald-100 text-emerald-700',
       'Savings Account': 'bg-blue-100 text-blue-700',
@@ -172,14 +193,14 @@ export default function CashDeposits() {
       'CD': 'bg-amber-100 text-amber-700',
       'Other': 'bg-slate-100 text-slate-700'
     };
-    return colors[type] || colors['Other'];
+    return colors[type as keyof typeof colors] || colors['Other'];
   };
 
-  const columns = [
+  const columns: TableColumn<CashDeposit>[] = [
     { 
       key: 'name', 
       label: 'Name',
-      render: (val, row) => (
+      render: (val: CashDeposit['name'], row) => (
         <div>
           <span className="font-semibold text-slate-900">{val}</span>
           {row.account && (
@@ -191,7 +212,7 @@ export default function CashDeposits() {
     { 
       key: 'depositType', 
       label: 'Type',
-      render: (val) => val && (
+      render: (val: CashDeposit['depositType']) => val && (
         <Badge className={`${getTypeColor(val)} font-medium`}>
           {val}
         </Badge>
@@ -201,7 +222,7 @@ export default function CashDeposits() {
       key: 'amount',
       label: 'Amount',
       align: 'right',
-      render: (val, row) => {
+      render: (val: CashDeposit['amount'], row) => {
         const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
         return <span className="font-semibold">{symbol}{(Number(val) || 0).toLocaleString()}</span>;
       }
@@ -210,19 +231,19 @@ export default function CashDeposits() {
       key: 'interestRate', 
       label: 'Interest',
       align: 'right',
-      render: (val) => val ? (
+      render: (val: CashDeposit['interestRate']) => val ? (
         <span className="text-emerald-600 font-medium">{val}%</span>
       ) : '-'
     },
     { 
       key: 'maturityDate', 
       label: 'Maturity',
-      render: (val) => val ? format(new Date(val), 'MMM d, yyyy') : '-'
+      render: (val: CashDeposit['maturityDate']) => val ? format(new Date(val), 'MMM d, yyyy') : '-'
     },
     { 
       key: 'currency', 
       label: 'Ccy',
-      render: (val) => (
+      render: (val: CashDeposit['currency']) => (
         <Badge variant="outline" className="font-normal text-xs">
           {val || 'USD'}
         </Badge>
@@ -323,7 +344,7 @@ export default function CashDeposits() {
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
-                onClick={() => deleteMutation.mutate(deleteTarget.id)}
+                onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
                 className="bg-rose-600 hover:bg-rose-700"
               >
                 Delete

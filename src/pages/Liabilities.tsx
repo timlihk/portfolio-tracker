@@ -9,6 +9,8 @@ import { useExchangeRates, CURRENCY_SYMBOLS } from '@/components/portfolio/useMa
 import { createChangeLogger } from '@/components/portfolio/useChangelog';
 import { format } from 'date-fns';
 import PaginationControls from '@/components/portfolio/PaginationControls';
+import type { Liability, Account } from '@/types';
+import type React from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,12 +24,28 @@ import {
 
 const liabilityLogger = createChangeLogger('Liability');
 
-const LIABILITY_TYPES = ['Margin Loan', 'Securities-Backed Line', 'Investment Loan', 'Portfolio Line of Credit', 'Other'];
-const RATE_TYPES = ['Fixed', 'Variable', 'SOFR+Spread', 'Prime+Spread'];
-const STATUSES = ['Active', 'Paid Off', 'In Default'];
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS', 'HKD'];
+const LIABILITY_TYPES = ['Margin Loan', 'Securities-Backed Line', 'Investment Loan', 'Portfolio Line of Credit', 'Other'] as const;
+const RATE_TYPES = ['Fixed', 'Variable', 'SOFR+Spread', 'Prime+Spread'] as const;
+const STATUSES = ['Active', 'Paid Off', 'In Default'] as const;
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS', 'HKD'] as const;
 
-const getLiabilityFields = (accounts) => [
+type TableColumn<T> = {
+  key: keyof T | string;
+  label: string;
+  align?: 'left' | 'right' | 'center';
+  render?: (val: T[keyof T] | undefined, row: T) => React.ReactNode;
+};
+
+type PaginatedResponse<T> = {
+  data: T[];
+  pagination?: {
+    total?: number;
+    page?: number;
+    limit?: number;
+  };
+};
+
+const getLiabilityFields = (accounts: Account[]) => [
   { name: 'name', label: 'Loan Name', required: true, placeholder: 'Margin Loan - Schwab' },
   { name: 'liabilityType', label: 'Type', type: 'select', options: LIABILITY_TYPES },
   { name: 'account', label: 'Account', type: 'select', options: accounts.map(a => a.name), allowCustom: true },
@@ -45,33 +63,37 @@ const getLiabilityFields = (accounts) => [
 
 export default function Liabilities() {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({});
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
-  const [accountFilter, setAccountFilter] = useState('');
-  const [currencyFilter, setCurrencyFilter] = useState('');
+  const [formData, setFormData] = useState<Partial<Liability>>({});
+  const [deleteTarget, setDeleteTarget] = useState<Liability | null>(null);
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(10);
+  const [accountFilter, setAccountFilter] = useState<string>('');
+  const [currencyFilter, setCurrencyFilter] = useState<string>('');
   
   const queryClient = useQueryClient();
 
-  const { data: liabilitiesResponse = [], isFetching: liabilitiesLoading, isError: liabilitiesError, error: liabilitiesErrorObj } = useQuery({
+  const { data: liabilitiesResponse = [], isFetching: liabilitiesLoading, isError: liabilitiesError, error: liabilitiesErrorObj } = useQuery<PaginatedResponse<Liability> | Liability[]>({
     queryKey: ['liabilities', page, limit, accountFilter, currencyFilter],
     queryFn: () => entities.Liability.listWithPagination({ page, limit, account: accountFilter || undefined, currency: currencyFilter || undefined }),
     keepPreviousData: true
   });
-  const liabilities = liabilitiesResponse?.data || liabilitiesResponse || [];
-  const pagination = liabilitiesResponse?.pagination || { total: liabilities.length, page, limit };
+  const liabilities = Array.isArray(liabilitiesResponse)
+    ? liabilitiesResponse as Liability[]
+    : (liabilitiesResponse as PaginatedResponse<Liability>)?.data || [];
+  const pagination = !Array.isArray(liabilitiesResponse)
+    ? (liabilitiesResponse as PaginatedResponse<Liability>)?.pagination || { total: liabilities.length, page, limit }
+    : { total: liabilities.length, page, limit };
 
-  const { data: accounts = [], isError: accountsError, error: accountsErrorObj } = useQuery({
+  const { data: accounts = [], isError: accountsError, error: accountsErrorObj } = useQuery<Account[]>({
     queryKey: ['accounts'],
     queryFn: () => entities.Account.list()
   });
 
   const liabilityFields = getLiabilityFields(accounts);
-  const { convertToUSD } = useExchangeRates() || { convertToUSD: (v) => v };
+  const { convertToUSD } = useExchangeRates() || { convertToUSD: (value: number, currency?: string) => value };
 
   const createMutation = useMutation({
-    mutationFn: (data) => entities.Liability.create(data),
+    mutationFn: (data: Partial<Liability>) => entities.Liability.create(data),
     onSuccess: (_, data) => {
       liabilityLogger.logCreate(data.name, `${data.outstandingBalance} ${data.currency || 'USD'}`);
       queryClient.invalidateQueries({ queryKey: ['liabilities'] });
@@ -81,7 +103,7 @@ export default function Liabilities() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => entities.Liability.update(id, data),
+    mutationFn: ({ id, data }: { id: number | string; data: Partial<Liability> }) => entities.Liability.update(id, data),
     onSuccess: (_, { data }) => {
       liabilityLogger.logUpdate(data.name, 'Updated loan');
       queryClient.invalidateQueries({ queryKey: ['liabilities'] });
@@ -91,7 +113,7 @@ export default function Liabilities() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => entities.Liability.delete(id),
+    mutationFn: (id: number | string) => entities.Liability.delete(id),
     onSuccess: () => {
       liabilityLogger.logDelete(deleteTarget?.name, 'Loan removed');
       queryClient.invalidateQueries({ queryKey: ['liabilities'] });
@@ -99,7 +121,7 @@ export default function Liabilities() {
     }
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (formData.id) {
       const { id, ...data } = formData;
@@ -109,12 +131,12 @@ export default function Liabilities() {
     }
   };
 
-  const handleEdit = (liability) => {
+  const handleEdit = (liability: Liability) => {
     setFormData(liability);
     setDialogOpen(true);
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status?: string) => {
     switch (status) {
       case 'Active': return 'bg-amber-100 text-amber-800';
       case 'Paid Off': return 'bg-emerald-100 text-emerald-800';
@@ -123,11 +145,11 @@ export default function Liabilities() {
     }
   };
 
-  const columns = [
+  const columns: TableColumn<Liability>[] = [
     { 
       key: 'name', 
       label: 'Loan',
-      render: (val, row) => (
+      render: (val: Liability['name'], row) => (
         <div>
           <span className="font-semibold text-slate-900">{val}</span>
           {row.liabilityType && (
@@ -139,7 +161,7 @@ export default function Liabilities() {
     { 
       key: 'account', 
       label: 'Account',
-      render: (val) => val ? (
+      render: (val: Liability['account']) => val ? (
         <Badge variant="outline" className="font-normal">{val}</Badge>
       ) : '-'
     },
@@ -147,7 +169,7 @@ export default function Liabilities() {
       key: 'outstandingBalance',
       label: 'Outstanding',
       align: 'right',
-      render: (val, row) => {
+      render: (val: Liability['outstandingBalance'], row) => {
         const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
         return <span className="font-medium text-rose-600">{symbol}{(Number(val) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>;
       }
@@ -156,7 +178,7 @@ export default function Liabilities() {
       key: 'interestRate', 
       label: 'Rate',
       align: 'right',
-      render: (val, row) => val ? (
+      render: (val: Liability['interestRate'], row) => val ? (
         <div>
           <span className="font-medium">{val}%</span>
           {row.rateType && <p className="text-xs text-slate-500">{row.rateType}</p>}
@@ -166,19 +188,19 @@ export default function Liabilities() {
     { 
       key: 'maturityDate', 
       label: 'Maturity',
-      render: (val) => val ? format(new Date(val), 'MMM d, yyyy') : '-'
+      render: (val: Liability['maturityDate']) => val ? format(new Date(val), 'MMM d, yyyy') : '-'
     },
     { 
       key: 'status', 
       label: 'Status',
-      render: (val) => (
+      render: (val: Liability['status']) => (
         <Badge className={getStatusColor(val)}>{val || 'Active'}</Badge>
       )
     },
     { 
       key: 'currency', 
       label: 'Ccy',
-      render: (val) => (
+      render: (val: Liability['currency']) => (
         <Badge variant="outline" className="font-normal text-xs">{val || 'USD'}</Badge>
       )
     }
@@ -278,7 +300,7 @@ export default function Liabilities() {
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
-                onClick={() => deleteMutation.mutate(deleteTarget.id)}
+                onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
                 className="bg-rose-600 hover:bg-rose-700"
               >
                 Delete

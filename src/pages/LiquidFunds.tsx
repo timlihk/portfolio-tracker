@@ -7,6 +7,8 @@ import AddAssetDialog from '@/components/portfolio/AddAssetDialog';
 import { Badge } from '@/components/ui/badge';
 import PaginationControls from '@/components/portfolio/PaginationControls';
 import { useExchangeRates, CURRENCY_SYMBOLS } from '@/components/portfolio/useMarketData';
+import type { LiquidFund } from '@/types';
+import type React from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,12 +20,27 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const FUND_TYPES = ['Hedge Fund', 'Fixed Income Fund', 'Closed-End Equity', 'Closed-End Bond', 'Interval Fund', 'Other'];
-const STRATEGIES = ['Long/Short Equity', 'Global Macro', 'Event Driven', 'Multi-Strategy', 'Credit', 'Fixed Income', 'Quantitative', 'Distressed', 'Arbitrage', 'Other'];
-const REDEMPTION_FREQ = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Semi-Annual', 'Annual', 'Locked'];
-const STATUSES = ['Active', 'In Redemption', 'Fully Redeemed'];
+const FUND_TYPES = ['Hedge Fund', 'Fixed Income Fund', 'Closed-End Equity', 'Closed-End Bond', 'Interval Fund', 'Other'] as const;
+const STRATEGIES = ['Long/Short Equity', 'Global Macro', 'Event Driven', 'Multi-Strategy', 'Credit', 'Fixed Income', 'Quantitative', 'Distressed', 'Arbitrage', 'Other'] as const;
+const REDEMPTION_FREQ = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Semi-Annual', 'Annual', 'Locked'] as const;
+const STATUSES = ['Active', 'In Redemption', 'Fully Redeemed'] as const;
+const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS', 'HKD'] as const;
 
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS', 'HKD'];
+type TableColumn<T> = {
+  key: keyof T | string;
+  label: string;
+  align?: 'left' | 'right' | 'center';
+  render?: (val: T[keyof T] | undefined, row: T) => React.ReactNode;
+};
+
+type PaginatedResponse<T> = {
+  data: T[];
+  pagination?: {
+    total?: number;
+    page?: number;
+    limit?: number;
+  };
+};
 
 const fundFields = [
   { name: 'fundName', label: 'Fund Name', required: true, placeholder: 'Bridgewater Pure Alpha' },
@@ -45,25 +62,29 @@ const fundFields = [
 
 export default function LiquidFunds() {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({});
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [formData, setFormData] = useState<Partial<LiquidFund>>({});
+  const [deleteTarget, setDeleteTarget] = useState<LiquidFund | null>(null);
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(10);
   
   const queryClient = useQueryClient();
-  const { convertToUSD } = useExchangeRates();
+  const { convertToUSD } = useExchangeRates() || { convertToUSD: (value: number, currency?: string) => value };
 
-  const { data: fundsResponse = [], isFetching: isLoading, isError: fundsError, error: fundsErrorObj } = useQuery({
+  const { data: fundsResponse = [], isFetching: isLoading, isError: fundsError, error: fundsErrorObj } = useQuery<PaginatedResponse<LiquidFund> | LiquidFund[]>({
     queryKey: ['liquidFunds', page, limit],
     queryFn: () => entities.LiquidFund.listWithPagination({ page, limit }),
     keepPreviousData: true
   });
-  const funds = fundsResponse?.data || fundsResponse || [];
-  const pagination = fundsResponse?.pagination || { total: funds.length, page, limit };
+  const funds = Array.isArray(fundsResponse)
+    ? fundsResponse as LiquidFund[]
+    : (fundsResponse as PaginatedResponse<LiquidFund>)?.data || [];
+  const pagination = !Array.isArray(fundsResponse)
+    ? (fundsResponse as PaginatedResponse<LiquidFund>)?.pagination || { total: funds.length, page, limit }
+    : { total: funds.length, page, limit };
   const loadError = fundsError ? (fundsErrorObj?.message || 'Failed to load liquid funds') : '';
 
   const createMutation = useMutation({
-    mutationFn: (data) => entities.LiquidFund.create(data),
+    mutationFn: (data: Partial<LiquidFund>) => entities.LiquidFund.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['liquidFunds'] });
       setDialogOpen(false);
@@ -72,7 +93,7 @@ export default function LiquidFunds() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => entities.LiquidFund.update(id, data),
+    mutationFn: ({ id, data }: { id: number | string; data: Partial<LiquidFund> }) => entities.LiquidFund.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['liquidFunds'] });
       setDialogOpen(false);
@@ -81,16 +102,16 @@ export default function LiquidFunds() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => entities.LiquidFund.delete(id),
+    mutationFn: (id: number | string) => entities.LiquidFund.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['liquidFunds'] });
       setDeleteTarget(null);
     }
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const payload = {
+    const payload: Partial<LiquidFund> = {
       ...formData,
       currency: formData.currency || 'USD'
     };
@@ -102,12 +123,12 @@ export default function LiquidFunds() {
     }
   };
 
-  const handleEdit = (fund) => {
+  const handleEdit = (fund: LiquidFund) => {
     setFormData(fund);
     setDialogOpen(true);
   };
 
-  const getTypeColor = (type) => {
+  const getTypeColor = (type?: string) => {
     switch (type) {
       case 'Hedge Fund': return 'bg-violet-100 text-violet-700';
       case 'Fixed Income Fund': return 'bg-emerald-100 text-emerald-700';
@@ -117,7 +138,7 @@ export default function LiquidFunds() {
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status?: string) => {
     switch (status) {
       case 'Active': return 'bg-emerald-100 text-emerald-700';
       case 'In Redemption': return 'bg-amber-100 text-amber-700';
@@ -126,11 +147,11 @@ export default function LiquidFunds() {
     }
   };
 
-  const columns = [
+  const columns: TableColumn<LiquidFund>[] = [
     { 
       key: 'fundName', 
       label: 'Fund',
-      render: (val, row) => (
+      render: (val: LiquidFund['fundName'], row) => (
         <div>
           <span className="font-semibold text-slate-900">{val}</span>
           {row.manager && (
@@ -142,7 +163,7 @@ export default function LiquidFunds() {
     { 
       key: 'fundType', 
       label: 'Type',
-      render: (val) => val && (
+      render: (val: LiquidFund['fundType']) => val && (
         <Badge className={`${getTypeColor(val)} font-normal`}>
           {val}
         </Badge>
@@ -151,13 +172,13 @@ export default function LiquidFunds() {
     { 
       key: 'strategy', 
       label: 'Strategy',
-      render: (val) => val || '-'
+      render: (val: LiquidFund['strategy']) => val || '-'
     },
     {
       key: 'investmentAmount',
       label: 'Invested',
       align: 'right',
-      render: (val, row) => {
+      render: (val: LiquidFund['investmentAmount'], row) => {
         const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
         return `${symbol}${(Number(val) || 0).toLocaleString()}`;
       }
@@ -166,7 +187,7 @@ export default function LiquidFunds() {
       key: 'currentValue',
       label: 'Current Value',
       align: 'right',
-      render: (val, row) => {
+      render: (val: LiquidFund['currentValue'], row) => {
         const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
         const base = Number(val) || Number(row.investmentAmount) || 0;
         return <span className="font-medium">{symbol}{base.toLocaleString()}</span>;
@@ -176,7 +197,7 @@ export default function LiquidFunds() {
       key: 'gainLoss',
       label: 'Gain/Loss',
       align: 'right',
-      render: (_, row) => {
+      render: (_: unknown, row) => {
         const invested = Number(row.investmentAmount) || 0;
         const current = Number(row.currentValue) || invested;
         const gain = current - invested;
@@ -194,7 +215,7 @@ export default function LiquidFunds() {
       key: 'ytdReturn', 
       label: 'YTD',
       align: 'right',
-      render: (val) => {
+      render: (val: LiquidFund['ytdReturn']) => {
         if (val === undefined || val === null) return '-';
         const isPositive = val >= 0;
         return (
@@ -207,12 +228,12 @@ export default function LiquidFunds() {
     { 
       key: 'redemptionFrequency', 
       label: 'Redemption',
-      render: (val) => val || '-'
+      render: (val: LiquidFund['redemptionFrequency']) => val || '-'
     },
     { 
       key: 'status', 
       label: 'Status',
-      render: (val) => val && (
+      render: (val: LiquidFund['status']) => val && (
         <Badge className={`${getStatusColor(val)} font-normal`}>
           {val}
         </Badge>
@@ -286,7 +307,7 @@ export default function LiquidFunds() {
             <AlertDialogFooter>
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
-                onClick={() => deleteMutation.mutate(deleteTarget.id)}
+                onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
                 className="bg-rose-600 hover:bg-rose-700"
               >
                 Delete
