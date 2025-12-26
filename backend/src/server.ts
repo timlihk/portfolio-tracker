@@ -287,72 +287,56 @@ export async function startServer(): Promise<void> {
   const projectRoot = path.resolve(__dirname, '..', '..');
   const frontendDistPath = path.join(projectRoot, 'dist');
 
-  // Serve static files in production
-  if (process.env.NODE_ENV === 'production') {
-    logger.info('Looking for static files', { distPath: frontendDistPath });
+  // Serve static files
+  logger.info('Looking for static files', { distPath: frontendDistPath });
 
-    if (fs.existsSync(frontendDistPath)) {
-      const distFiles = fs.readdirSync(frontendDistPath);
-      logger.info('Found dist directory', { fileCount: distFiles.length, files: distFiles });
+  if (fs.existsSync(frontendDistPath)) {
+    const distFiles = fs.readdirSync(frontendDistPath);
+    logger.info('Found dist directory', { fileCount: distFiles.length, files: distFiles });
 
-      // Serve static files with proper MIME types
-      app.use(express.static(frontendDistPath, {
-        maxAge: '0',
-        etag: true,
-        setHeaders: (res, filePath) => {
-          // Set correct MIME types explicitly
-          if (filePath.endsWith('.js')) {
-            res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-            res.setHeader('Cache-Control', 'no-store, max-age=0');
-          } else if (filePath.endsWith('.css')) {
-            res.setHeader('Content-Type', 'text/css; charset=utf-8');
-            res.setHeader('Cache-Control', 'no-store, max-age=0');
-          } else if (filePath.endsWith('.svg')) {
-            res.setHeader('Content-Type', 'image/svg+xml');
-          }
+    // Serve static files with proper MIME types
+    app.use(express.static(frontendDistPath, {
+      maxAge: '0',
+      etag: true,
+      setHeaders: (res, filePath) => {
+        // Set correct MIME types explicitly
+        if (filePath.endsWith('.js')) {
+          res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+          res.setHeader('Cache-Control', 'no-store, max-age=0');
+        } else if (filePath.endsWith('.css')) {
+          res.setHeader('Content-Type', 'text/css; charset=utf-8');
+          res.setHeader('Cache-Control', 'no-store, max-age=0');
+        } else if (filePath.endsWith('.svg')) {
+          res.setHeader('Content-Type', 'image/svg+xml');
         }
-      }));
+      }
+    }));
 
-      // SPA fallback - serve index.html for non-API, non-asset routes
-      app.get('*', (req: Request, res: Response, next: NextFunction) => {
-        // Skip API routes
-        if (req.path.startsWith('/api')) {
-          return next();
-        }
-        // Skip if it looks like a static asset request
-        if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map)$/)) {
-          return res.status(404).send('Not found');
-        }
-        res.setHeader('Cache-Control', 'no-store, max-age=0');
-        res.sendFile(path.join(frontendDistPath, 'index.html'));
-      });
-    } else {
-      logger.warn('Dist directory not found', { distPath: frontendDistPath });
-      app.use('*', (req: Request, res: Response, next: NextFunction) => {
-        // Skip API routes - let them be handled by API route handlers
-        logger.info('Dist not found catch-all route', { path: req.path, method: req.method });
-        if (req.path.startsWith('/api')) {
-          logger.info('Skipping API route (dist not found)', { path: req.path });
-          return next();
-        }
-        logger.info('Returning frontend not built error for', { path: req.path });
-        res.status(404).json({
-          error: 'Frontend not built',
-          message: 'The frontend static files were not found. Please check the build process.',
-          api: 'Available at /api endpoints'
-        });
-      });
-    }
-  } else {
-    app.use('*', (req: Request, res: Response, next: NextFunction) => {
-      // Skip API routes - let them be handled by API route handlers
-      logger.info('Development catch-all route', { path: req.path, method: req.method });
+    // SPA fallback - serve index.html for non-API, non-asset routes
+    app.get('*', (req: Request, res: Response, next: NextFunction) => {
+      // Skip API routes
       if (req.path.startsWith('/api')) {
-        logger.info('Skipping API route (development)', { path: req.path });
         return next();
       }
-      logger.info('Returning route not found for', { path: req.path });
-      res.status(404).json({ error: 'Route not found' });
+      // Skip if it looks like a static asset request
+      if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|map)$/)) {
+        return res.status(404).send('Not found');
+      }
+      res.setHeader('Cache-Control', 'no-store, max-age=0');
+      res.sendFile(path.join(frontendDistPath, 'index.html'));
+    });
+  } else {
+    logger.warn('Dist directory not found', { distPath: frontendDistPath });
+    app.use('*', (req: Request, res: Response, next: NextFunction) => {
+      // Skip API routes - let them be handled by API route handlers
+      if (req.path.startsWith('/api')) {
+        return next();
+      }
+      res.status(404).json({
+        error: 'Frontend not built',
+        message: 'The frontend static files were not found. Please check the build process.',
+        api: 'Available at /api endpoints'
+      });
     });
   }
 
