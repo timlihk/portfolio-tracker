@@ -441,24 +441,28 @@ export default function Accounts() {
                                 </span>
                               </div>
                               <div className="grid gap-2">
-                                {assets.bonds.map((bond) => (
-                                  <div key={bond.id} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
-                                    <div>
-                                      <span className="font-medium text-slate-900">{bond.name}</span>
-                                      {bond.bondType && (
-                                        <Badge variant="secondary" className="ml-2 text-xs">{bond.bondType}</Badge>
-                                      )}
+                                {assets.bonds.map((bond) => {
+                                  const marketValue = getBondMarketValue(bond);
+                                  const displayValue = convertToUSD(marketValue, bond.currency);
+                                  return (
+                                    <div key={bond.id} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
+                                      <div>
+                                        <span className="font-medium text-slate-900">{bond.name}</span>
+                                        {bond.bondType && (
+                                          <Badge variant="secondary" className="ml-2 text-xs">{bond.bondType}</Badge>
+                                        )}
+                                      </div>
+                                      <div className="text-right">
+                                        <p className="font-medium">
+                                          ${displayValue.toLocaleString()}
+                                        </p>
+                                        {bond.couponRate && (
+                                          <p className="text-xs text-slate-500">{Number(bond.couponRate)}% coupon {bond.currency && bond.currency !== 'USD' ? `(${bond.currency})` : ''}</p>
+                                        )}
+                                      </div>
                                     </div>
-                                    <div className="text-right">
-                                      <p className="font-medium">
-                                        ${convertToUSD(Number(bond.currentValue) || Number(bond.purchasePrice) || 0, bond.currency).toLocaleString()}
-                                      </p>
-                                      {bond.couponRate && (
-                                        <p className="text-xs text-slate-500">{Number(bond.couponRate)}% coupon {bond.currency && bond.currency !== 'USD' ? `(${bond.currency})` : ''}</p>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                             </div>
                           )}
@@ -596,14 +600,18 @@ export default function Accounts() {
                             <h4 className="font-medium text-slate-700">Bonds</h4>
                           </div>
                           <div className="grid gap-2">
-                            {unassignedBonds.map((bond) => (
-                              <div key={bond.id} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
-                                <span className="font-medium text-slate-900">{bond.name}</span>
-                                <p className="font-medium">
-                                  ${convertToUSD(Number(bond.currentValue) || Number(bond.purchasePrice) || 0, bond.currency).toLocaleString()}
-                                </p>
-                              </div>
-                            ))}
+                            {unassignedBonds.map((bond) => {
+                              const marketValue = getBondMarketValue(bond);
+                              const displayValue = convertToUSD(marketValue, bond.currency);
+                              return (
+                                <div key={bond.id} className="flex items-center justify-between py-2 px-3 bg-slate-50 rounded-lg">
+                                  <span className="font-medium text-slate-900">{bond.name}</span>
+                                  <p className="font-medium">
+                                    ${displayValue.toLocaleString()}
+                                  </p>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
