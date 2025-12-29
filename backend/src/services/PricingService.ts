@@ -94,6 +94,13 @@ interface YahooQuoteResponse {
   };
 }
 
+interface CachedProfile {
+  sector: string | null;
+  industry: string | null;
+  longName: string | null;
+  timestamp: number;
+}
+
 interface MultipleStockPricesResult {
   results: Record<string, StockPriceData>;
   errors: Record<string, string>;
@@ -128,8 +135,10 @@ interface CacheStats {
 class PricingService {
   private priceCache: Map<string, CachedPrice>;
   private bondPriceCache: Map<string, BondPriceData>;
+  private profileCache: Map<string, CachedProfile>;
   private readonly CACHE_TTL: number;
   private readonly BOND_CACHE_TTL: number;
+  private readonly PROFILE_CACHE_TTL: number;
   private failureCount: number;
   private lastFailure: number | null;
   private readonly CIRCUIT_BREAKER_THRESHOLD: number;
@@ -141,6 +150,8 @@ class PricingService {
     this.CACHE_TTL = 5 * 60 * 1000; // 5 minutes
     this.bondPriceCache = new Map<string, BondPriceData>();
     this.BOND_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+    this.profileCache = new Map<string, CachedProfile>();
+    this.PROFILE_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
 
     // Circuit breaker state
     this.failureCount = 0;
@@ -211,6 +222,21 @@ class PricingService {
   private setCachedBondPrice(isin: string, data: BondPriceData): void {
     this.bondPriceCache.set(isin.toUpperCase(), {
       ...data,
+      timestamp: Date.now()
+    });
+  }
+
+  private getCachedProfile(ticker: string): CachedProfile | null {
+    const cached = this.profileCache.get(ticker.toUpperCase());
+    if (cached && (Date.now() - cached.timestamp) < this.PROFILE_CACHE_TTL) {
+      return cached;
+    }
+    return null;
+  }
+
+  private setCachedProfile(ticker: string, profile: Omit<CachedProfile, 'timestamp'>): void {
+    this.profileCache.set(ticker.toUpperCase(), {
+      ...profile,
       timestamp: Date.now()
     });
   }
@@ -298,27 +324,33 @@ class PricingService {
       let sector: string | null = null;
       let industry: string | null = null;
       let longName: string | null = null;
-      try {
-        const summaryResponse = await fetch(
-          `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(upperTicker)}?modules=assetProfile,quoteType`,
-          {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      const cachedProfile = this.getCachedProfile(upperTicker);
+      if (cachedProfile) {
+        ({ sector, industry, longName } = cachedProfile);
+      } else {
+        try {
+          const summaryResponse = await fetch(
+            `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(upperTicker)}?modules=assetProfile,quoteType`,
+            {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+              }
             }
+          );
+          if (summaryResponse.ok) {
+            const summaryData = await summaryResponse.json() as YahooSummaryResponse;
+            const assetProfile = summaryData.quoteSummary?.result?.[0]?.assetProfile;
+            const quoteType = summaryData.quoteSummary?.result?.[0]?.quoteType;
+            sector = assetProfile?.sector ?? null;
+            industry = assetProfile?.industry ?? null;
+            longName = quoteType?.longName ?? null;
+            this.setCachedProfile(upperTicker, { sector, industry, longName });
           }
-        );
-        if (summaryResponse.ok) {
-          const summaryData = await summaryResponse.json() as YahooSummaryResponse;
-          const assetProfile = summaryData.quoteSummary?.result?.[0]?.assetProfile;
-          const quoteType = summaryData.quoteSummary?.result?.[0]?.quoteType;
-          sector = assetProfile?.sector ?? null;
-          industry = assetProfile?.industry ?? null;
-          longName = quoteType?.longName ?? null;
+        } catch (e) {
+          // Ignore errors fetching additional info - price is most important
+          const error = e as Error;
+          logger.warn(`Could not fetch sector info for ${upperTicker}:`, { error: error.message });
         }
-      } catch (e) {
-        // Ignore errors fetching additional info - price is most important
-        const error = e as Error;
-        logger.warn(`Could not fetch sector info for ${upperTicker}:`, { error: error.message });
       }
 
       const toNumber = (value: unknown): number | null => {

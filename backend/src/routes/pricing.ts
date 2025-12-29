@@ -1,10 +1,51 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
 import { pricingService } from '../services/PricingService.js';
 import { currencyService } from '../services/CurrencyService.js';
 import logger from '../services/logger.js';
 import type { StockPriceData } from '../types/index.js';
 
 const router = express.Router();
+
+type RequestWithCookies = Request & { cookies?: Record<string, string> };
+
+function getSharedSecretFromRequest(req: RequestWithCookies): string | undefined {
+  const authHeader = req.headers.authorization;
+  const sharedHeader =
+    (authHeader?.startsWith('Shared ') && authHeader.replace('Shared ', '')) ||
+    (req.headers['x-shared-secret'] as string | undefined);
+  const cookieSecret = req.cookies?.shared_secret;
+  return cookieSecret || sharedHeader;
+}
+
+const pricingAuthMiddleware = async (req: RequestWithCookies, res: Response, next: NextFunction) => {
+  const sharedSecret = process.env.SHARED_SECRET || process.env.SECRET_PHRASE;
+  const jwtSecret = process.env.JWT_SECRET;
+
+  if (!sharedSecret && !jwtSecret) {
+    return next();
+  }
+
+  const providedSecret = getSharedSecretFromRequest(req);
+  if (sharedSecret && providedSecret === sharedSecret) {
+    return next();
+  }
+
+  const authHeader = req.headers.authorization;
+  if (jwtSecret && authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.substring('Bearer '.length);
+    try {
+      jwt.verify(token, jwtSecret);
+      return next();
+    } catch {
+      // fall through
+    }
+  }
+
+  return res.status(403).json({ error: 'Authentication required' });
+};
+
+router.use(pricingAuthMiddleware);
 
 /**
  * GET /api/pricing/stock/:ticker
@@ -96,21 +137,39 @@ router.post('/stocks', async (req: Request<{}, {}, StocksRequestBody>, res: Resp
 
     // Convert prices if requested
     if (convertTo) {
+      const targetCurrency = convertTo.toUpperCase();
+      const conversionCache = new Map<string, number>();
+
+      const getRate = async (fromCurrency: string): Promise<number> => {
+        if (conversionCache.has(fromCurrency)) {
+          return conversionCache.get(fromCurrency)!;
+        }
+        const conversion = await currencyService.convert(1, fromCurrency, targetCurrency);
+        conversionCache.set(fromCurrency, conversion.exchangeRate);
+        return conversion.exchangeRate;
+      };
+
       for (const ticker of Object.keys(results)) {
         const priceData = results[ticker];
-        if (priceData.currency !== convertTo.toUpperCase()) {
-          try {
-            const conversion = await currencyService.convert(
-              priceData.price,
-              priceData.currency,
-              convertTo
-            );
-            priceData.convertedPrice = conversion.convertedAmount;
-            priceData.convertedCurrency = conversion.targetCurrency;
-            priceData.exchangeRate = conversion.exchangeRate;
-          } catch (e) {
-            // Keep original price if conversion fails
-          }
+        const fromCurrency = (priceData.currency || 'USD').toUpperCase();
+        if (fromCurrency === targetCurrency) {
+          priceData.convertedPrice = Math.round(priceData.price * 100) / 100;
+          priceData.convertedCurrency = targetCurrency;
+          priceData.exchangeRate = 1;
+          continue;
+        }
+        try {
+          const rate = await getRate(fromCurrency);
+          const convertedAmount = Math.round(priceData.price * rate * 100) / 100;
+          priceData.convertedPrice = convertedAmount;
+          priceData.convertedCurrency = targetCurrency;
+          priceData.exchangeRate = rate;
+        } catch (e) {
+          logger.warn('Currency conversion failed', {
+            error: e instanceof Error ? e.message : 'Unknown error',
+            from: fromCurrency,
+            to: targetCurrency
+          });
         }
       }
     }
