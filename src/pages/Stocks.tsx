@@ -322,9 +322,21 @@ export default function Stocks() {
       key: 'ticker',
       label: 'Ticker',
       sortable: true,
-      render: (val) => (
-        <span className="font-semibold text-slate-900">{val}</span>
-      )
+      render: (val) => {
+        const ticker = (val || '').toUpperCase();
+        if (!ticker) return '-';
+        const url = `https://finance.yahoo.com/quote/${encodeURIComponent(ticker)}`;
+        return (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-slate-900 hover:text-sky-600"
+          >
+            {ticker}
+          </a>
+        );
+      }
     },
     {
       key: 'companyName',

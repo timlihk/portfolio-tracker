@@ -103,8 +103,10 @@ export default function Accounts() {
 
   // Helper to get current price (real-time or manual)
   // Note: PostgreSQL returns DECIMAL as strings, so we need to convert to numbers
-  const getCurrentPrice = (stock: Stock) =>
-    Number(stockPrices[stock.ticker]?.price) || Number(stock.currentPrice) || Number(stock.averageCost) || 0;
+  const getCurrentPrice = (stock: Stock) => {
+    const tickerKey = stock.ticker ? stock.ticker.toUpperCase() : stock.ticker;
+    return Number(stockPrices[tickerKey || '']?.price) || Number(stock.currentPrice) || Number(stock.averageCost) || 0;
+  };
 
   const getBondPricePct = (bond: Bond) => {
     if (Number.isFinite(Number(bond.currentValue))) return Number(bond.currentValue);
@@ -133,12 +135,26 @@ export default function Accounts() {
       label: 'Ticker',
       render: (val, row) => {
         // Use Yahoo Finance data if available, otherwise use stored data
-        const yahooData = stockPrices[row.ticker];
+        const tickerKey = row.ticker ? row.ticker.toUpperCase() : row.ticker;
+        const yahooData = tickerKey ? stockPrices[tickerKey] : undefined;
         const companyName = row.companyName || yahooData?.name || yahooData?.shortName;
         const sector = row.sector || yahooData?.sector;
+        const ticker = (val || row.ticker || '').toUpperCase();
+        const url = ticker ? `https://finance.yahoo.com/quote/${encodeURIComponent(ticker)}` : null;
         return (
           <div>
-            <span className="font-semibold text-slate-900">{val}</span>
+            {url ? (
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-slate-900 hover:text-sky-600"
+              >
+                {ticker}
+              </a>
+            ) : (
+              <span className="font-semibold text-slate-900">{val || '-'}</span>
+            )}
             {companyName && (
               <p className="text-sm text-slate-500">{companyName}</p>
             )}
@@ -171,7 +187,8 @@ export default function Accounts() {
       render: (val, row) => {
         const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
         const price = getCurrentPrice(row);
-        const isLive = stockPrices[row.ticker]?.price && !row.currentPrice;
+        const tickerKey = row.ticker ? row.ticker.toUpperCase() : row.ticker;
+        const isLive = tickerKey ? stockPrices[tickerKey]?.price && !row.currentPrice : false;
         return (
           <div className="flex items-center justify-end gap-1">
             <span>{symbol}{(price || 0).toFixed(2)}</span>
