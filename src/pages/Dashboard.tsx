@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { authAPI, portfolioAPI } from '@/api/backendClient';
 import StatCard from '@/components/portfolio/StatCard';
@@ -69,6 +69,11 @@ export default function Dashboard() {
   const { prices: stockPrices = {}, loading: stockPricesLoading } = useStockPrices(stockTickers, { refreshIntervalMs: 60000 });
   const { prices: bondPrices = {}, loading: bondPricesLoading } = useBondPrices(bonds);
 
+  const getStockPriceData = useCallback((ticker?: string | null) => {
+    if (!ticker) return null;
+    return stockPrices[ticker.toUpperCase()] || null;
+  }, [stockPrices]);
+
   const isLoadingPrices = ratesLoading || stockPricesLoading || bondPricesLoading;
 
   const getBondPricePct = (bond: Bond): number => {
@@ -99,7 +104,8 @@ export default function Dashboard() {
 
   const totals = useMemo(() => {
     const stocksValue = stocks.reduce((sum, s) => {
-      const realTimePrice = Number(stockPrices[s.ticker]?.price) || Number(s.currentPrice) || Number(s.averageCost) || 0;
+      const liveData = getStockPriceData(s.ticker);
+      const realTimePrice = Number(liveData?.price) || Number(s.currentPrice) || Number(s.averageCost) || 0;
       const shares = Number(s.shares) || 0;
       const valueInOriginalCurrency = shares * realTimePrice;
       const converted = convertToUSD(valueInOriginalCurrency, s.currency);
@@ -169,7 +175,7 @@ export default function Dashboard() {
       totalCost,
       totalGainPercent
     };
-  }, [stocks, bonds, peFunds, peDeals, liquidFunds, cashDeposits, liabilities, stockPrices, bondPrices, convertToUSD]);
+  }, [stocks, bonds, peFunds, peDeals, liquidFunds, cashDeposits, liabilities, bondPrices, convertToUSD, getStockPriceData]);
 
   const {
     stocksValue,
@@ -236,7 +242,10 @@ export default function Dashboard() {
       map.set(currency, (map.get(currency) || 0) + amount);
     };
     if (assetsOnly) {
-      stocks.forEach((s) => add(s.currency || 'USD', convertToUSD((Number(s.shares) || 0) * (Number(stockPrices[s.ticker]?.price) || Number(s.currentPrice) || Number(s.averageCost) || 0), s.currency)));
+      stocks.forEach((s) => {
+        const liveData = getStockPriceData(s.ticker);
+        add(s.currency || 'USD', convertToUSD((Number(s.shares) || 0) * (Number(liveData?.price) || Number(s.currentPrice) || Number(s.averageCost) || 0), s.currency));
+      });
       bonds.forEach((b) => add(b.currency || 'USD', convertToUSD(getBondMarketValue(b), b.currency)));
       liquidFunds.forEach((f) => add(f.currency || 'USD', convertToUSD(Number(f.currentValue) || Number(f.investmentAmount) || 0, f.currency)));
       cashDeposits.forEach((c) => add(c.currency || 'USD', convertToUSD(Number(c.amount) || 0, c.currency)));
@@ -255,7 +264,8 @@ export default function Dashboard() {
       const accountName = account.name;
       const stocksVal = stocks.reduce((sum, s) => {
         if (s.account !== accountName) return sum;
-        const price = Number(stockPrices[s.ticker]?.price) || Number(s.currentPrice) || Number(s.averageCost) || 0;
+        const liveData = getStockPriceData(s.ticker);
+        const price = Number(liveData?.price) || Number(s.currentPrice) || Number(s.averageCost) || 0;
         const value = (Number(s.shares) || 0) * price;
         return sum + convertToUSD(value, s.currency);
       }, 0);
@@ -293,7 +303,7 @@ export default function Dashboard() {
         }
       };
     }).sort((a, b) => b.assetsTotal - a.assetsTotal);
-  }, [accounts, stocks, bonds, cashDeposits, liquidFunds, liabilities, convertToUSD, stockPrices, bondPrices]);
+  }, [accounts, stocks, bonds, cashDeposits, liquidFunds, liabilities, convertToUSD, bondPrices, getStockPriceData]);
 
   const isLoadingData = profileLoading || dashboardLoading;
   const loadError = dashboardError

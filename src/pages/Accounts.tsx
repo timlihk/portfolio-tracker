@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { entities } from '@/api/backendClient';
 import { Button } from "@/components/ui/button";
@@ -103,10 +103,11 @@ export default function Accounts() {
 
   // Helper to get current price (real-time or manual)
   // Note: PostgreSQL returns DECIMAL as strings, so we need to convert to numbers
-  const getCurrentPrice = (stock: Stock) => {
+  const getCurrentPrice = useCallback((stock: Stock) => {
     const tickerKey = stock.ticker ? stock.ticker.toUpperCase() : stock.ticker;
-    return Number(stockPrices[tickerKey || '']?.price) || Number(stock.currentPrice) || Number(stock.averageCost) || 0;
-  };
+    const liveData = tickerKey ? stockPrices[tickerKey] : undefined;
+    return Number(liveData?.price) || Number(stock.currentPrice) || Number(stock.averageCost) || 0;
+  }, [stockPrices]);
 
   const getBondPricePct = (bond: Bond) => {
     if (Number.isFinite(Number(bond.currentValue))) return Number(bond.currentValue);
@@ -183,16 +184,26 @@ export default function Accounts() {
     {
       key: 'currentPrice',
       label: 'Current',
-      align: 'right',
+      align: 'center',
       render: (val, row) => {
         const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
         const price = getCurrentPrice(row);
         const tickerKey = row.ticker ? row.ticker.toUpperCase() : row.ticker;
-        const isLive = tickerKey ? stockPrices[tickerKey]?.price && !row.currentPrice : false;
+        const liveData = tickerKey ? stockPrices[tickerKey] : undefined;
+        const isLive = Boolean(liveData?.price && !row.currentPrice);
+        const change = typeof liveData?.change === 'number' ? liveData.change : null;
+        const changePercent = typeof liveData?.changePercent === 'number' ? liveData.changePercent : null;
         return (
-          <div className="flex items-center justify-end gap-1">
-            <span>{symbol}{(price || 0).toFixed(2)}</span>
-            {isLive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Live price" />}
+          <div className="text-center space-y-0.5">
+            <div className="flex items-center justify-center gap-1">
+              <span>{symbol}{(price || 0).toFixed(2)}</span>
+              {isLive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" title="Live price" />}
+            </div>
+            {change !== null && changePercent !== null && (
+              <p className={`text-xs ${change >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {change >= 0 ? '+' : ''}{change.toFixed(2)} ({changePercent >= 0 ? '+' : ''}{changePercent.toFixed(2)}%)
+              </p>
+            )}
           </div>
         );
       }
@@ -248,7 +259,7 @@ export default function Accounts() {
         </Badge>
       ) : '-'
     }
-  ], [stockPrices, CURRENCY_SYMBOLS]);
+  ], [stockPrices, CURRENCY_SYMBOLS, getCurrentPrice]);
 
   const createMutation = useMutation({
     mutationFn: (data: Partial<Account>) => entities.Account.create(data),
@@ -301,8 +312,7 @@ export default function Accounts() {
     const accountCash = cashDeposits.filter(c => c.account === accountName);
     
     const stocksValue = accountStocks.reduce((sum, s) => {
-      const tickerKey = s.ticker ? s.ticker.toUpperCase() : s.ticker;
-      const price = Number(stockPrices[tickerKey || '']?.price) || Number(s.currentPrice) || Number(s.averageCost) || 0;
+      const price = getCurrentPrice(s);
       const value = Number(s.shares) * price;
       return sum + convertToUSD(value, s.currency);
     }, 0);
@@ -335,8 +345,7 @@ export default function Accounts() {
   const unassignedBonds = bonds.filter(b => !b.account);
   const unassignedValue =
     unassignedStocks.reduce((sum, s) => {
-      const tickerKey = s.ticker ? s.ticker.toUpperCase() : s.ticker;
-      const price = Number(stockPrices[tickerKey || '']?.price) || Number(s.currentPrice) || Number(s.averageCost) || 0;
+      const price = getCurrentPrice(s);
       return sum + convertToUSD(Number(s.shares) * price, s.currency);
     }, 0) +
     unassignedBonds.reduce((sum, b) => sum + convertToUSD(getBondMarketValue(b), b.currency), 0);
