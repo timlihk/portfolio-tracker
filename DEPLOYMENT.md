@@ -142,7 +142,7 @@ FRONTEND_URL=http://localhost:5173
 
 ### Railway CLI
 
-You can use Railway CLI for debugging:
+You can use Railway CLI for debugging and manual deploys:
 
 ```bash
 # Install Railway CLI
@@ -159,6 +159,11 @@ railway logs
 
 # Open shell
 railway shell
+
+# (Optional) Build/push locally if hosted build stalls
+docker build -t registry.railway.app/<project>/<service>:manual .
+docker push registry.railway.app/<project>/<service>:manual
+railway up
 ```
 
 ## Architecture
