@@ -68,7 +68,8 @@ export default function AssetTable<T extends { id?: string | number }>({
                   key={col.key as string}
                   className={cn(
                     "text-xs font-semibold text-slate-500 uppercase tracking-wider py-4",
-                    col.align === "right" && "text-right"
+                    col.align === "right" && "text-right",
+                    col.align === "center" && "text-center"
                   )}
                 >
                   <div className="flex items-center gap-1">
@@ -102,6 +103,7 @@ export default function AssetTable<T extends { id?: string | number }>({
                   className={cn(
                     "py-4",
                     col.align === "right" && "text-right",
+                    col.align === "center" && "text-center",
                     col.className
                   )}
                 >

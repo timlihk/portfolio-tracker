@@ -363,7 +363,7 @@ export default function Stocks() {
     {
       key: 'currentPrice',
       label: 'Current',
-      align: 'right',
+      align: 'center',
       render: (val, row) => {
         const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
         const price = getCurrentPrice(row);
@@ -373,8 +373,8 @@ export default function Stocks() {
         const change = typeof liveData?.change === 'number' ? liveData.change : null;
         const changePercent = typeof liveData?.changePercent === 'number' ? liveData.changePercent : null;
         return (
-          <div className="text-right space-y-0.5">
-            <div className="flex items-center justify-end gap-1">
+          <div className="text-center space-y-0.5">
+            <div className="flex items-center justify-center gap-1">
               <span>{symbol}{(price || 0).toFixed(2)}</span>
               {isLive && (
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" title="Live price" />
