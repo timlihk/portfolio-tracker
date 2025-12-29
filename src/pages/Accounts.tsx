@@ -121,7 +121,6 @@ export default function Accounts() {
     const face = Number(bond.faceValue) || 0;
     return face * (getBondPricePct(bond) / 100);
   };
-
   // Columns for stocks table (matching Stocks page)
   type TableColumn<T> = {
     key: keyof T | string;
