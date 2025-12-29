@@ -280,22 +280,29 @@ class PricingService {
         logger.warn(`Could not fetch sector info for ${upperTicker}:`, { error: error.message });
       }
 
+      const livePrice = meta.regularMarketPrice ?? meta.previousClose ?? 0;
+      const previousClose = meta.previousClose ?? livePrice;
+      const changeValue =
+        meta.regularMarketPrice != null && meta.previousClose != null
+          ? meta.regularMarketPrice - meta.previousClose
+          : (previousClose != null ? livePrice - previousClose : 0);
+      const changePercent =
+        previousClose && previousClose !== 0
+          ? (changeValue / previousClose) * 100
+          : 0;
+
       const priceData: StockPriceData = {
         ticker: upperTicker,
-        price: meta.regularMarketPrice ?? meta.previousClose ?? 0,
+        price: livePrice,
         currency: meta.currency ?? 'USD',
         name: longName ?? meta.shortName ?? meta.longName ?? upperTicker,
         shortName: meta.shortName ?? upperTicker,
         sector: sector,
         industry: industry,
         exchange: meta.exchangeName ?? 'Unknown',
-        change: meta.regularMarketPrice && meta.previousClose
-          ? meta.regularMarketPrice - meta.previousClose
-          : 0,
-        changePercent: meta.regularMarketPrice && meta.previousClose
-          ? ((meta.regularMarketPrice - meta.previousClose) / meta.previousClose) * 100
-          : 0,
-        previousClose: meta.previousClose,
+        change: changeValue,
+        changePercent,
+        previousClose,
         open: quote?.open?.[0] ?? undefined,
         high: quote?.high?.[0] ?? undefined,
         low: quote?.low?.[0] ?? undefined,
