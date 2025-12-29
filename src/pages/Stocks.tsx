@@ -103,19 +103,37 @@ export default function Stocks() {
 
   // Get real-time prices and exchange rates
   const stockTickers = useMemo(() => stocks.map(s => s.ticker).filter(Boolean), [stocks]);
-  const { prices: stockPrices = {}, loading: pricesLoading } = useStockPrices(stockTickers);
+  const {
+    prices: stockPrices = {},
+    loading: pricesLoading,
+    lastUpdated: stockPricesUpdatedAt
+  } = useStockPrices(stockTickers, { refreshIntervalMs: 60000 });
   const {
     convertToUSD = ((v: number) => v) as (val: number, currency?: string | null) => number,
     loading: ratesLoading = false
   } = useExchangeRates() || {};
 
   const isLoadingPrices = pricesLoading || ratesLoading;
+  const livePriceTime = useMemo(() => {
+    if (!stockPricesUpdatedAt) return null;
+    try {
+      return new Date(stockPricesUpdatedAt).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    } catch {
+      return null;
+    }
+  }, [stockPricesUpdatedAt]);
 
   // Helper to get current price (real-time or manual)
   // Note: PostgreSQL returns DECIMAL as strings, so we need to convert to numbers
   // stockPrices[ticker] is an object with { price, currency, name, ... }
-  const getCurrentPrice = (stock: Stock): number =>
-    Number(stockPrices[stock.ticker]?.price) || Number(stock.currentPrice) || Number(stock.averageCost) || 0;
+  const getCurrentPrice = (stock: Stock): number => {
+    const tickerKey = stock.ticker ? stock.ticker.toUpperCase() : stock.ticker;
+    return Number(stockPrices[tickerKey]?.price) || Number(stock.currentPrice) || Number(stock.averageCost) || 0;
+  };
 
   const createMutation = useMutation({
     mutationFn: (data) => entities.Stock.create(data),
@@ -258,8 +276,9 @@ export default function Stocks() {
   const sortedStocks = useMemo(() => {
     const copy = [...filteredStocks];
     const getCompanyName = (stock: Stock) => {
-      const yahooData = stockPrices[stock.ticker] || {};
-      return (stock.companyName || yahooData.name || yahooData.shortName || stock.ticker || '').toString().toUpperCase();
+      const tickerKey = stock.ticker ? stock.ticker.toUpperCase() : stock.ticker;
+      const yahooData = tickerKey ? stockPrices[tickerKey] : undefined;
+      return (stock.companyName || yahooData?.name || yahooData?.shortName || stock.ticker || '').toString().toUpperCase();
     };
     copy.sort((a, b) => {
       const dir = sortDir === 'asc' ? 1 : -1;
@@ -312,7 +331,8 @@ export default function Stocks() {
       label: 'Company',
       sortable: true,
       render: (_, row) => {
-        const yahooData = stockPrices[row.ticker];
+        const tickerKey = row.ticker ? row.ticker.toUpperCase() : row.ticker;
+        const yahooData = tickerKey ? stockPrices[tickerKey] : undefined;
         const companyName = row.companyName || yahooData?.name || yahooData?.shortName || row.ticker;
         const sector = row.sector || yahooData?.sector;
         return (
@@ -347,11 +367,24 @@ export default function Stocks() {
       render: (val, row) => {
         const symbol = CURRENCY_SYMBOLS[row.currency] || '$';
         const price = getCurrentPrice(row);
-        const isLive = stockPrices[row.ticker]?.price && !row.currentPrice;
+        const tickerKey = row.ticker ? row.ticker.toUpperCase() : row.ticker;
+        const liveData = tickerKey ? stockPrices[tickerKey] : undefined;
+        const isLive = Boolean(liveData?.price && !row.currentPrice);
+        const change = typeof liveData?.change === 'number' ? liveData.change : null;
+        const changePercent = typeof liveData?.changePercent === 'number' ? liveData.changePercent : null;
         return (
-          <div className="flex items-center justify-end gap-1">
-            <span>{symbol}{(price || 0).toFixed(2)}</span>
-            {isLive && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Live price" />}
+          <div className="text-right space-y-0.5">
+            <div className="flex items-center justify-end gap-1">
+              <span>{symbol}{(price || 0).toFixed(2)}</span>
+              {isLive && (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" title="Live price" />
+              )}
+            </div>
+            {change !== null && changePercent !== null && (
+              <p className={`text-xs font-medium ${change >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {change >= 0 ? '+' : ''}{change.toFixed(2)} ({changePercent >= 0 ? '+' : ''}{changePercent.toFixed(2)}%)
+              </p>
+            )}
           </div>
         );
       }
@@ -419,9 +452,15 @@ export default function Stocks() {
         <PageHeader
           title="Stocks"
           subtitle={
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
               <span>{totalPositions} positions • ${totalValueUSD.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} USD</span>
               {isLoadingPrices && <RefreshCw className="w-3 h-3 animate-spin text-slate-400" />}
+              {!isLoadingPrices && livePriceTime && (
+                <span className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-emerald-600">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Live {livePriceTime}
+                </span>
+              )}
             </div>
           }
           onAdd={() => {

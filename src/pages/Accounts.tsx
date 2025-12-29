@@ -98,7 +98,7 @@ export default function Accounts() {
   const { convertToUSD } = useExchangeRates();
   
   const stockTickers = stocks.map(s => s.ticker).filter(Boolean);
-  const { prices: stockPrices } = useStockPrices(stockTickers);
+  const { prices: stockPrices } = useStockPrices(stockTickers, { refreshIntervalMs: 60000 });
   const { prices: bondPrices = {} } = useBondPrices(bonds);
 
   // Helper to get current price (real-time or manual)

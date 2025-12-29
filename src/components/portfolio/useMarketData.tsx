@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { pricingAPI } from '@/api/backendClient';
 
 export const CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD', 'ILS', 'HKD', 'SGD', 'CNY', 'KRW', 'TWD'] as const;
@@ -86,58 +86,128 @@ export type StockPriceEntry = {
   marketState?: string;
 };
 
-export function useStockPrices(tickers: string[] | undefined) {
+type UseStockPricesOptions = {
+  refreshIntervalMs?: number;
+};
+
+export function useStockPrices(
+  tickers: string[] | undefined,
+  options: UseStockPricesOptions = {}
+) {
+  const { refreshIntervalMs = 0 } = options;
   const [prices, setPrices] = useState<Record<string, StockPriceEntry>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+
+  const { uniqueTickers, tickerKey } = useMemo(() => {
+    if (!tickers || tickers.length === 0) {
+      return { uniqueTickers: [] as string[], tickerKey: '' };
+    }
+    const normalized = tickers
+      .map((ticker) => (typeof ticker === 'string' ? ticker.trim().toUpperCase() : ''))
+      .filter(Boolean);
+    const unique = Array.from(new Set(normalized));
+    return {
+      uniqueTickers: unique,
+      tickerKey: unique.join(',')
+    };
+  }, [tickers]);
 
   useEffect(() => {
-    if (!tickers || tickers.length === 0) {
+    if (!uniqueTickers || uniqueTickers.length === 0) {
       setPrices({});
+      setLastUpdated(null);
+      setLoading(false);
       return;
     }
 
-    const uniqueTickers = [...new Set(tickers.filter(t => t && typeof t === 'string' && t.trim()))];
-    if (uniqueTickers.length === 0) {
-      setPrices({});
-      return;
-    }
-
-    const fetchPrices = async () => {
-      setLoading(true);
-      setError(null);
+    let cancelled = false;
+    let intervalId: number | null = null;
+    const fetchPrices = async ({ background = false } = {}) => {
+      if (!background) {
+        setLoading(true);
+        setError(null);
+      }
       try {
         const result = await pricingAPI.getMultipleStockPrices(uniqueTickers);
+        if (cancelled) return;
+
         const fetchedPrices: Record<string, StockPriceEntry> = {};
         if (result?.results) {
           for (const [ticker, data] of Object.entries(result.results)) {
             if (data && typeof (data as any).price === 'number' && (data as any).price > 0) {
-              fetchedPrices[ticker.toUpperCase()] = {
+              const upperTicker = ticker.toUpperCase();
+              fetchedPrices[upperTicker] = {
                 price: (data as any).price,
                 currency: (data as any).currency || 'USD',
                 name: (data as any).name,
                 shortName: (data as any).shortName,
                 sector: (data as any).sector,
                 industry: (data as any).industry,
-                change: (data as any).change,
-                changePercent: (data as any).changePercent,
+                change: typeof (data as any).change === 'number' ? (data as any).change : undefined,
+                changePercent: typeof (data as any).changePercent === 'number' ? (data as any).changePercent : undefined,
                 previousClose: (data as any).previousClose,
                 marketState: (data as any).marketState,
               };
             }
           }
         }
-        setPrices(fetchedPrices);
+
+        setPrices((prev) => {
+          const requested = new Set(uniqueTickers);
+          const next = { ...prev };
+          let hasChanges = false;
+
+          Object.keys(next).forEach((key) => {
+            if (!requested.has(key)) {
+              delete next[key];
+              hasChanges = true;
+            }
+          });
+
+          requested.forEach((ticker) => {
+            const fresh = fetchedPrices[ticker];
+            if (fresh) {
+              const prevEntry = next[ticker];
+              if (!prevEntry || prevEntry.price !== fresh.price || prevEntry.previousClose !== fresh.previousClose) {
+                next[ticker] = fresh;
+                hasChanges = true;
+              }
+            }
+          });
+
+          return hasChanges ? next : prev;
+        });
+        setLastUpdated(result?.timestamp || Date.now());
+        setError(null);
       } catch (err) {
         console.error('Failed to fetch stock prices:', err);
-        setError(err);
+        if (!cancelled) {
+          setError(err);
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled && !background) {
+          setLoading(false);
+        }
       }
     };
 
     fetchPrices();
-  }, [JSON.stringify(tickers)]);
+
+    if (refreshIntervalMs > 0) {
+      intervalId = window.setInterval(() => {
+        fetchPrices({ background: true });
+      }, refreshIntervalMs);
+    }
+
+    return () => {
+      cancelled = true;
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [tickerKey, refreshIntervalMs, uniqueTickers]);
 
   const getPrice = useCallback((ticker?: string | null) => {
     if (!ticker) return null;
@@ -156,6 +226,7 @@ export function useStockPrices(tickers: string[] | undefined) {
     error,
     getPrice,
     getPriceData,
+    lastUpdated,
   };
 }
 

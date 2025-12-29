@@ -66,7 +66,7 @@ export default function Dashboard() {
   const { convertToUSD = (v: number) => v, loading: ratesLoading = false } = useExchangeRates() || {};
   
   const stockTickers = useMemo(() => stocks.map(s => s.ticker).filter(Boolean), [stocks]);
-  const { prices: stockPrices = {}, loading: stockPricesLoading } = useStockPrices(stockTickers);
+  const { prices: stockPrices = {}, loading: stockPricesLoading } = useStockPrices(stockTickers, { refreshIntervalMs: 60000 });
   const { prices: bondPrices = {}, loading: bondPricesLoading } = useBondPrices(bonds);
 
   const isLoadingPrices = ratesLoading || stockPricesLoading || bondPricesLoading;
