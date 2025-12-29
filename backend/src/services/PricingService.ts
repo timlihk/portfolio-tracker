@@ -226,6 +226,21 @@ class PricingService {
     try {
       logger.info(`Fetching price for ${upperTicker} from Yahoo Finance`);
 
+      const quoteResponse = await fetch(
+        `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(upperTicker)}`,
+        {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          }
+        }
+      );
+
+      let quoteResult: YahooQuoteResult | null = null;
+      if (quoteResponse.ok) {
+        const quoteData = await quoteResponse.json() as YahooQuoteResponse;
+        quoteResult = quoteData.quoteResponse?.result?.[0] ?? null;
+      }
+
       const response = await fetch(
         `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(upperTicker)}?interval=1d&range=1d`,
         {
@@ -251,7 +266,7 @@ class PricingService {
       }
 
       const meta = result.meta;
-      const quote = result.indicators?.quote?.[0];
+      const chartQuote = result.indicators?.quote?.[0];
 
       // Fetch additional info (sector, industry) from quoteSummary API
       let sector: string | null = null;
@@ -280,34 +295,49 @@ class PricingService {
         logger.warn(`Could not fetch sector info for ${upperTicker}:`, { error: error.message });
       }
 
-      const livePrice = meta.regularMarketPrice ?? meta.previousClose ?? 0;
-      const previousClose = meta.previousClose ?? livePrice;
+      const toNumber = (value: unknown): number | null => {
+        const num = Number(value);
+        return Number.isFinite(num) ? num : null;
+      };
+
+      const livePrice =
+        toNumber(quoteResult?.regularMarketPrice) ??
+        meta.regularMarketPrice ??
+        meta.previousClose ??
+        0;
+
+      const previousClose =
+        toNumber(quoteResult?.regularMarketPreviousClose) ??
+        meta.previousClose ??
+        livePrice;
+
       const changeValue =
-        meta.regularMarketPrice != null && meta.previousClose != null
-          ? meta.regularMarketPrice - meta.previousClose
-          : (previousClose != null ? livePrice - previousClose : 0);
+        toNumber(quoteResult?.regularMarketChange) ??
+        (livePrice != null && previousClose != null ? livePrice - previousClose : 0);
+
       const changePercent =
-        previousClose && previousClose !== 0
+        toNumber(quoteResult?.regularMarketChangePercent) ??
+        (previousClose && previousClose !== 0
           ? (changeValue / previousClose) * 100
-          : 0;
+          : 0);
 
       const priceData: StockPriceData = {
         ticker: upperTicker,
         price: livePrice,
-        currency: meta.currency ?? 'USD',
-        name: longName ?? meta.shortName ?? meta.longName ?? upperTicker,
-        shortName: meta.shortName ?? upperTicker,
+        currency: quoteResult?.currency ?? meta.currency ?? 'USD',
+        name: longName ?? quoteResult?.longName ?? meta.shortName ?? meta.longName ?? upperTicker,
+        shortName: quoteResult?.shortName ?? meta.shortName ?? upperTicker,
         sector: sector,
         industry: industry,
-        exchange: meta.exchangeName ?? 'Unknown',
+        exchange: quoteResult?.fullExchangeName ?? meta.exchangeName ?? 'Unknown',
         change: changeValue,
         changePercent,
         previousClose,
-        open: quote?.open?.[0] ?? undefined,
-        high: quote?.high?.[0] ?? undefined,
-        low: quote?.low?.[0] ?? undefined,
-        volume: quote?.volume?.[0] ?? undefined,
-        marketState: meta.marketState,
+        open: toNumber(quoteResult?.regularMarketOpen) ?? chartQuote?.open?.[0] ?? undefined,
+        high: toNumber(quoteResult?.regularMarketDayHigh) ?? chartQuote?.high?.[0] ?? undefined,
+        low: toNumber(quoteResult?.regularMarketDayLow) ?? chartQuote?.low?.[0] ?? undefined,
+        volume: toNumber(quoteResult?.regularMarketVolume) ?? chartQuote?.volume?.[0] ?? undefined,
+        marketState: quoteResult?.marketState ?? meta.marketState,
         cached: false,
         timestamp: Date.now()
       };
@@ -488,3 +518,27 @@ class PricingService {
 // Export singleton instance
 export const pricingService = new PricingService();
 export default PricingService;
+interface YahooQuoteResult {
+  symbol?: string;
+  regularMarketPrice?: number;
+  regularMarketPreviousClose?: number;
+  regularMarketChange?: number;
+  regularMarketChangePercent?: number;
+  regularMarketOpen?: number;
+  regularMarketDayHigh?: number;
+  regularMarketDayLow?: number;
+  regularMarketVolume?: number;
+  currency?: string;
+  shortName?: string;
+  longName?: string;
+  fullExchangeName?: string;
+  marketState?: string;
+  marketCap?: number;
+}
+
+interface YahooQuoteResponse {
+  quoteResponse?: {
+    result?: YahooQuoteResult[];
+    error?: unknown;
+  };
+}
