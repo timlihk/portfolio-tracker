@@ -545,6 +545,7 @@ class PricingService {
   clearCache(): void {
     this.priceCache.clear();
     this.bondPriceCache.clear();
+    this.profileCache.clear();
     logger.info('Price cache cleared');
   }
 
