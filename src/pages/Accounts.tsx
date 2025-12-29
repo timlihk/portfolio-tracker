@@ -301,7 +301,8 @@ export default function Accounts() {
     const accountCash = cashDeposits.filter(c => c.account === accountName);
     
     const stocksValue = accountStocks.reduce((sum, s) => {
-      const price = Number(stockPrices[s.ticker]?.price) || Number(s.currentPrice) || Number(s.averageCost) || 0;
+      const tickerKey = s.ticker ? s.ticker.toUpperCase() : s.ticker;
+      const price = Number(stockPrices[tickerKey || '']?.price) || Number(s.currentPrice) || Number(s.averageCost) || 0;
       const value = Number(s.shares) * price;
       return sum + convertToUSD(value, s.currency);
     }, 0);
@@ -334,7 +335,8 @@ export default function Accounts() {
   const unassignedBonds = bonds.filter(b => !b.account);
   const unassignedValue =
     unassignedStocks.reduce((sum, s) => {
-      const price = Number(stockPrices[s.ticker]?.price) || Number(s.currentPrice) || Number(s.averageCost) || 0;
+      const tickerKey = s.ticker ? s.ticker.toUpperCase() : s.ticker;
+      const price = Number(stockPrices[tickerKey || '']?.price) || Number(s.currentPrice) || Number(s.averageCost) || 0;
       return sum + convertToUSD(Number(s.shares) * price, s.currency);
     }, 0) +
     unassignedBonds.reduce((sum, b) => sum + convertToUSD(getBondMarketValue(b), b.currency), 0);

@@ -142,35 +142,30 @@ export function useStockPrices(
           };
           for (const [ticker, data] of Object.entries(result.results)) {
             const price = toNumber((data as any)?.price);
-            if (price != null && price > 0) {
-              const upperTicker = ticker.toUpperCase();
-              const previousClose = toNumber((data as any)?.previousClose);
-              const changeValue =
-                typeof (data as any).change === "number"
-                  ? (data as any).change
-                  : price != null && previousClose != null
-                  ? price - previousClose
-                  : undefined;
-              const changePercent =
-                typeof (data as any).changePercent === "number"
-                  ? (data as any).changePercent
-                  : changeValue != null && previousClose != null && previousClose !== 0
-                  ? (changeValue / previousClose) * 100
-                  : undefined;
-              fetchedPrices[upperTicker] = {
-                price,
-                currency: (data as any).currency || "USD",
-                name: (data as any).name,
-                shortName: (data as any).shortName,
-                sector: (data as any).sector,
-                industry: (data as any).industry,
-                change: changeValue,
-                changePercent,
-                previousClose: previousClose ?? undefined,
-                marketState: (data as any).marketState,
-                timestamp: (data as any).timestamp || Date.now()
-              };
-            }
+            if (price == null || price <= 0) continue;
+            const upperTicker = ticker.toUpperCase();
+            const previousClose = toNumber((data as any)?.previousClose);
+            const apiChange = toNumber((data as any)?.change);
+            const changeValue = apiChange ?? (price != null && previousClose != null ? price - previousClose : null);
+            const apiChangePercent = toNumber((data as any)?.changePercent);
+            const changePercent =
+              apiChangePercent ??
+              (changeValue != null && previousClose != null && previousClose !== 0
+                ? (changeValue / previousClose) * 100
+                : null);
+            fetchedPrices[upperTicker] = {
+              price,
+              currency: (data as any).currency || "USD",
+              name: (data as any).name,
+              shortName: (data as any).shortName,
+              sector: (data as any).sector,
+              industry: (data as any).industry,
+              change: changeValue ?? undefined,
+              changePercent: changePercent ?? undefined,
+              previousClose: previousClose ?? undefined,
+              marketState: (data as any).marketState,
+              timestamp: (data as any).timestamp || Date.now()
+            };
           }
         }
 
