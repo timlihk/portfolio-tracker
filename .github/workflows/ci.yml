@@ -79,7 +79,7 @@
             DATABASE_URL: postgresql://test:test@localhost:5432/portfolio_test
           run: npx --prefix backend prisma db push
 
-        - name: Run E2E tests
+        - name: Build application
           env:
             DATABASE_URL: postgresql://test:test@localhost:5432/portfolio_test
             JWT_SECRET: ci-test-secret-key
@@ -89,7 +89,45 @@
             CI: true
           run: |
             npm run build:all
+
+        - name: Start backend server
+          env:
+            DATABASE_URL: postgresql://test:test@localhost:5432/portfolio_test
+            JWT_SECRET: ci-test-secret-key
+            SHARED_SECRET: e2e-test-secret
+            E2E_SHARED_SECRET: e2e-test-secret
+            NODE_ENV: test
+            CI: true
+            PORT: 3001
+          run: |
+            cd backend
+            npm start &
+            SERVER_PID=$!
+            echo "Server started with PID: $SERVER_PID"
+            echo "SERVER_PID=$SERVER_PID" >> $GITHUB_ENV
+            # Wait for server to be ready
+            timeout 30 bash -c 'until curl -s http://localhost:3001/api/health > /dev/null; do sleep 1; done'
+            echo "Backend server is ready"
+
+        - name: Run E2E tests
+          env:
+            DATABASE_URL: postgresql://test:test@localhost:5432/portfolio_test
+            JWT_SECRET: ci-test-secret-key
+            SHARED_SECRET: e2e-test-secret
+            E2E_SHARED_SECRET: e2e-test-secret
+            NODE_ENV: test
+            CI: true
+            E2E_BASE_URL: http://localhost:3001
+          run: |
             npm run test:e2e
+
+        - name: Stop backend server
+          if: always()
+          run: |
+            if [ -n "$SERVER_PID" ]; then
+              echo "Stopping server with PID: $SERVER_PID"
+              kill $SERVER_PID 2>/dev/null || true
+            fi
 
         - name: Upload Playwright report
           uses: actions/upload-artifact@v4

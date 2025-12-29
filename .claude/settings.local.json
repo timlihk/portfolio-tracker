@@ -93,7 +93,9 @@
       "Bash(git tag:*)",
       "WebSearch",
       "Bash(npm test)",
-      "Bash(nslookup:*)"
+      "Bash(nslookup:*)",
+      "Bash(npx vitest run:*)",
+      "Bash(npx tsx:*)"
     ],
     "deny": [],
     "ask": []
