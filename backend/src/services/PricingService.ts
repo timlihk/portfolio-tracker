@@ -20,6 +20,7 @@ interface CachedPrice extends StockPriceData {
 interface YahooChartMeta {
   regularMarketPrice?: number;
   previousClose?: number;
+  chartPreviousClose?: number;
   currency?: string;
   shortName?: string;
   longName?: string;
@@ -65,6 +66,31 @@ interface YahooSummaryResponse {
       assetProfile?: YahooAssetProfile;
       quoteType?: YahooQuoteType;
     }>;
+  };
+}
+
+interface YahooQuoteResult {
+  symbol?: string;
+  regularMarketPrice?: number;
+  regularMarketPreviousClose?: number;
+  regularMarketChange?: number;
+  regularMarketChangePercent?: number;
+  regularMarketOpen?: number;
+  regularMarketDayHigh?: number;
+  regularMarketDayLow?: number;
+  regularMarketVolume?: number;
+  currency?: string;
+  shortName?: string;
+  longName?: string;
+  fullExchangeName?: string;
+  marketState?: string;
+  marketCap?: number;
+}
+
+interface YahooQuoteResponse {
+  quoteResponse?: {
+    result?: YahooQuoteResult[];
+    error?: unknown;
   };
 }
 
@@ -303,11 +329,13 @@ class PricingService {
       const livePrice =
         toNumber(quoteResult?.regularMarketPrice) ??
         meta.regularMarketPrice ??
+        meta.chartPreviousClose ??
         meta.previousClose ??
         0;
 
       const previousClose =
         toNumber(quoteResult?.regularMarketPreviousClose) ??
+        meta.chartPreviousClose ??
         meta.previousClose ??
         livePrice;
 
@@ -518,27 +546,3 @@ class PricingService {
 // Export singleton instance
 export const pricingService = new PricingService();
 export default PricingService;
-interface YahooQuoteResult {
-  symbol?: string;
-  regularMarketPrice?: number;
-  regularMarketPreviousClose?: number;
-  regularMarketChange?: number;
-  regularMarketChangePercent?: number;
-  regularMarketOpen?: number;
-  regularMarketDayHigh?: number;
-  regularMarketDayLow?: number;
-  regularMarketVolume?: number;
-  currency?: string;
-  shortName?: string;
-  longName?: string;
-  fullExchangeName?: string;
-  marketState?: string;
-  marketCap?: number;
-}
-
-interface YahooQuoteResponse {
-  quoteResponse?: {
-    result?: YahooQuoteResult[];
-    error?: unknown;
-  };
-}
