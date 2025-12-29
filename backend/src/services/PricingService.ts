@@ -546,7 +546,7 @@ class PricingService {
     this.priceCache.clear();
     this.bondPriceCache.clear();
     this.profileCache.clear();
-    logger.info('Price cache cleared');
+    logger.info('Price, bond, and profile caches cleared');
   }
 
   /**
@@ -554,21 +554,31 @@ class PricingService {
    */
   getCacheStats(): CacheStats {
     const now = Date.now();
-    let validEntries = 0;
-    let expiredEntries = 0;
-
+    let priceValid = 0;
+    let priceExpired = 0;
     for (const [, value] of this.priceCache) {
-      if ((now - value.timestamp) < this.CACHE_TTL) {
-        validEntries++;
-      } else {
-        expiredEntries++;
-      }
+      if ((now - value.timestamp) < this.CACHE_TTL) priceValid++;
+      else priceExpired++;
+    }
+
+    let bondValid = 0;
+    let bondExpired = 0;
+    for (const [, value] of this.bondPriceCache) {
+      if ((now - value.timestamp) < this.BOND_CACHE_TTL) bondValid++;
+      else bondExpired++;
+    }
+
+    let profileValid = 0;
+    let profileExpired = 0;
+    for (const [, value] of this.profileCache) {
+      if ((now - value.timestamp) < this.PROFILE_CACHE_TTL) profileValid++;
+      else profileExpired++;
     }
 
     return {
-      totalEntries: this.priceCache.size,
-      validEntries,
-      expiredEntries,
+      totalEntries: this.priceCache.size + this.bondPriceCache.size + this.profileCache.size,
+      validEntries: priceValid + bondValid + profileValid,
+      expiredEntries: priceExpired + bondExpired + profileExpired,
       cacheTTL: this.CACHE_TTL,
       circuitBreakerStatus: this.isCircuitOpen() ? 'OPEN' : 'CLOSED',
       failureCount: this.failureCount
