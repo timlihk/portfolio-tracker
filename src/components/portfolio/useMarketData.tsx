@@ -140,6 +140,9 @@ export function useStockPrices(
             const num = Number(value);
             return Number.isFinite(num) ? num : null;
           };
+
+          // Normalize each quote so downstream hooks always get numeric deltas
+          // even when Yahoo leaves change fields blank for non-US tickers.
           for (const [ticker, data] of Object.entries(result.results)) {
             const price = toNumber((data as any)?.price);
             if (price == null || price <= 0) continue;
