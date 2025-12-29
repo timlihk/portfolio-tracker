@@ -122,6 +122,16 @@ JWT_SECRET=your-super-secret-jwt-key-here
 FRONTEND_URL=http://localhost:5173
 ```
 
+### Cache Monitoring & Pricing Auth
+
+The pricing service maintains three caches with different TTLs (stock prices: 5 min, bond prices: 10 min, profile metadata: 6 hrs). Cache stats exposed by the admin endpoint now include counts for all three layers. When clearing caches (POST `/api/pricing/cache/clear`), all layers are flushed together and logs will report “Price, bond, and profile caches cleared”.  
+
+All `/api/pricing/*` routes require authentication in production. You can either:
+1. Set `SHARED_SECRET` (plus optional `SHARED_SECRET_USER_*`) for service-to-service authentication, or
+2. Set `JWT_SECRET` so users authenticated via the frontend can call the pricing APIs with Bearer tokens.
+
+If neither variable is set (local development), the middleware becomes a no-op so you can test without extra headers.
+
 ## Troubleshooting
 
 ### Common Issues
