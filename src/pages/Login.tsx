@@ -1,12 +1,9 @@
-// @ts-nocheck
 import { useState } from 'react';
 import type React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { portfolioAPI, authAPI } from '@/api/backendClient';
 import { Loader2 } from 'lucide-react';
 
 export default function Login() {
-  const navigate = useNavigate();
   const [secret, setSecret] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string>('');
@@ -32,8 +29,9 @@ export default function Login() {
       setStatus('Connected. Redirecting...');
       // Full page reload to re-initialize AuthContext with the new cookie
       setTimeout(() => window.location.href = '/', 500);
-    } catch (err: any) {
-      setError(err?.message || 'Could not verify access. Please check the secret phrase.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Could not verify access. Please check the secret phrase.';
+      setError(message);
     } finally {
       setIsSubmitting(false);
     }

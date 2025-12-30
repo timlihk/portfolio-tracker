@@ -23,6 +23,18 @@ const mockPrisma = vi.hoisted(() => ({
     update: vi.fn(),
     delete: vi.fn()
   },
+  bond: {
+    findMany: vi.fn()
+  },
+  peFund: {
+    findMany: vi.fn()
+  },
+  peDeal: {
+    findMany: vi.fn()
+  },
+  account: {
+    findMany: vi.fn()
+  },
   cashDeposit: {
     findMany: vi.fn(),
     count: vi.fn(),
@@ -79,6 +91,11 @@ describeOrSkip('Portfolio routes integration (shared secret)', () => {
     });
     mockPrisma.stock.delete.mockResolvedValue({ id: 2 });
 
+    mockPrisma.bond.findMany.mockResolvedValue([]);
+    mockPrisma.peFund.findMany.mockResolvedValue([]);
+    mockPrisma.peDeal.findMany.mockResolvedValue([]);
+    mockPrisma.account.findMany.mockResolvedValue([]);
+
     mockPrisma.cashDeposit.findMany.mockResolvedValue([
       { id: 1, userId: 1, name: 'Cash', amount: 1000, currency: 'USD', account: 'Main', createdAt: new Date(), updatedAt: new Date() }
     ]);
@@ -120,6 +137,27 @@ describeOrSkip('Portfolio routes integration (shared secret)', () => {
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
     expect(mockPrisma.stock.findMany).toHaveBeenCalled();
+  });
+
+  it('returns dashboard data with shared secret auth', async () => {
+    const res = await request(app)
+      .get('/api/v1/portfolio/dashboard')
+      .set(baseHeaders);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      stocks: expect.any(Array),
+      bonds: expect.any(Array),
+      peFunds: expect.any(Array),
+      peDeals: expect.any(Array),
+      liquidFunds: expect.any(Array),
+      cashDeposits: expect.any(Array),
+      liabilities: expect.any(Array),
+      accounts: expect.any(Array)
+    });
+    expect(mockPrisma.stock.findMany).toHaveBeenCalled();
+    expect(mockPrisma.bond.findMany).toHaveBeenCalled();
+    expect(mockPrisma.account.findMany).toHaveBeenCalled();
   });
 
   it('creates and updates a stock', async () => {

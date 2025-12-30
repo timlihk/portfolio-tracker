@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { entities, pricingAPI } from '@/api/backendClient';
@@ -36,6 +35,10 @@ type PaginatedResponse<T> = {
   };
 };
 
+type StockFormData = Partial<Stock> & {
+  [key: string]: unknown;
+};
+
 const getStockFields = (accounts: Account[], sectorOptions: string[]) => [
   { name: 'ticker', label: 'Ticker Symbol', required: true, placeholder: 'AAPL' },
   { name: 'companyName', label: 'Company Name', placeholder: 'Apple Inc.' },
@@ -51,7 +54,7 @@ const getStockFields = (accounts: Account[], sectorOptions: string[]) => [
 
 export default function Stocks() {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [formData, setFormData] = useState<StockFormData>({});
   const [deleteTarget, setDeleteTarget] = useState<Stock | null>(null);
   const [tickerLookupLoading, setTickerLookupLoading] = useState(false);
   const [tickerError, setTickerError] = useState('');
@@ -65,7 +68,7 @@ export default function Stocks() {
 
   const queryClient = useQueryClient();
 
-  const { data: stocksResponse, isFetching: stocksLoading, isError: stocksError, error: stocksErrorObj } = useQuery<PaginatedResponse<Stock>>({
+  const { data: stocksResponse, isFetching: stocksLoading, isError: stocksError, error: stocksErrorObj } = useQuery<PaginatedResponse<Stock>, Error>({
     queryKey: ['stocks', page, limit, accountFilter, sectorFilter],
     queryFn: () => entities.Stock.listWithPagination({
       page,
@@ -78,7 +81,7 @@ export default function Stocks() {
   const stocks = stocksResponse?.data || [];
   const pagination = stocksResponse?.pagination || { total: stocks.length, page, limit };
 
-  const { data: accounts = [], isError: accountsError, error: accountsErrorObj } = useQuery<Account[]>({
+  const { data: accounts = [], isError: accountsError, error: accountsErrorObj } = useQuery<Account[], Error>({
     queryKey: ['accounts'],
     queryFn: () => entities.Account.list()
   });
@@ -213,14 +216,15 @@ export default function Stocks() {
         }));
       }
     } catch (error) {
-      setTickerError(error?.message || 'Ticker lookup failed');
+      const message = error instanceof Error ? error.message : 'Ticker lookup failed';
+      setTickerError(message);
     } finally {
       setTickerLookupLoading(false);
     }
   }, []);
 
   // Handle form field changes with auto-lookup for ticker
-  const handleFieldChange = useCallback((name: string, value: any) => {
+  const handleFieldChange = useCallback((name: string, value: unknown) => {
     setFormData(prev => {
       if (name === 'ticker') {
         setTickerError('');
@@ -456,7 +460,11 @@ export default function Stocks() {
     return sum + convertToUSD(value || 0, s.currency);
   }, 0);
   const totalPositions = total || stocks.length;
-  const loadError = stocksError ? (stocksErrorObj?.message || 'Failed to load stocks') : accountsError ? (accountsErrorObj?.message || 'Failed to load accounts') : '';
+  const loadError = stocksError
+    ? (stocksErrorObj?.message || 'Failed to load stocks')
+    : accountsError
+      ? (accountsErrorObj?.message || 'Failed to load accounts')
+      : '';
 
   return (
     <div className="min-h-screen bg-slate-50/50">

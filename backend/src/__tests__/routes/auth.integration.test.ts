@@ -79,7 +79,7 @@ describeOrSkip('Auth integration (shared secret + JWT)', () => {
   });
 
   it('returns profile when shared secret cookie/header is valid', async () => {
-    mockPrisma.user.findUnique.mockResolvedValue({
+    mockPrisma.user.upsert.mockResolvedValue({
       id: 1,
       email: 'test@example.com',
       name: 'Tester',
@@ -92,5 +92,6 @@ describeOrSkip('Auth integration (shared secret + JWT)', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.email).toBe('test@example.com');
+    expect(mockPrisma.user.upsert).toHaveBeenCalled();
   });
 });
