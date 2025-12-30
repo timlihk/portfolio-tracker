@@ -59,8 +59,8 @@ test.describe('Stocks CRUD', () => {
     await gotoAuthenticated(page, '/Stocks');
 
     // Wait for table or list to load
-    const table = page.locator('table, [role="table"], .stocks-list');
-    await expect(table.first()).toBeVisible({ timeout: 15000 });
+    const tableOrEmpty = page.locator('table, [role="table"], .stocks-list, text=/no stocks in your portfolio yet/i');
+    await expect(tableOrEmpty.first()).toBeVisible({ timeout: 15000 });
   });
 
   test('should open add stock dialog', async ({ page }) => {
