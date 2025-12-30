@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useMemo, useState, useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { entities } from '@/api/backendClient';
@@ -44,9 +43,26 @@ import type React from 'react';
 
 const ACCOUNT_TYPES = ['Brokerage', 'IRA', '401k', 'Roth IRA', 'Bank', 'Other'];
 
+type PaginatedResponse<T> = {
+  data: T[];
+  pagination?: {
+    total?: number;
+    page?: number;
+    limit?: number;
+  };
+};
+
+type AccountFormData = Partial<Account> & {
+  [key: string]: unknown;
+};
+
+type BondPriceData = {
+  pricePct?: number;
+};
+
 export default function Accounts() {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState<Partial<Account>>({});
+  const [formData, setFormData] = useState<AccountFormData>({});
   const [deleteTarget, setDeleteTarget] = useState<Account | null>(null);
   const [expandedAccounts, setExpandedAccounts] = useState<Record<string, boolean>>({});
   const [page, setPage] = useState<number>(1);
@@ -54,16 +70,7 @@ export default function Accounts() {
 
   const queryClient = useQueryClient();
 
-  type PaginatedResponse<T> = {
-    data: T[];
-    pagination?: {
-      total?: number;
-      page?: number;
-      limit?: number;
-    };
-  };
-
-  const { data: accountsResponse = [] , isFetching: accountsLoading } = useQuery<PaginatedResponse<Account> | Account[]>({
+  const { data: accountsResponse = [] , isFetching: accountsLoading } = useQuery<PaginatedResponse<Account> | Account[], Error>({
     queryKey: ['accounts', page, limit],
     queryFn: () => entities.Account.listWithPagination({ page, limit }),
     placeholderData: keepPreviousData
@@ -75,30 +82,30 @@ export default function Accounts() {
     ? accountsResponse?.pagination || { total: accounts.length, page, limit }
     : { total: accounts.length, page, limit };
 
-  const { data: stocks = [] } = useQuery<Stock[]>({
+  const { data: stocks = [] } = useQuery<Stock[], Error>({
     queryKey: ['stocks'],
     queryFn: () => entities.Stock.list()
   });
 
-  const { data: bonds = [] } = useQuery<Bond[]>({
+  const { data: bonds = [] } = useQuery<Bond[], Error>({
     queryKey: ['bonds'],
     queryFn: () => entities.Bond.list()
   });
 
-  const { data: liabilities = [] } = useQuery<Liability[]>({
+  const { data: liabilities = [] } = useQuery<Liability[], Error>({
     queryKey: ['liabilities'],
     queryFn: () => entities.Liability.list()
   });
 
-  const { data: cashDeposits = [] } = useQuery<CashDeposit[]>({
+  const { data: cashDeposits = [] } = useQuery<CashDeposit[], Error>({
     queryKey: ['cashDeposits'],
     queryFn: () => entities.CashDeposit.list()
   });
 
-  const { convertToUSD } = useExchangeRates();
+  const { convertToUSD = (value: number) => value } = useExchangeRates() || {};
   
   const stockTickers = stocks.map(s => s.ticker).filter(Boolean);
-  const { prices: stockPrices } = useStockPrices(stockTickers, { refreshIntervalMs: 60000 });
+  const { prices: stockPrices = {} } = useStockPrices(stockTickers, { refreshIntervalMs: 60000 });
   const { prices: bondPrices = {} } = useBondPrices(bonds);
 
   // Helper to get current price (real-time or manual)
@@ -111,8 +118,10 @@ export default function Accounts() {
 
   const getBondPricePct = (bond: Bond) => {
     if (Number.isFinite(Number(bond.currentValue))) return Number(bond.currentValue);
-    const entry = bondPrices[bond.id] || bondPrices[bond.isin] || bondPrices[bond.name];
-    if (entry && typeof entry === 'object' && Number.isFinite(entry.pricePct)) return Number(entry.pricePct);
+    const entry = bondPrices[bond.id] || bondPrices[bond.isin ?? ''] || bondPrices[bond.name];
+    if (entry && typeof entry === 'object' && Number.isFinite((entry as BondPriceData).pricePct)) {
+      return Number((entry as BondPriceData).pricePct);
+    }
     if (entry != null && Number.isFinite(Number(entry))) return Number(entry);
     if (Number.isFinite(Number(bond.purchasePrice))) return Number(bond.purchasePrice);
     return 100;

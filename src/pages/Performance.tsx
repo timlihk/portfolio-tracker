@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { entities } from '@/api/backendClient';
@@ -17,7 +16,7 @@ import { format, subMonths, subYears, startOfMonth, eachMonthOfInterval, isAfter
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import type { Stock, Bond, PeFund, PeDeal, LiquidFund, CashDeposit } from '@/types';
+import type { Stock, Bond, PeFund, PeDeal, LiquidFund, CashDeposit, StockPriceData } from '@/types';
 
 const TIME_PERIODS = [
   { label: '1 Year', value: '1y', months: 12 },
@@ -41,6 +40,39 @@ const ASSET_COLORS = {
   'Cash': '#6366f1',
 };
 
+type BondPriceData = {
+  pricePct?: number;
+};
+
+type ChartPoint = {
+  date: string;
+  Stocks: number;
+  Bonds: number;
+  'PE Funds': number;
+  'PE Deals': number;
+  'Liquid Funds': number;
+  Cash: number;
+  total: number;
+};
+
+type AssetClass = keyof typeof ASSET_COLORS;
+
+type Holding = {
+  id: number;
+  ticker: string | null;
+  name: string | null;
+  assetClass: AssetClass;
+  price: number;
+  quantity: number | string | null;
+  value: number;
+  cost: number;
+  capitalGains: number;
+  dividends: number;
+  currency: string;
+  return: number;
+  returnPercent: number;
+};
+
 const formatCurrency = (value: number) => {
   if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
   if (value >= 1000) return `${(value / 1000).toFixed(0)}k`;
@@ -62,37 +94,37 @@ export default function Performance() {
   const [selectedAssetClass, setSelectedAssetClass] = useState<string>('all');
 
   // Fetch all portfolio data
-  const { data: stocks = [], isLoading: stocksLoading } = useQuery<Stock[]>({
+  const { data: stocks = [], isLoading: stocksLoading } = useQuery<Stock[], Error>({
     queryKey: ['stocks'],
     queryFn: () => entities.Stock.list()
   });
 
-  const { data: bonds = [], isLoading: bondsLoading } = useQuery<Bond[]>({
+  const { data: bonds = [], isLoading: bondsLoading } = useQuery<Bond[], Error>({
     queryKey: ['bonds'],
     queryFn: () => entities.Bond.list()
   });
 
-  const { data: peFunds = [], isLoading: peFundsLoading } = useQuery<PeFund[]>({
+  const { data: peFunds = [], isLoading: peFundsLoading } = useQuery<PeFund[], Error>({
     queryKey: ['peFunds'],
     queryFn: () => entities.PEFund.list()
   });
 
-  const { data: peDeals = [], isLoading: peDealsLoading } = useQuery<PeDeal[]>({
+  const { data: peDeals = [], isLoading: peDealsLoading } = useQuery<PeDeal[], Error>({
     queryKey: ['peDeals'],
     queryFn: () => entities.PEDeal.list()
   });
 
-  const { data: liquidFunds = [], isLoading: liquidFundsLoading } = useQuery<LiquidFund[]>({
+  const { data: liquidFunds = [], isLoading: liquidFundsLoading } = useQuery<LiquidFund[], Error>({
     queryKey: ['liquidFunds'],
     queryFn: () => entities.LiquidFund.list()
   });
 
-  const { data: cashDeposits = [], isLoading: cashLoading } = useQuery<CashDeposit[]>({
+  const { data: cashDeposits = [], isLoading: cashLoading } = useQuery<CashDeposit[], Error>({
     queryKey: ['cashDeposits'],
     queryFn: () => entities.CashDeposit.list()
   });
 
-  const { convertToUSD } = useExchangeRates();
+  const { convertToUSD = (value: number) => value } = useExchangeRates() || {};
   const stockTickers = useMemo(() => stocks.map(s => s.ticker).filter(Boolean), [stocks]);
   const { prices: stockPrices = {} } = useStockPrices(stockTickers);
   const { prices: bondPrices = {} } = useBondPrices(bonds);
@@ -102,7 +134,9 @@ export default function Performance() {
   const getBondPricePct = (bond: Bond) => {
     if (Number.isFinite(Number(bond.currentValue))) return Number(bond.currentValue);
     const entry = bondPrices[bond.id] || bondPrices[bond.isin] || bondPrices[bond.name];
-    if (entry && typeof entry === 'object' && Number.isFinite(entry.pricePct)) return Number(entry.pricePct);
+    if (entry && typeof entry === 'object' && Number.isFinite((entry as BondPriceData).pricePct)) {
+      return Number((entry as BondPriceData).pricePct);
+    }
     if (entry != null && Number.isFinite(Number(entry))) return Number(entry);
     if (Number.isFinite(Number(bond.purchasePrice))) return Number(bond.purchasePrice);
     return 100;
@@ -120,7 +154,7 @@ export default function Performance() {
   };
 
   // Generate historical data points
-  const chartData = useMemo(() => {
+  const chartData = useMemo<ChartPoint[]>(() => {
     const period = TIME_PERIODS.find(p => p.value === timePeriod);
     const monthsBack = period?.months || 60;
     const endDate = new Date();
@@ -139,7 +173,7 @@ export default function Performance() {
         })
         .reduce((sum, s) => {
           const shares = Number(s.shares) || 0;
-          const price = Number(stockPrices[s.ticker]?.price) || Number(s.currentPrice) || Number(s.averageCost) || 0;
+          const price = Number((stockPrices[s.ticker] as StockPriceData | undefined)?.price) || Number(s.currentPrice) || Number(s.averageCost) || 0;
           // Simulate some historical variance
           const monthsAgo = Math.floor((endDate - date) / (30 * 24 * 60 * 60 * 1000));
           const variance = 1 - (monthsAgo * 0.008 * (Math.random() * 0.5 + 0.75));
@@ -214,11 +248,16 @@ export default function Performance() {
   }, [stocks, bonds, peFunds, peDeals, liquidFunds, cashDeposits, stockPrices, convertToUSD, timePeriod]);
 
   // Calculate current totals and holdings data
-  const { currentValue, holdings, totalGains, totalDividends } = useMemo(() => {
+  const { currentValue, holdings, totalGains, totalDividends } = useMemo<{
+    currentValue: number;
+    holdings: Holding[];
+    totalGains: number;
+    totalDividends: number;
+  }>(() => {
     const stockHoldings = stocks.map(s => {
       const shares = Number(s.shares) || 0;
       const avgCost = Number(s.averageCost) || 0;
-      const currentPrice = Number(stockPrices[s.ticker]?.price) || Number(s.currentPrice) || avgCost;
+      const currentPrice = Number((stockPrices[s.ticker] as StockPriceData | undefined)?.price) || Number(s.currentPrice) || avgCost;
       const value = convertToUSD(shares * currentPrice, s.currency);
       const cost = convertToUSD(shares * avgCost, s.currency);
       const capitalGains = value - cost;
@@ -229,7 +268,7 @@ export default function Performance() {
         id: s.id,
         ticker: s.ticker,
         name: s.companyName,
-        assetClass: 'Stocks',
+        assetClass: 'Stocks' as AssetClass,
         price: currentPrice,
         quantity: shares,
         value,
@@ -253,7 +292,7 @@ export default function Performance() {
         id: b.id,
         ticker: b.isin || b.name,
         name: b.name,
-        assetClass: 'Bonds',
+        assetClass: 'Bonds' as AssetClass,
         price: pricePct,
         quantity: b.faceValue,
         value,
@@ -277,7 +316,7 @@ export default function Performance() {
         id: f.id,
         ticker: f.fundName,
         name: f.fundType || 'PE Fund',
-        assetClass: 'PE Funds',
+        assetClass: 'PE Funds' as AssetClass,
         price: nav,
         quantity: 1,
         value,
@@ -299,7 +338,7 @@ export default function Performance() {
         id: d.id,
         ticker: d.companyName,
         name: d.dealType || 'Direct Investment',
-        assetClass: 'PE Deals',
+        assetClass: 'PE Deals' as AssetClass,
         price: value,
         quantity: 1,
         value,
@@ -321,7 +360,7 @@ export default function Performance() {
         id: f.id,
         ticker: f.fundName,
         name: f.fundType || 'Liquid Fund',
-        assetClass: 'Liquid Funds',
+        assetClass: 'Liquid Funds' as AssetClass,
         price: value,
         quantity: 1,
         value,
@@ -348,12 +387,12 @@ export default function Performance() {
   }, [stocks, bonds, peFunds, peDeals, liquidFunds, stockPrices, convertToUSD]);
 
   // Group holdings by asset class
-  const groupedHoldings = useMemo(() => {
+  const groupedHoldings = useMemo<Record<string, Holding[]>>(() => {
     const filtered = selectedAssetClass === 'all'
       ? holdings
       : holdings.filter(h => h.assetClass === selectedAssetClass);
 
-    const groups = {};
+    const groups: Record<string, Holding[]> = {};
     filtered.forEach(h => {
       if (!groups[h.assetClass]) {
         groups[h.assetClass] = [];
