@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Authentication', () => {
   test('should show login page', async ({ page }) => {
     await page.goto('/login');
-    await expect(page.locator('h1, h2').first()).toContainText(/login|sign in|welcome/i);
+    await expect(page.locator('h1, h2').first()).toContainText(/login|sign in|welcome|secret phrase/i);
   });
 
   test('should reject invalid shared secret', async ({ page }) => {
@@ -38,7 +38,7 @@ test.describe('Authentication', () => {
     await page.locator('button[type="submit"], button:has-text("Login"), button:has-text("Sign")').first().click();
 
     // Should redirect to dashboard
-    await expect(page).toHaveURL(/dashboard|\//i, { timeout: 10000 });
+    await expect(page).not.toHaveURL(/\/login/i, { timeout: 10000 });
 
     // Dashboard should show portfolio content
     await expect(page.locator('text=/portfolio|dashboard|total|assets/i').first()).toBeVisible({ timeout: 10000 });
