@@ -33,4 +33,5 @@ dist-ssr
 .claude/settings.local.json
 start-local.sh
 playwright-report/
+e2e/.auth/
 test-results/
