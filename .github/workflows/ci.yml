@@ -105,9 +105,9 @@
             SERVER_PID=$!
             echo "Server started with PID: $SERVER_PID"
             echo "SERVER_PID=$SERVER_PID" >> $GITHUB_ENV
-            # Wait for server to be ready
-            timeout 30 bash -c 'until curl -s http://localhost:3001/api/health > /dev/null; do sleep 1; done'
-            echo "Backend server is ready"
+            # Wait for server and database to be ready
+            timeout 60 bash -c 'until curl -sf http://localhost:3001/api/ready > /dev/null; do sleep 1; done'
+            echo "Backend server and database are ready"
 
         - name: Run E2E tests
           env:
