@@ -35,10 +35,38 @@ test.describe('Authentication', () => {
     await secretInput.fill(sharedSecret);
 
     // Submit the form
+    const secretResponsePromise = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/v1/auth/shared-secret') &&
+        response.request().method() === 'POST'
+    );
+    const dashboardResponsePromise = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/v1/portfolio/dashboard') &&
+        response.request().method() === 'GET'
+    );
+
     await page.locator('button[type="submit"], button:has-text("Login"), button:has-text("Sign")').first().click();
 
+    const secretResponse = await secretResponsePromise;
+    if (!secretResponse.ok()) {
+      const body = await secretResponse.text().catch(() => '');
+      throw new Error(`Shared-secret API failed: ${secretResponse.status()} ${body}`);
+    }
+
+    const dashboardResponse = await dashboardResponsePromise;
+    if (!dashboardResponse.ok()) {
+      const body = await dashboardResponse.text().catch(() => '');
+      throw new Error(`Dashboard API failed: ${dashboardResponse.status()} ${body}`);
+    }
+
     // Should redirect to dashboard
-    await expect(page).not.toHaveURL(/\/login/i, { timeout: 10000 });
+    try {
+      await expect(page).not.toHaveURL(/\/login/i, { timeout: 10000 });
+    } catch (error) {
+      const errorText = await page.locator('.text-red-600, [role="alert"]').first().textContent().catch(() => '');
+      throw new Error(`Still on login page. Error banner: ${errorText || 'none'}`);
+    }
 
     // Dashboard should show portfolio content
     await expect(page.locator('text=/portfolio|dashboard|total|assets/i').first()).toBeVisible({ timeout: 10000 });
