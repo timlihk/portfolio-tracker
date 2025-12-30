@@ -8,6 +8,8 @@ test.describe('Stocks CRUD', () => {
     const secretInput = page.locator('input[type="password"], input[type="text"]').first();
     await secretInput.fill(sharedSecret);
     await page.locator('button[type="submit"], button:has-text("Login"), button:has-text("Sign")').first().click();
+    await expect(page).not.toHaveURL(/\/login/i, { timeout: 10000 });
+    await expect(page.locator('text=/portfolio|dashboard|total|assets/i').first()).toBeVisible({ timeout: 10000 });
   };
 
   test.beforeEach(async ({ page }) => {
@@ -18,9 +20,6 @@ test.describe('Stocks CRUD', () => {
 
     // Login before each test
     await loginWithSharedSecret(page);
-    await page.goto('/');
-    await expect(page).not.toHaveURL(/\/login/i, { timeout: 10000 });
-    await expect(page.locator('text=/portfolio|dashboard|total|assets/i').first()).toBeVisible({ timeout: 10000 });
   });
 
   test('should navigate to stocks page', async ({ page }) => {
