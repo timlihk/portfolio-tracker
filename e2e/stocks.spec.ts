@@ -15,7 +15,8 @@ test.describe('Stocks CRUD', () => {
       await page.context().addCookies([{
         name: 'shared_secret',
         value: sharedSecret,
-        url: apiOrigin,
+        domain: 'localhost',
+        path: '/',
         httpOnly: true,
       }]);
     } else {
