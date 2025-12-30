@@ -47,6 +47,10 @@ type CashDepositFormData = Partial<CashDeposit> & {
   [key: string]: unknown;
 };
 
+type CashDepositFormData = Partial<CashDeposit> & {
+  [key: string]: unknown;
+};
+
 const getCashFields = (accounts: Account[]) => [
   { name: 'name', label: 'Name', required: true, placeholder: 'Emergency Fund' },
   { name: 'depositType', label: 'Type', type: 'select', options: DEPOSIT_TYPES },
