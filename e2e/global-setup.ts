@@ -1,4 +1,4 @@
-import { chromium } from '@playwright/test';
+import { request } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
 
@@ -18,16 +18,22 @@ export default async function globalSetup() {
   }
 
   const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
-  const browser = await chromium.launch();
-  const context = await browser.newContext({ baseURL: baseUrl });
-  const page = await context.newPage();
+  const apiContext = await request.newContext({ baseURL: baseUrl });
 
-  await page.goto('/login');
-  await page.locator('input[type="password"], input[type="text"]').first().fill(sharedSecret);
-  await page.locator('button[type="submit"], button:has-text("Login"), button:has-text("Sign")').first().click();
-  await page.waitForURL(/^(?!.*\/login).*/i, { timeout: 10000 });
-  await page.waitForSelector('text=/portfolio|dashboard|total|assets/i', { timeout: 10000 });
+  const secretResponse = await apiContext.post('/api/v1/auth/shared-secret', {
+    data: { secret: sharedSecret }
+  });
+  if (!secretResponse.ok()) {
+    const body = await secretResponse.text().catch(() => '');
+    throw new Error(`Global setup failed to set shared secret: ${secretResponse.status()} ${body}`);
+  }
 
-  await context.storageState({ path: storageStatePath });
-  await browser.close();
+  const profileResponse = await apiContext.get('/api/v1/auth/profile');
+  if (!profileResponse.ok()) {
+    const body = await profileResponse.text().catch(() => '');
+    throw new Error(`Global setup failed to fetch profile: ${profileResponse.status()} ${body}`);
+  }
+
+  await apiContext.storageState({ path: storageStatePath });
+  await apiContext.dispose();
 }
