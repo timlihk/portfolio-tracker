@@ -158,6 +158,8 @@ This document tracks remaining technical debt and future improvements.
 - [ ] **Stabilize E2E coverage** - Fix auth flow + data seeding for Playwright
   - E2E now runs manual/scheduled until stability improves
 
+- [ ] **Harden API docs auth** - Validate shared secret/JWT for `/api/docs` in production
+
 - [ ] **Add unit tests for backend routes**
   - Scaffolding exists in `backend/src/__tests__/`
   - Priority: auth, pricing, portfolio CRUD
@@ -180,6 +182,12 @@ This document tracks remaining technical debt and future improvements.
 
 - [ ] **Convert lib files to TypeScript**
   - Files: `src/lib/*.js`
+
+- [ ] **Clean up frontend API client surface**
+  - Remove duplicate `getInsights` export and tighten response types
+
+- [ ] **Normalize currency display**
+  - Fix mojibake currency symbols in `useMarketData.tsx` or use Intl formatting
 
 - [ ] **Migrate Changelog to backend API**
   - Currently uses legacy `base44` client
@@ -218,7 +226,9 @@ This document tracks remaining technical debt and future improvements.
 
 1. **E2E coverage is manual/scheduled** - Tests still flaky for auth + data seeding
 2. **Type casts in useMarketData.tsx** - Uses `any` for API responses (lines 114-126)
-3. **Duplicate toNumber helper** - Exists in multiple hooks
+3. **Currency symbols render incorrectly** - Mojibake in `useMarketData.tsx`
+4. **Swagger docs auth is superficial** - Accepts any `Bearer`/`Shared` prefix
+5. **Duplicate toNumber helper** - Exists in multiple hooks
 
 ---
 
