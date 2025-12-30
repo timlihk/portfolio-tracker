@@ -223,8 +223,15 @@ router.get('/profile', async (req: Request, res: Response) => {
 
     // Shared-secret path (family/demo) — single tenant only
     if (sharedSecret && providedSecret && providedSecret === sharedSecret) {
-      const sharedUser = await prisma.user.findUnique({
+      const sharedUser = await prisma.user.upsert({
         where: { id: singleUserId },
+        update: {},
+        create: {
+          id: singleUserId,
+          email: process.env.SHARED_SECRET_USER_EMAIL || `family${singleUserId}@local`,
+          passwordHash: await bcrypt.hash(crypto.randomUUID(), 12),
+          name: 'Family User'
+        },
         select: {
           id: true,
           email: true,
@@ -232,10 +239,6 @@ router.get('/profile', async (req: Request, res: Response) => {
           createdAt: true
         }
       });
-
-      if (!sharedUser) {
-        return res.status(404).json({ error: 'User not found for shared secret' });
-      }
 
       return res.json(sharedUser);
     }
