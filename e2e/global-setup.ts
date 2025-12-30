@@ -1,4 +1,4 @@
-import { request } from '@playwright/test';
+import { chromium } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
 
@@ -18,23 +18,16 @@ export default async function globalSetup() {
   }
 
   const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
-  const apiBaseUrl = `${baseUrl.replace(/\/$/, '')}/api/v1`;
+  const browser = await chromium.launch();
+  const context = await browser.newContext({ baseURL: baseUrl });
+  const page = await context.newPage();
 
-  const context = await request.newContext({ baseURL: baseUrl });
-  const seedResponse = await context.get(`${apiBaseUrl}/portfolio/dashboard`, {
-    headers: { 'x-shared-secret': sharedSecret },
-  });
-  if (!seedResponse.ok()) {
-    throw new Error(`Failed to seed shared user: ${seedResponse.status()}`);
-  }
-
-  const authResponse = await context.post(`${apiBaseUrl}/auth/shared-secret`, {
-    data: { secret: sharedSecret },
-  });
-  if (!authResponse.ok()) {
-    throw new Error(`Failed to set shared secret cookie: ${authResponse.status()}`);
-  }
+  await page.goto('/login');
+  await page.locator('input[type="password"], input[type="text"]').first().fill(sharedSecret);
+  await page.locator('button[type="submit"], button:has-text("Login"), button:has-text("Sign")').first().click();
+  await page.waitForURL(/^(?!.*\/login).*/i, { timeout: 10000 });
+  await page.waitForSelector('text=/portfolio|dashboard|total|assets/i', { timeout: 10000 });
 
   await context.storageState({ path: storageStatePath });
-  await context.dispose();
+  await browser.close();
 }
