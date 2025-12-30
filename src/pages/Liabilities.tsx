@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { entities } from '@/api/backendClient';
@@ -46,6 +45,10 @@ type PaginatedResponse<T> = {
   };
 };
 
+type LiabilityFormData = Partial<Liability> & {
+  [key: string]: unknown;
+};
+
 const getLiabilityFields = (accounts: Account[]) => [
   { name: 'name', label: 'Loan Name', required: true, placeholder: 'Margin Loan - Schwab' },
   { name: 'liabilityType', label: 'Type', type: 'select', options: LIABILITY_TYPES },
@@ -64,7 +67,7 @@ const getLiabilityFields = (accounts: Account[]) => [
 
 export default function Liabilities() {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState<Partial<Liability>>({});
+  const [formData, setFormData] = useState<LiabilityFormData>({});
   const [deleteTarget, setDeleteTarget] = useState<Liability | null>(null);
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
@@ -73,7 +76,7 @@ export default function Liabilities() {
   
   const queryClient = useQueryClient();
 
-  const { data: liabilitiesResponse = [], isFetching: liabilitiesLoading, isError: liabilitiesError, error: liabilitiesErrorObj } = useQuery<PaginatedResponse<Liability> | Liability[]>({
+  const { data: liabilitiesResponse = [], isFetching: liabilitiesLoading, isError: liabilitiesError, error: liabilitiesErrorObj } = useQuery<PaginatedResponse<Liability> | Liability[], Error>({
     queryKey: ['liabilities', page, limit, accountFilter, currencyFilter],
     queryFn: () => entities.Liability.listWithPagination({ page, limit, account: accountFilter || undefined, currency: currencyFilter || undefined }),
     placeholderData: keepPreviousData
@@ -85,13 +88,13 @@ export default function Liabilities() {
     ? (liabilitiesResponse as PaginatedResponse<Liability>)?.pagination || { total: liabilities.length, page, limit }
     : { total: liabilities.length, page, limit };
 
-  const { data: accounts = [], isError: accountsError, error: accountsErrorObj } = useQuery<Account[]>({
+  const { data: accounts = [], isError: accountsError, error: accountsErrorObj } = useQuery<Account[], Error>({
     queryKey: ['accounts'],
     queryFn: () => entities.Account.list()
   });
 
   const liabilityFields = getLiabilityFields(accounts);
-  const { convertToUSD } = useExchangeRates() || { convertToUSD: (value: number, currency?: string) => value };
+  const { convertToUSD = (value: number) => value } = useExchangeRates() || {};
 
   const createMutation = useMutation({
     mutationFn: (data: Partial<Liability>) => entities.Liability.create(data),
@@ -137,7 +140,7 @@ export default function Liabilities() {
     setDialogOpen(true);
   };
 
-  const getStatusColor = (status?: string) => {
+  const getStatusColor = (status?: string | null) => {
     switch (status) {
       case 'Active': return 'bg-amber-100 text-amber-800';
       case 'Paid Off': return 'bg-emerald-100 text-emerald-800';
@@ -212,7 +215,11 @@ export default function Liabilities() {
     return sum + convertToUSD(Number(l.outstandingBalance) || 0, l.currency);
   }, 0);
   const totalCount = pagination?.total ?? liabilities.length;
-  const loadError = liabilitiesError ? (liabilitiesErrorObj?.message || 'Failed to load liabilities') : accountsError ? (accountsErrorObj?.message || 'Failed to load accounts') : '';
+  const loadError = liabilitiesError
+    ? (liabilitiesErrorObj?.message || 'Failed to load liabilities')
+    : accountsError
+      ? (accountsErrorObj?.message || 'Failed to load accounts')
+      : '';
 
   return (
     <div className="min-h-screen bg-slate-50/50">

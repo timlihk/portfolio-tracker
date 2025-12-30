@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { entities } from '@/api/backendClient';
@@ -43,6 +42,10 @@ type PaginatedResponse<T> = {
   };
 };
 
+type LiquidFundFormData = Partial<LiquidFund> & {
+  [key: string]: unknown;
+};
+
 const fundFields = [
   { name: 'fundName', label: 'Fund Name', required: true, placeholder: 'Bridgewater Pure Alpha' },
   { name: 'manager', label: 'Fund Manager', placeholder: 'Bridgewater Associates' },
@@ -63,15 +66,15 @@ const fundFields = [
 
 export default function LiquidFunds() {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState<Partial<LiquidFund>>({});
+  const [formData, setFormData] = useState<LiquidFundFormData>({});
   const [deleteTarget, setDeleteTarget] = useState<LiquidFund | null>(null);
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
   
   const queryClient = useQueryClient();
-  const { convertToUSD } = useExchangeRates() || { convertToUSD: (value: number, currency?: string) => value };
+  const { convertToUSD = (value: number) => value } = useExchangeRates() || {};
 
-  const { data: fundsResponse = [], isFetching: isLoading, isError: fundsError, error: fundsErrorObj } = useQuery<PaginatedResponse<LiquidFund> | LiquidFund[]>({
+  const { data: fundsResponse = [], isFetching: isLoading, isError: fundsError, error: fundsErrorObj } = useQuery<PaginatedResponse<LiquidFund> | LiquidFund[], Error>({
     queryKey: ['liquidFunds', page, limit],
     queryFn: () => entities.LiquidFund.listWithPagination({ page, limit }),
     placeholderData: keepPreviousData
@@ -129,7 +132,7 @@ export default function LiquidFunds() {
     setDialogOpen(true);
   };
 
-  const getTypeColor = (type?: string) => {
+  const getTypeColor = (type?: string | null) => {
     switch (type) {
       case 'Hedge Fund': return 'bg-violet-100 text-violet-700';
       case 'Fixed Income Fund': return 'bg-emerald-100 text-emerald-700';
@@ -139,7 +142,7 @@ export default function LiquidFunds() {
     }
   };
 
-  const getStatusColor = (status?: string) => {
+  const getStatusColor = (status?: string | null) => {
     switch (status) {
       case 'Active': return 'bg-emerald-100 text-emerald-700';
       case 'In Redemption': return 'bg-amber-100 text-amber-700';
