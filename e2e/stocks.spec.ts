@@ -4,6 +4,7 @@ test.describe('Stocks CRUD', () => {
   const sharedSecret = process.env.E2E_SHARED_SECRET || process.env.SHARED_SECRET;
   const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
   const apiBaseUrl = `${baseUrl.replace(/\/$/, '')}/api/v1`;
+  const apiOrigin = new URL(apiBaseUrl).origin;
 
   const loginWithSharedSecret = async (page) => {
     if (process.env.CI) {
@@ -11,6 +12,12 @@ test.describe('Stocks CRUD', () => {
         data: { secret: sharedSecret },
       });
       expect(response.ok()).toBeTruthy();
+      await page.context().addCookies([{
+        name: 'shared_secret',
+        value: sharedSecret,
+        url: apiOrigin,
+        httpOnly: true,
+      }]);
     } else {
       await page.goto('/login');
       const secretInput = page.locator('input[type="password"], input[type="text"]').first();
