@@ -13,12 +13,13 @@ This guide will help you deploy the Mangrove Portfolio application to Railway wi
 
 Ensure your repository has the following structure:
 ```
-├── railway.toml
-├── package.json
-├── src/ (frontend)
-├── backend/ (backend API)
-└── .env.example
+railway.toml
+package.json
+src/ (frontend)
+backend/ (backend API)
+.env.example
 ```
+
 
 ### 2. Deploy to Railway
 
@@ -124,7 +125,7 @@ FRONTEND_URL=http://localhost:5173
 
 ### Cache Monitoring & Pricing Auth
 
-The pricing service maintains three caches with different TTLs (stock prices: 5 min, bond prices: 10 min, profile metadata: 6 hrs). Cache stats exposed by the admin endpoint now include counts for all three layers. When clearing caches (POST `/api/pricing/cache/clear`), all layers are flushed together and logs will report “Price, bond, and profile caches cleared”.  
+The pricing service maintains three caches with different TTLs (stock prices: 5 min, bond prices: 10 min, profile metadata: 6 hrs). Cache stats exposed by the admin endpoint include counts for all three layers. When clearing caches (POST `/api/pricing/cache/clear`), all layers are flushed together and logs report "price, bond, and profile caches cleared."
 
 All `/api/pricing/*` routes require authentication in production. You can either:
 1. Set `SHARED_SECRET` (plus optional `SHARED_SECRET_USER_*`) for service-to-service authentication, or

@@ -143,10 +143,10 @@ This document tracks remaining technical debt and future improvements.
 
 ---
 
-## Current Status (v1.7.1)
+## Current Status (v2.0)
 
 - **Production**: Live at https://wealth.mangrove-hk.org
-- **CI**: GitHub Actions - build passes, E2E tests need server setup
+- **CI**: GitHub Actions - build/lint/typecheck on push; E2E runs manual/scheduled
 - **Rate Limit**: 500 requests/15min
 
 ---
@@ -155,33 +155,19 @@ This document tracks remaining technical debt and future improvements.
 
 ### High Priority
 
-- [ ] **Fix E2E tests in CI** - Start server before Playwright tests run
-  - Add `webServer` config or background server step in `.github/workflows/ci.yml`
+- [ ] **Stabilize E2E coverage** - Fix auth flow + data seeding for Playwright
+  - E2E now runs manual/scheduled until stability improves
 
 - [ ] **Add unit tests for backend routes**
   - Scaffolding exists in `backend/src/__tests__/`
   - Priority: auth, pricing, portfolio CRUD
 
-- [ ] **Remove `@ts-nocheck` from high-traffic pages**
-  - Dashboard.tsx, Stocks.tsx, Bonds.tsx
-  - Requires fixing JSX component prop types
+- [x] **Remove `@ts-nocheck` across pages**
+  - All pages now have typed props and API responses
 
 ### TypeScript Migration
 
-Pages currently using `@ts-nocheck`:
-- `src/pages/Accounts.tsx`
-- `src/pages/Bonds.tsx`
-- `src/pages/CashDeposits.tsx`
-- `src/pages/Changelog.tsx`
-- `src/pages/Dashboard.tsx`
-- `src/pages/Liabilities.tsx`
-- `src/pages/LiquidFunds.tsx`
-- `src/pages/Login.tsx`
-- `src/pages/PEDeals.tsx`
-- `src/pages/PEFunds.tsx`
-- `src/pages/Performance.tsx`
-- `src/pages/Stocks.tsx`
-- `src/pages/Transactions.tsx`
+- Completed: all pages are typed and `npm run typecheck` passes
 
 ---
 
@@ -230,7 +216,7 @@ Pages currently using `@ts-nocheck`:
 
 ## Known Issues
 
-1. **E2E tests fail in CI** - Server not started before test run
+1. **E2E coverage is manual/scheduled** - Tests still flaky for auth + data seeding
 2. **Type casts in useMarketData.tsx** - Uses `any` for API responses (lines 114-126)
 3. **Duplicate toNumber helper** - Exists in multiple hooks
 

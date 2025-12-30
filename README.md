@@ -2,15 +2,15 @@
 
 A full-stack portfolio tracking application for managing investments across multiple asset classes including stocks, bonds, private equity funds, liquid funds, and private deals.
 
-> **v1.7.1** - December 2025
+> **v2.0** - December 2025
 >
 > ### What's New
-> - **GitHub Actions CI** - Automated typecheck, build, and lint on every push
-> - **Rate limiting** - Configurable via `RATE_LIMIT_MAX` env var (default 500/15min)
-> - **Dashboard stability** - Fixed stuck "Updating prices" badge
-> - **Railway deployment fixes** - Resolved EBUSY build errors
+> - **TypeScript cleanup** - Removed `@ts-nocheck` from all pages and tightened types across the UI
+> - **Stabilized E2E harness** - Shared-secret login setup is more explicit and debuggable
+> - **CI noise reduction** - E2E runs only on manual trigger or schedule; build/lint/typecheck still run on push
+> - **CORS for local E2E** - Backend allows `http://localhost:3001` in test runs
 >
-> See [DEVELOPMENT.md](DEVELOPMENT.md) for the roadmap and remaining tasks.
+> See [RELEASE_NOTES.md](RELEASE_NOTES.md) for details and [DEVELOPMENT.md](DEVELOPMENT.md) for the roadmap.
 
 ## Features
 
@@ -78,6 +78,10 @@ npm run test:e2e:ui        # Interactive UI mode
 npm run test:e2e:debug     # Debug mode with inspector
 ```
 
+### Release Notes
+
+See [RELEASE_NOTES.md](RELEASE_NOTES.md) for detailed release notes.
+
 ### Deployment
 
 The application is configured for deployment on Railway. See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions.
@@ -95,20 +99,19 @@ For family/demo use, the app uses a shared secret mapped to a single user ID:
 ## Project Structure
 
 ```
-├── src/                    # Frontend React application
-│   ├── components/        # React components
-│   ├── lib/              # Utilities and contexts
-│   ├── api/              # API client and services
-│   └── App.tsx           # Main application component
-├── backend/              # Express.js backend API
-│   ├── src/
-│   │   ├── routes/       # API routes
-│   │   ├── models/       # Database models
-│   │   └── server.ts     # Express server (compiled to dist/main.js)
-│   └── package.json      # Backend dependencies
-├── railway.toml          # Railway deployment configuration
-├── package.json          # Root dependencies and scripts
-└── DEPLOYMENT.md         # Deployment guide
+src/                    # Frontend React application
+  components/           # React components
+  lib/                  # Utilities and contexts
+  api/                  # API client and services
+  App.tsx               # Main application component
+backend/                # Express.js backend API
+  src/
+    routes/             # API routes
+  server.ts             # Express server (compiled to dist/main.js)
+  package.json          # Backend dependencies
+railway.toml            # Railway deployment configuration
+package.json            # Root dependencies and scripts
+DEPLOYMENT.md           # Deployment guide
 ```
 
 ## API Endpoints
@@ -140,7 +143,8 @@ curl -X POST https://your-app.railway.app/api/pricing/stocks \
 # Convert currency
 curl "https://your-app.railway.app/api/pricing/currency/convert?amount=100&from=EUR&to=USD"
 
+```
+
 ## Forms
 
 - Cash & Deposits: required fields include Name, Amount, Currency, and Institution. The dialog scrolls for long forms and shows inline errors if validation fails.
-```
