@@ -2,6 +2,22 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Stocks CRUD', () => {
   const sharedSecret = process.env.E2E_SHARED_SECRET || process.env.SHARED_SECRET;
+  const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
+  const apiBaseUrl = `${baseUrl.replace(/\/$/, '')}/api/v1`;
+
+  const loginWithSharedSecret = async (page) => {
+    if (process.env.CI) {
+      const response = await page.request.post(`${apiBaseUrl}/auth/shared-secret`, {
+        data: { secret: sharedSecret },
+      });
+      expect(response.ok()).toBeTruthy();
+    } else {
+      await page.goto('/login');
+      const secretInput = page.locator('input[type="password"], input[type="text"]').first();
+      await secretInput.fill(sharedSecret);
+      await page.locator('button[type="submit"], button:has-text("Login"), button:has-text("Sign")').first().click();
+    }
+  };
 
   test.beforeEach(async ({ page }) => {
     if (!sharedSecret) {
@@ -10,10 +26,8 @@ test.describe('Stocks CRUD', () => {
     }
 
     // Login before each test
-    await page.goto('/login');
-    const secretInput = page.locator('input[type="password"], input[type="text"]').first();
-    await secretInput.fill(sharedSecret);
-    await page.locator('button[type="submit"], button:has-text("Login"), button:has-text("Sign")').first().click();
+    await loginWithSharedSecret(page);
+    await page.goto('/');
     await expect(page).not.toHaveURL(/\/login/i, { timeout: 10000 });
     await expect(page.locator('text=/portfolio|dashboard|total|assets/i').first()).toBeVisible({ timeout: 10000 });
   });
