@@ -2,33 +2,11 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Stocks CRUD', () => {
   const sharedSecret = process.env.E2E_SHARED_SECRET || process.env.SHARED_SECRET;
-  const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
-  const apiBaseUrl = `${baseUrl.replace(/\/$/, '')}/api/v1`;
-  const apiOrigin = new URL(apiBaseUrl).origin;
-
   const loginWithSharedSecret = async (page) => {
-    if (process.env.CI) {
-      const response = await page.request.post(`${apiBaseUrl}/auth/shared-secret`, {
-        data: { secret: sharedSecret },
-      });
-      expect(response.ok()).toBeTruthy();
-      const seedResponse = await page.request.get(`${apiBaseUrl}/portfolio/dashboard`, {
-        headers: { 'x-shared-secret': sharedSecret },
-      });
-      expect(seedResponse.ok()).toBeTruthy();
-      await page.context().addCookies([{
-        name: 'shared_secret',
-        value: sharedSecret,
-        url: baseUrl.replace(/\/$/, ''),
-        httpOnly: true,
-        sameSite: 'Strict',
-      }]);
-    } else {
-      await page.goto('/login');
-      const secretInput = page.locator('input[type="password"], input[type="text"]').first();
-      await secretInput.fill(sharedSecret);
-      await page.locator('button[type="submit"], button:has-text("Login"), button:has-text("Sign")').first().click();
-    }
+    await page.goto('/login');
+    const secretInput = page.locator('input[type="password"], input[type="text"]').first();
+    await secretInput.fill(sharedSecret);
+    await page.locator('button[type="submit"], button:has-text("Login"), button:has-text("Sign")').first().click();
   };
 
   test.beforeEach(async ({ page }) => {
