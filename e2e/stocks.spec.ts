@@ -3,6 +3,14 @@ import { test, expect } from '@playwright/test';
 test.describe('Stocks CRUD', () => {
   const sharedSecret = process.env.E2E_SHARED_SECRET || process.env.SHARED_SECRET;
   const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
+  const assertAuthenticated = async (page) => {
+    const ok = await page.evaluate(async () => {
+      const response = await fetch('/api/v1/auth/profile', { credentials: 'include' });
+      return response.ok;
+    });
+    expect(ok).toBeTruthy();
+  };
+
   const loginWithSharedSecret = async (page) => {
     await page.goto(`${baseUrl.replace(/\/$/, '')}/login`);
     const secretInput = page.locator('input[type="password"], input[type="text"]').first();
@@ -10,6 +18,7 @@ test.describe('Stocks CRUD', () => {
     await page.locator('button[type="submit"], button:has-text("Login"), button:has-text("Sign")').first().click();
     await expect(page).not.toHaveURL(/\/login/i, { timeout: 10000 });
     await expect(page.locator('text=/portfolio|dashboard|total|assets/i').first()).toBeVisible({ timeout: 10000 });
+    await assertAuthenticated(page);
   };
 
   const gotoAuthenticated = async (page, path) => {
@@ -19,6 +28,7 @@ test.describe('Stocks CRUD', () => {
       await page.goto(path);
     }
     await expect(page).not.toHaveURL(/\/login/i, { timeout: 10000 });
+    await assertAuthenticated(page);
   };
 
   test.beforeEach(async ({ page }) => {
