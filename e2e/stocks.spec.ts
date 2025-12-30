@@ -50,7 +50,7 @@ test.describe('Stocks CRUD', () => {
     if (!sharedSecret) return;
 
     await gotoAuthenticated(page, '/Stocks');
-    await expect(page.locator('h1, h2').first()).toContainText(/stock/i, { timeout: 10000 });
+    await expect(page.getByRole('heading', { name: /stocks/i }).first()).toBeVisible({ timeout: 10000 });
   });
 
   test('should display stocks table', async ({ page }) => {
