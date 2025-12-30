@@ -5,11 +5,11 @@ test.describe('Stocks CRUD', () => {
   const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
   const apiBaseUrl = `${baseUrl.replace(/\/$/, '')}/api/v1`;
   const assertAuthenticated = async (page) => {
-    const ok = await page.evaluate(async () => {
-      const response = await fetch('/api/v1/auth/profile', { credentials: 'include' });
-      return response.ok;
-    });
-    expect(ok).toBeTruthy();
+    const response = await page.request.get(`${apiBaseUrl}/auth/profile`);
+    if (!response.ok()) {
+      const body = await response.text().catch(() => '');
+      throw new Error(`Auth profile check failed: ${response.status()} ${body}`);
+    }
   };
 
   const loginWithSharedSecret = async (page) => {
@@ -20,7 +20,30 @@ test.describe('Stocks CRUD', () => {
     await page.goto(`${baseUrl.replace(/\/$/, '')}/login`);
     const secretInput = page.locator('input[type="password"], input[type="text"]').first();
     await secretInput.fill(sharedSecret);
+    const secretResponsePromise = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/v1/auth/shared-secret') &&
+        response.request().method() === 'POST'
+    );
+    const dashboardResponsePromise = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/v1/portfolio/dashboard') &&
+        response.request().method() === 'GET'
+    );
+
     await page.locator('button[type="submit"], button:has-text("Login"), button:has-text("Sign")').first().click();
+
+    const secretResponse = await secretResponsePromise;
+    if (!secretResponse.ok()) {
+      const body = await secretResponse.text().catch(() => '');
+      throw new Error(`Shared-secret API failed: ${secretResponse.status()} ${body}`);
+    }
+
+    const dashboardResponse = await dashboardResponsePromise;
+    if (!dashboardResponse.ok()) {
+      const body = await dashboardResponse.text().catch(() => '');
+      throw new Error(`Dashboard API failed: ${dashboardResponse.status()} ${body}`);
+    }
     await expect(page).not.toHaveURL(/\/login/i, { timeout: 10000 });
     await expect(page.locator('text=/portfolio|dashboard|total|assets/i').first()).toBeVisible({ timeout: 10000 });
     await assertAuthenticated(page);
