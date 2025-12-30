@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { entities } from '@/api/backendClient';
@@ -44,6 +43,10 @@ type PaginatedResponse<T> = {
   };
 };
 
+type CashDepositFormData = Partial<CashDeposit> & {
+  [key: string]: unknown;
+};
+
 const getCashFields = (accounts: Account[]) => [
   { name: 'name', label: 'Name', required: true, placeholder: 'Emergency Fund' },
   { name: 'depositType', label: 'Type', type: 'select', options: DEPOSIT_TYPES },
@@ -64,7 +67,7 @@ const parseNumber = (val: unknown): number | null => {
 
 export default function CashDeposits() {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState<Partial<CashDeposit>>({});
+  const [formData, setFormData] = useState<CashDepositFormData>({});
   const [deleteTarget, setDeleteTarget] = useState<CashDeposit | null>(null);
   const [submitError, setSubmitError] = useState<string>('');
   const [page, setPage] = useState<number>(1);
@@ -74,7 +77,7 @@ export default function CashDeposits() {
   
   const queryClient = useQueryClient();
 
-  const { data: depositsResponse = [], isFetching: depositsLoading, isError: depositsError, error: depositsErrorObj } = useQuery<PaginatedResponse<CashDeposit> | CashDeposit[]>({
+  const { data: depositsResponse = [], isFetching: depositsLoading, isError: depositsError, error: depositsErrorObj } = useQuery<PaginatedResponse<CashDeposit> | CashDeposit[], Error>({
     queryKey: ['cashDeposits', page, limit, accountFilter, currencyFilter],
     queryFn: () => entities.CashDeposit.listWithPagination({ page, limit, account: accountFilter || undefined, currency: currencyFilter || undefined }),
     placeholderData: keepPreviousData
@@ -87,13 +90,13 @@ export default function CashDeposits() {
     ? (depositsResponse as PaginatedResponse<CashDeposit>)?.pagination || { total: deposits.length, page, limit }
     : { total: deposits.length, page, limit };
 
-  const { data: accounts = [], isError: accountsError, error: accountsErrorObj } = useQuery<Account[]>({
+  const { data: accounts = [], isError: accountsError, error: accountsErrorObj } = useQuery<Account[], Error>({
     queryKey: ['accounts'],
     queryFn: () => entities.Account.list()
   });
 
   const cashFields = getCashFields(accounts);
-  const { convertToUSD } = useExchangeRates() || { convertToUSD: (value: number, currency?: string) => value };
+  const { convertToUSD = (value: number) => value } = useExchangeRates() || {};
   const loadError = depositsError ? (depositsErrorObj?.message || 'Failed to load cash & deposits') : accountsError ? (accountsErrorObj?.message || 'Failed to load accounts') : '';
 
   const createMutation = useMutation({
@@ -105,8 +108,9 @@ export default function CashDeposits() {
       setFormData({});
       setSubmitError('');
     },
-    onError: (err: { message?: string }) => {
-      setSubmitError(err?.message || 'Failed to add cash/deposit. Please try again.');
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Failed to add cash/deposit. Please try again.';
+      setSubmitError(message);
     }
   });
 
@@ -119,8 +123,9 @@ export default function CashDeposits() {
       setFormData({});
       setSubmitError('');
     },
-    onError: (err: { message?: string }) => {
-      setSubmitError(err?.message || 'Failed to update cash/deposit. Please try again.');
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Failed to update cash/deposit. Please try again.';
+      setSubmitError(message);
     }
   });
 
@@ -185,7 +190,7 @@ export default function CashDeposits() {
     setDialogOpen(true);
   };
 
-  const getTypeColor = (type?: string) => {
+  const getTypeColor = (type?: string | null) => {
     const colors = {
       'Cash': 'bg-emerald-100 text-emerald-700',
       'Savings Account': 'bg-blue-100 text-blue-700',

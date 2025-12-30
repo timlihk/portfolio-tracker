@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { entities } from '@/api/backendClient';
@@ -40,6 +39,10 @@ type PaginatedResponse<T> = {
   };
 };
 
+type PeFundFormData = Partial<PeFund> & {
+  [key: string]: unknown;
+};
+
 const fundFields = [
   { name: 'fundName', label: 'Fund Name', required: true, placeholder: 'Sequoia Capital XV' },
   { name: 'manager', label: 'Fund Manager / GP', placeholder: 'Sequoia Capital' },
@@ -56,14 +59,14 @@ const fundFields = [
 
 export default function PEFunds() {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState<Partial<PeFund>>({});
+  const [formData, setFormData] = useState<PeFundFormData>({});
   const [deleteTarget, setDeleteTarget] = useState<PeFund | null>(null);
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
   
   const queryClient = useQueryClient();
 
-  const { data: fundsResponse = [], isFetching: isLoading } = useQuery<PaginatedResponse<PeFund> | PeFund[]>({
+  const { data: fundsResponse = [], isFetching: isLoading } = useQuery<PaginatedResponse<PeFund> | PeFund[], Error>({
     queryKey: ['peFunds', page, limit],
     queryFn: () => entities.PEFund.listWithPagination({ page, limit }),
     placeholderData: keepPreviousData
@@ -116,7 +119,7 @@ export default function PEFunds() {
     setDialogOpen(true);
   };
 
-  const getStatusColor = (status?: string) => {
+  const getStatusColor = (status?: string | null) => {
     switch (status) {
       case 'Active': return 'bg-emerald-100 text-emerald-700';
       case 'Fully Invested': return 'bg-blue-100 text-blue-700';
