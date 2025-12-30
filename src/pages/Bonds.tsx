@@ -1,5 +1,5 @@
-// @ts-nocheck
 import { useState } from 'react';
+import type React from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { entities } from '@/api/backendClient';
 import PageHeader from '@/components/portfolio/PageHeader';
@@ -38,6 +38,15 @@ type PaginatedResponse<T> = {
   };
 };
 
+type BondFormData = Partial<Bond> & {
+  [key: string]: unknown;
+};
+
+type BondPriceData = {
+  pricePct?: number;
+  source?: string;
+};
+
 const getBondFields = (accounts: Account[]) => [
   { name: 'name', label: 'Bond Name / Issuer', required: true, placeholder: 'US Treasury 10Y' },
   { name: 'isin', label: 'ISIN', placeholder: 'US912810RZ49 (12 characters)' },
@@ -56,14 +65,14 @@ const getBondFields = (accounts: Account[]) => [
 
 export default function Bonds() {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [formData, setFormData] = useState<BondFormData>({});
   const [deleteTarget, setDeleteTarget] = useState<Bond | null>(null);
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
   
   const queryClient = useQueryClient();
 
-  const { data: bondResponse, isFetching: bondsLoading } = useQuery<PaginatedResponse<Bond>>({
+  const { data: bondResponse, isFetching: bondsLoading } = useQuery<PaginatedResponse<Bond>, Error>({
     queryKey: ['bonds', page, limit],
     queryFn: () => entities.Bond.listWithPagination({ page, limit }),
     placeholderData: keepPreviousData
@@ -71,7 +80,7 @@ export default function Bonds() {
   const bonds = bondResponse?.data || [];
   const pagination = bondResponse?.pagination || { total: bonds.length, page, limit };
 
-  const { data: accounts = [] } = useQuery<Account[]>({
+  const { data: accounts = [] } = useQuery<Account[], Error>({
     queryKey: ['accounts'],
     queryFn: () => entities.Account.list()
   });
@@ -79,14 +88,14 @@ export default function Bonds() {
   const bondFields = getBondFields(accounts);
 
   // Get real-time bond values and exchange rates
-  const { prices: bondPrices, loading: pricesLoading } = useBondPrices(bonds);
+  const { prices: bondPrices = {}, loading: pricesLoading } = useBondPrices(bonds);
   const { convertToUSD = (v: number) => v, loading: ratesLoading = false } = useExchangeRates() || {};
 
   const isLoadingPrices = pricesLoading || ratesLoading;
 
-  const getBondPriceData = (bond: Bond) => {
-    const price = bondPrices[bond.id] || bondPrices[bond.isin] || bondPrices[bond.name];
-    if (price && typeof price === 'object') return price;
+  const getBondPriceData = (bond: Bond): BondPriceData | null => {
+    const price = bondPrices[bond.id] || bondPrices[bond.isin ?? ''] || bondPrices[bond.name];
+    if (price && typeof price === 'object') return price as BondPriceData;
     if (price != null) return { pricePct: Number(price) || 0, source: 'manual' };
     return null;
   };
@@ -123,7 +132,7 @@ export default function Bonds() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: any; data: Partial<Bond> }) => entities.Bond.update(id, data),
+    mutationFn: ({ id, data }: { id: number | string; data: Partial<Bond> }) => entities.Bond.update(id, data),
     onSuccess: (_, { data }) => {
       bondLogger.logUpdate(data.name, 'Updated position');
       queryClient.invalidateQueries({ queryKey: ['bonds'] });
@@ -141,22 +150,22 @@ export default function Bonds() {
     }
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (formData.id) {
       const { id, ...data } = formData;
-      updateMutation.mutate({ id, data });
+      updateMutation.mutate({ id: id as number | string, data });
     } else {
       createMutation.mutate(formData);
     }
   };
 
-  const handleEdit = (bond) => {
+  const handleEdit = (bond: Bond) => {
     setFormData(bond);
     setDialogOpen(true);
   };
 
-  const getRatingColor = (rating) => {
+  const getRatingColor = (rating?: string | null) => {
     if (!rating) return 'bg-slate-100 text-slate-700';
     if (['AAA', 'AA', 'A'].includes(rating)) return 'bg-emerald-100 text-emerald-700';
     if (['BBB', 'BB'].includes(rating)) return 'bg-amber-100 text-amber-700';

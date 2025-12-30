@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { authAPI, portfolioAPI } from '@/api/backendClient';
@@ -15,7 +14,7 @@ import {
   Building2
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import type { Stock, Bond, PeFund, PeDeal, LiquidFund, CashDeposit, Liability, Account, User } from '@/types';
+import type { Stock, Bond, PeFund, PeDeal, LiquidFund, CashDeposit, Liability, Account, User, StockPriceData } from '@/types';
 
 const COLORS = ['#0ea5e9', '#10b981', '#06b6d4', '#8b5cf6', '#f59e0b', '#ec4899'];
 
@@ -41,14 +40,32 @@ const emptyDashboard: DashboardData = {
   accounts: []
 };
 
+type AssetAllocation = {
+  name: string;
+  value: number;
+};
+
+type AccountSummary = {
+  name: string;
+  assetsTotal: number;
+  netWorth: number;
+  liabilitiesVal: number;
+  breakdown: {
+    stocksVal: number;
+    bondsVal: number;
+    cashVal: number;
+    liquidVal: number;
+  };
+};
+
 export default function Dashboard() {
-  const { data: profile, error: profileError, isLoading: profileLoading } = useQuery<User>({
+  const { data: profile, error: profileError, isLoading: profileLoading } = useQuery<User, Error>({
     queryKey: ['profile'],
     queryFn: () => authAPI.getProfile(),
     retry: false
   });
 
-  const { data: dashboardData = emptyDashboard, isLoading: dashboardLoading, isError: dashboardError, error: dashboardErrorObj } = useQuery<DashboardData>({
+  const { data: dashboardData = emptyDashboard, isLoading: dashboardLoading, isError: dashboardError, error: dashboardErrorObj } = useQuery<DashboardData, Error>({
     queryKey: ['portfolio-dashboard'],
     queryFn: () => portfolioAPI.getDashboard()
   });
@@ -69,7 +86,7 @@ export default function Dashboard() {
   const { prices: stockPrices = {}, loading: stockPricesLoading } = useStockPrices(stockTickers, { refreshIntervalMs: 60000 });
   const { prices: bondPrices = {}, loading: bondPricesLoading } = useBondPrices(bonds);
 
-  const getStockPriceData = useCallback((ticker?: string | null) => {
+  const getStockPriceData = useCallback((ticker?: string | null): StockPriceData | null => {
     if (!ticker) return null;
     return stockPrices[ticker.toUpperCase()] || null;
   }, [stockPrices]);
@@ -201,7 +218,7 @@ export default function Dashboard() {
   } = totals;
 
   // Classify liquid funds into equity-like vs fixed-income-like
-  const classifyLiquidFunds = (fund) => {
+  const classifyLiquidFunds = (fund: LiquidFund): 'equity' | 'fixed' => {
     const type = (fund.fundType || '').toLowerCase();
     const strategy = (fund.strategy || '').toLowerCase();
     const isEquity =
@@ -226,7 +243,7 @@ export default function Dashboard() {
   const stocksDisplayValue = stocksValue + equityLiquidValue;
   const fixedIncomeDisplayValue = bondsValue + fixedLiquidValue;
 
-  const allocationData = [
+  const allocationData: AssetAllocation[] = [
     { name: 'Stocks', value: stocksDisplayValue },
     { name: 'Fixed Income', value: fixedIncomeDisplayValue },
     { name: 'Cash & Deposits', value: cashValue },
@@ -235,8 +252,8 @@ export default function Dashboard() {
   ].filter(item => item.value > 0);
 
   const formatUsd = (v: number) => `$${Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-  const buildCurrencyExposure = (assetsOnly = true) => {
-    const map = new Map();
+  const buildCurrencyExposure = (assetsOnly = true): AssetAllocation[] => {
+    const map = new Map<string, number>();
     const add = (currency: string, amount: number) => {
       if (!currency || !Number.isFinite(amount)) return;
       map.set(currency, (map.get(currency) || 0) + amount);
@@ -257,7 +274,7 @@ export default function Dashboard() {
     return Array.from(map.entries()).map(([name, value]) => ({ name, value })).filter(d => d.value > 0);
   };
 
-  const accountSummaries = useMemo(() => {
+  const accountSummaries = useMemo<AccountSummary[]>(() => {
     if (!accounts || accounts.length === 0) return [];
 
     return accounts.map((account) => {
@@ -309,7 +326,7 @@ export default function Dashboard() {
   const loadError = dashboardError
     ? (dashboardErrorObj?.message || 'Failed to load dashboard data')
     : profileError
-      ? (profileError as Error).message || 'Failed to load profile'
+      ? (profileError.message || 'Failed to load profile')
       : '';
 
   if (isLoadingData) {
