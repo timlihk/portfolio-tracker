@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { entities } from '@/api/backendClient';
@@ -41,6 +40,10 @@ type PaginatedResponse<T> = {
   };
 };
 
+type PeDealFormData = Partial<PeDeal> & {
+  [key: string]: unknown;
+};
+
 const dealFields = [
   { name: 'companyName', label: 'Company Name', required: true, placeholder: 'Acme Corp' },
   { name: 'dealType', label: 'Deal Type', type: 'select', options: DEAL_TYPES },
@@ -56,14 +59,14 @@ const dealFields = [
 
 export default function PEDeals() {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState<Partial<PeDeal>>({});
+  const [formData, setFormData] = useState<PeDealFormData>({});
   const [deleteTarget, setDeleteTarget] = useState<PeDeal | null>(null);
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
   
   const queryClient = useQueryClient();
 
-  const { data: dealsResponse = [], isFetching: isLoading } = useQuery<PaginatedResponse<PeDeal> | PeDeal[]>({
+  const { data: dealsResponse = [], isFetching: isLoading } = useQuery<PaginatedResponse<PeDeal> | PeDeal[], Error>({
     queryKey: ['peDeals', page, limit],
     queryFn: () => entities.PEDeal.listWithPagination({ page, limit }),
     placeholderData: keepPreviousData
@@ -116,7 +119,7 @@ export default function PEDeals() {
     setDialogOpen(true);
   };
 
-  const getStatusColor = (status?: string) => {
+  const getStatusColor = (status?: string | null) => {
     switch (status) {
       case 'Active': return 'bg-emerald-100 text-emerald-700';
       case 'Partially Exited': return 'bg-blue-100 text-blue-700';

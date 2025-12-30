@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
@@ -54,6 +53,10 @@ type Transaction = {
   notes?: string;
 };
 
+type TransactionFormData = Partial<Transaction> & {
+  [key: string]: unknown;
+};
+
 type TransactionFiltersState = {
   startDate: string;
   endDate: string;
@@ -100,7 +103,7 @@ const assetIcons = {
 export default function Transactions() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [formData, setFormData] = useState<Partial<Transaction>>({});
+  const [formData, setFormData] = useState<TransactionFormData>({});
   const [deleteItem, setDeleteItem] = useState<Transaction | null>(null);
   const [filters, setFilters] = useState<TransactionFiltersState>({
     startDate: '',
@@ -114,12 +117,12 @@ export default function Transactions() {
 
   const queryClient = useQueryClient();
 
-  const { data: transactions = [], isLoading } = useQuery<Transaction[]>({
+  const { data: transactions = [], isLoading } = useQuery<Transaction[], Error>({
     queryKey: ['transactions'],
     queryFn: () => base44.entities.Transaction.list('-date'),
   });
 
-  const { data: accounts = [] } = useQuery<AccountOption[]>({
+  const { data: accounts = [] } = useQuery<AccountOption[], Error>({
     queryKey: ['accounts'],
     queryFn: () => base44.entities.Account.list(),
   });
@@ -138,7 +141,7 @@ export default function Transactions() {
   );
 
   const createMutation = useMutation({
-    mutationFn: (data: Partial<Transaction>) => base44.entities.Transaction.create(data),
+    mutationFn: (data: TransactionFormData) => base44.entities.Transaction.create(data),
     onSuccess: (_, data) => {
       const normalized = normalizeTransaction(data);
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
@@ -147,7 +150,7 @@ export default function Transactions() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number | string; data: Partial<Transaction> }) => base44.entities.Transaction.update(id, data),
+    mutationFn: ({ id, data }: { id: number | string; data: TransactionFormData }) => base44.entities.Transaction.update(id, data),
     onSuccess: (_, { data }) => {
       const normalized = normalizeTransaction(data);
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
