@@ -12,6 +12,15 @@ test.describe('Stocks CRUD', () => {
     await expect(page.locator('text=/portfolio|dashboard|total|assets/i').first()).toBeVisible({ timeout: 10000 });
   };
 
+  const gotoAuthenticated = async (page, path) => {
+    await page.goto(path);
+    if (page.url().includes('/login')) {
+      await loginWithSharedSecret(page);
+      await page.goto(path);
+    }
+    await expect(page).not.toHaveURL(/\/login/i, { timeout: 10000 });
+  };
+
   test.beforeEach(async ({ page }) => {
     if (!sharedSecret) {
       test.skip(true, 'E2E_SHARED_SECRET not set');
@@ -19,20 +28,20 @@ test.describe('Stocks CRUD', () => {
     }
 
     // Login before each test
-    await loginWithSharedSecret(page);
+    await gotoAuthenticated(page, '/');
   });
 
   test('should navigate to stocks page', async ({ page }) => {
     if (!sharedSecret) return;
 
-    await page.goto('/Stocks');
+    await gotoAuthenticated(page, '/Stocks');
     await expect(page.locator('h1, h2').first()).toContainText(/stock/i, { timeout: 10000 });
   });
 
   test('should display stocks table', async ({ page }) => {
     if (!sharedSecret) return;
 
-    await page.goto('/Stocks');
+    await gotoAuthenticated(page, '/Stocks');
 
     // Wait for table or list to load
     const table = page.locator('table, [role="table"], .stocks-list');
@@ -42,7 +51,7 @@ test.describe('Stocks CRUD', () => {
   test('should open add stock dialog', async ({ page }) => {
     if (!sharedSecret) return;
 
-    await page.goto('/Stocks');
+    await gotoAuthenticated(page, '/Stocks');
 
     // Find and click add button
     const addButton = page.locator('button:has-text("Add"), button:has-text("New"), button:has-text("+")').first();
@@ -56,7 +65,7 @@ test.describe('Stocks CRUD', () => {
   test('should create a new stock', async ({ page }) => {
     if (!sharedSecret) return;
 
-    await page.goto('/Stocks');
+    await gotoAuthenticated(page, '/Stocks');
 
     // Open add dialog
     const addButton = page.locator('button:has-text("Add"), button:has-text("New"), button:has-text("+")').first();
@@ -83,7 +92,7 @@ test.describe('Stocks CRUD', () => {
   test('should delete a stock', async ({ page }) => {
     if (!sharedSecret) return;
 
-    await page.goto('/Stocks');
+    await gotoAuthenticated(page, '/Stocks');
 
     // Look for TEST stock we created
     const testRow = page.locator('tr:has-text("TEST"), [data-testid*="TEST"]').first();
