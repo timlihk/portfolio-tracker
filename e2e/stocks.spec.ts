@@ -2,8 +2,9 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Stocks CRUD', () => {
   const sharedSecret = process.env.E2E_SHARED_SECRET || process.env.SHARED_SECRET;
+  const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
   const loginWithSharedSecret = async (page) => {
-    await page.goto('/login');
+    await page.goto(`${baseUrl.replace(/\/$/, '')}/login`);
     const secretInput = page.locator('input[type="password"], input[type="text"]').first();
     await secretInput.fill(sharedSecret);
     await page.locator('button[type="submit"], button:has-text("Login"), button:has-text("Sign")').first().click();
