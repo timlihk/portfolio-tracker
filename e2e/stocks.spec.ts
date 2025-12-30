@@ -110,13 +110,13 @@ test.describe('Stocks CRUD', () => {
     await addButton.click();
 
     // Fill form
-    const tickerInput = page.locator('input[name="ticker"], input[placeholder*="ticker" i], input[placeholder*="AAPL" i]').first();
+    const tickerInput = page.getByLabel(/ticker symbol/i);
     await tickerInput.fill('TEST');
 
-    const sharesInput = page.locator('input[name="shares"], input[placeholder*="shares" i], input[type="number"]').first();
+    const sharesInput = page.getByLabel(/number of shares/i);
     await sharesInput.fill('100');
 
-    const costInput = page.locator('input[name="averageCost"], input[placeholder*="cost" i], input[placeholder*="price" i]').nth(0);
+    const costInput = page.getByLabel(/average cost per share/i);
     await costInput.fill('50');
 
     // Submit
