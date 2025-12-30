@@ -81,6 +81,7 @@ const allowedOrigins = new Set([
     .split(',')
     .map(o => o.trim())
     .filter(Boolean),
+  'http://localhost:3001',
   'https://portfolio-tracker-production.up.railway.app',
   'https://mangrove-portfolio.up.railway.app',
   'https://wealth.mangrove-hk.org'
