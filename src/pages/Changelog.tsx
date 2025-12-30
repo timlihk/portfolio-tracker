@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { format } from 'date-fns';
@@ -13,7 +12,8 @@ import {
   Plus,
   Pencil,
   Trash2,
-  History
+  History,
+  type LucideIcon
 } from 'lucide-react';
 
 type ChangelogEntry = {
@@ -25,13 +25,13 @@ type ChangelogEntry = {
   createdDate: string;
 };
 
-const ACTION_CONFIG = {
+const ACTION_CONFIG: Record<string, { label: string; color: string; icon: LucideIcon }> = {
   created: { label: 'Created', color: 'bg-emerald-100 text-emerald-700', icon: Plus },
   updated: { label: 'Updated', color: 'bg-blue-100 text-blue-700', icon: Pencil },
   deleted: { label: 'Deleted', color: 'bg-rose-100 text-rose-700', icon: Trash2 }
 };
 
-const ASSET_ICONS = {
+const ASSET_ICONS: Record<string, LucideIcon> = {
   Stock: TrendingUp,
   Bond: Landmark,
   'PE Fund': Briefcase,
@@ -40,7 +40,7 @@ const ASSET_ICONS = {
   Account: Wallet
 };
 
-const ASSET_COLORS = {
+const ASSET_COLORS: Record<string, string> = {
   Stock: 'bg-sky-50 text-sky-600',
   Bond: 'bg-emerald-50 text-emerald-600',
   'PE Fund': 'bg-violet-50 text-violet-600',
@@ -50,7 +50,7 @@ const ASSET_COLORS = {
 };
 
 export default function Changelog() {
-  const { data: logs = [], isLoading } = useQuery<ChangelogEntry[]>({
+  const { data: logs = [], isLoading } = useQuery<ChangelogEntry[], Error>({
     queryKey: ['changelog'],
     queryFn: () => base44.entities.Changelog.list('-createdDate', 100)
   });
