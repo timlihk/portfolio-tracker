@@ -12,6 +12,10 @@ test.describe('Stocks CRUD', () => {
         data: { secret: sharedSecret },
       });
       expect(response.ok()).toBeTruthy();
+      const seedResponse = await page.request.get(`${apiBaseUrl}/portfolio/dashboard`, {
+        headers: { 'x-shared-secret': sharedSecret },
+      });
+      expect(seedResponse.ok()).toBeTruthy();
       await page.context().addCookies([{
         name: 'shared_secret',
         value: sharedSecret,
