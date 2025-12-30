@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test';
 test.describe('Stocks CRUD', () => {
   const sharedSecret = process.env.E2E_SHARED_SECRET || process.env.SHARED_SECRET;
   const baseUrl = process.env.E2E_BASE_URL || 'http://localhost:5173';
+  const apiBaseUrl = `${baseUrl.replace(/\/$/, '')}/api/v1`;
   const assertAuthenticated = async (page) => {
     const ok = await page.evaluate(async () => {
       const response = await fetch('/api/v1/auth/profile', { credentials: 'include' });
@@ -12,6 +13,10 @@ test.describe('Stocks CRUD', () => {
   };
 
   const loginWithSharedSecret = async (page) => {
+    const seedResponse = await page.request.get(`${apiBaseUrl}/portfolio/dashboard`, {
+      headers: { 'x-shared-secret': sharedSecret },
+    });
+    expect(seedResponse.ok()).toBeTruthy();
     await page.goto(`${baseUrl.replace(/\/$/, '')}/login`);
     const secretInput = page.locator('input[type="password"], input[type="text"]').first();
     await secretInput.fill(sharedSecret);
