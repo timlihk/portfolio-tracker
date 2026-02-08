@@ -7,12 +7,16 @@ import logger from '../services/logger.js';
 import type { RegisterRequest, LoginRequest, AuthResponse, JWTPayload } from '../types/index.js';
 
 const router = express.Router();
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 50,
-  standardHeaders: true,
-  legacyHeaders: false
-});
+
+// Disable rate limiting in test environment for E2E tests
+const authLimiter = process.env.NODE_ENV === 'test'
+  ? (req: Request, res: Response, next: express.NextFunction) => next()  // No-op in tests
+  : rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 50,
+      standardHeaders: true,
+      legacyHeaders: false
+    });
 
 function getSharedSecretFromHeaders(req: Request): string | undefined {
   const authHeader = req.headers.authorization;
