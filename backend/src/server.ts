@@ -127,12 +127,15 @@ app.use(compression());
 app.use(cookieParser());
 
 // Rate limiting (tightened for abuse protection)
-const limiter = rateLimit({
-  windowMs: RATE_LIMIT_WINDOW_MS,
-  max: RATE_LIMIT_MAX,
-  standardHeaders: true,
-  legacyHeaders: false
-});
+// Disable in test environment for E2E tests
+const limiter = process.env.NODE_ENV === 'test'
+  ? (req: Request, res: Response, next: NextFunction) => next()  // No-op in tests
+  : rateLimit({
+      windowMs: RATE_LIMIT_WINDOW_MS,
+      max: RATE_LIMIT_MAX,
+      standardHeaders: true,
+      legacyHeaders: false
+    });
 app.use(limiter);
 
 // Apply CORS to API routes only
