@@ -111,13 +111,16 @@ test.describe('Stocks CRUD', () => {
 
     await gotoAuthenticated(page, '/Stocks');
 
+    // Use unique ticker to avoid conflicts on retries
+    const uniqueTicker = `TEST${Date.now().toString().slice(-6)}`;
+
     // Open add dialog
     const addButton = page.locator('button:has-text("Add"), button:has-text("New"), button:has-text("+")').first();
     await addButton.click();
 
     // Fill form
     const tickerInput = page.getByLabel(/ticker symbol/i);
-    await tickerInput.fill('TEST');
+    await tickerInput.fill(uniqueTicker);
 
     const sharesInput = page.getByLabel(/number of shares/i);
     await sharesInput.fill('100');
@@ -129,8 +132,10 @@ test.describe('Stocks CRUD', () => {
     const submitButton = page.locator('button[type="submit"], button:has-text("Save"), button:has-text("Create"), button:has-text("Add")').last();
     await submitButton.click();
 
-    // Dialog should close and stock should appear
-    await expect(page.locator('text=TEST')).toBeVisible({ timeout: 10000 });
+    // Dialog should close and stock should appear in table
+    // Use specific table row locator to avoid matching Yahoo Finance links
+    const stockRow = page.locator('table tbody tr, [role="table"] [role="rowgroup"] [role="row"]').filter({ hasText: uniqueTicker });
+    await expect(stockRow.first()).toBeVisible({ timeout: 10000 });
   });
 
   test('should delete a stock', async ({ page }) => {
@@ -138,12 +143,26 @@ test.describe('Stocks CRUD', () => {
 
     await gotoAuthenticated(page, '/Stocks');
 
-    // Look for TEST stock we created
-    const testRow = page.locator('tr:has-text("TEST"), [data-testid*="TEST"]').first();
+    // Use unique ticker to avoid conflicts on retries
+    const uniqueTicker = `DEL${Date.now().toString().slice(-6)}`;
 
-    if (await testRow.isVisible()) {
-      // Find delete button in row
-      const deleteButton = testRow.locator('button:has-text("Delete"), button[aria-label*="delete" i], .delete-btn, button:has(.trash)').first();
+    // First create a stock to delete
+    const addButton = page.locator('button:has-text("Add"), button:has-text("New"), button:has-text("+")').first();
+    await addButton.click();
+
+    const tickerInput = page.getByLabel(/ticker symbol/i);
+    await tickerInput.fill(uniqueTicker);
+    await page.getByLabel(/number of shares/i).fill('50');
+    await page.getByLabel(/average cost per share/i).fill('25');
+    await page.locator('button[type="submit"], button:has-text("Save"), button:has-text("Create"), button:has-text("Add")').last().click();
+
+    // Wait for stock to appear
+    const stockRow = page.locator('table tbody tr, [role="table"] [role="rowgroup"] [role="row"]').filter({ hasText: uniqueTicker });
+    await expect(stockRow.first()).toBeVisible({ timeout: 10000 });
+
+    // Find delete button in row
+    const deleteButton = stockRow.locator('button:has-text("Delete"), button[aria-label*="delete" i], .delete-btn, button:has(.trash)').first();
+    if (await deleteButton.isVisible()) {
       await deleteButton.click();
 
       // Confirm deletion if dialog appears
@@ -153,7 +172,7 @@ test.describe('Stocks CRUD', () => {
       }
 
       // Stock should be removed
-      await expect(page.locator('text=TEST')).not.toBeVisible({ timeout: 10000 });
+      await expect(stockRow.first()).not.toBeVisible({ timeout: 10000 });
     }
   });
 });
