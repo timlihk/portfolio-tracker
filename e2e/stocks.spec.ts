@@ -45,7 +45,11 @@ test.describe('Stocks CRUD', () => {
       throw new Error(`Dashboard API failed: ${dashboardResponse.status()} ${body}`);
     }
     await expect(page).not.toHaveURL(/\/login/i, { timeout: 10000 });
-    await expect(page.locator('text=/portfolio|dashboard|total|assets/i').first()).toBeVisible({ timeout: 10000 });
+    // Use .or() to combine locators - can't mix CSS selectors with text regex
+    const portfolioHeading = page.getByRole('heading').filter({ hasText: /portfolio|dashboard/i });
+    const totalText = page.getByText(/total|assets/i);
+    const mainContent = page.locator('main, [data-testid="dashboard"], .dashboard-content');
+    await expect(portfolioHeading.or(totalText).or(mainContent).first()).toBeVisible({ timeout: 10000 });
     await assertAuthenticated(page);
   };
 
@@ -82,8 +86,10 @@ test.describe('Stocks CRUD', () => {
     await gotoAuthenticated(page, '/Stocks');
 
     // Wait for table or list to load
-    const tableOrEmpty = page.locator('table, [role="table"], .stocks-list, text=/no stocks in your portfolio yet/i');
-    await expect(tableOrEmpty.first()).toBeVisible({ timeout: 15000 });
+    // Use .or() to combine locators - can't mix CSS selectors with text regex in one string
+    const table = page.locator('table, [role="table"], .stocks-list');
+    const emptyMessage = page.getByText(/no stocks in your portfolio yet/i);
+    await expect(table.or(emptyMessage).first()).toBeVisible({ timeout: 15000 });
   });
 
   test('should open add stock dialog', async ({ page }) => {

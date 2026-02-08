@@ -69,7 +69,24 @@ test.describe('Authentication', () => {
     }
 
     // Dashboard should show portfolio content
-    await expect(page.locator('text=/portfolio|dashboard|total|assets/i').first()).toBeVisible({ timeout: 10000 });
+    // Use .or() to combine multiple possible locators for better reliability
+    const portfolioHeading = page.getByRole('heading').filter({ hasText: /portfolio|dashboard/i });
+    const totalText = page.getByText(/total|assets/i);
+    const mainContent = page.locator('main, [data-testid="dashboard"], .dashboard-content');
+
+    try {
+      await expect(portfolioHeading.or(totalText).or(mainContent).first()).toBeVisible({ timeout: 10000 });
+    } catch (error) {
+      // Debug: capture page state on failure
+      const currentUrl = page.url();
+      const pageTitle = await page.title().catch(() => 'unknown');
+      const html = await page.content().catch(() => 'failed to get HTML');
+      console.error('Dashboard visibility check failed:');
+      console.error(`  URL: ${currentUrl}`);
+      console.error(`  Title: ${pageTitle}`);
+      console.error(`  HTML preview: ${html.substring(0, 2000)}`);
+      throw error;
+    }
   });
 
   test('should logout successfully', async ({ page }) => {
